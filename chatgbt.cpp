@@ -47,7 +47,7 @@ int main() {
         return 1;
     }
 
-    // set the server address
+    // prepare the server address
     struct sockaddr_in address;
     std::memset(&address, 0, sizeof(address));
     address.sin_family = AF_INET;
@@ -67,8 +67,6 @@ int main() {
         close(server_fd);
         return 1;
     }
-
-
     std::cout << "✅ Server listening on http://localhost:" << PORT << "\n";
 
     // POLL MONITORING
@@ -99,14 +97,14 @@ int main() {
             // New connection
             if (poll_fds[i].fd == server_fd /* i == 0 */ && poll_fds[i].revents & POLLIN) { // Order matters: Server socket (index 0) is checked first
                 // accepts new connections
-                struct sockaddr_in client_addr; // just like the server
+                struct sockaddr_in client_addr;
                 socklen_t client_len = sizeof(client_addr);
                 int client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &client_len); // client_fd is a NEW socket for this specific client
                 if (client_fd >= 0) {
                     if (fcntl(client_fd, F_SETFL, O_NONBLOCK) < 0) { // Make client non-blocking: So recv()/send() won't hang the server
                         perror("fcntl failed");
-                        close(server_fd);
-                        return 1;
+                        close(client_fd);
+                        continue ;
                     }
                     pollfd client_pollfd = { client_fd, POLLIN, 0 }; // tell poll() to monitor this new client
                     poll_fds.push_back(client_pollfd); // add to vector
@@ -120,8 +118,7 @@ int main() {
                 if (bytes < 0) {
                     if (errno == EAGAIN || errno == EWOULDBLOCK) {
                         // Not an error - no data available right now
-                        // Keep connection alive, try again later
-                        continue ;
+                        continue ; // Keep connection alive, try again later
                     } else {
                         perror("recv failed"); // Real error - close connection
                         close(client_fd);
