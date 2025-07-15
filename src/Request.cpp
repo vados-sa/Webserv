@@ -81,7 +81,7 @@ int Request::parseHeaders(std::string &raw, Request *obj)
 
 int Request::parseBody(std::string &raw, Request *obj) {
     std::map<std::string, std::string>::iterator it;
-
+    (void) raw;
     it = obj->headers_.find("Content-Length");
     if (it == obj->headers_.end())
         return (0);
