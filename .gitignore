@@ -1,0 +1,13 @@
+# C++ build files
+*.o
+*.out
+*.exe
+
+# VSCode
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+webserv
