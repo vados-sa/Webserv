@@ -18,7 +18,10 @@ public:
     ~Request(); //same
 
     //---methods
-    static Request parse(const std::string &raw);
+    static Request *parse(const std::string &raw);
+    static int parseRequestLine(const std::string &raw, Request *obj); // ex: GET /index.html HTTP/1.1
+    static int parseHeaders(const std::string &raw, Request *obj);
+    static int parseBody(const std::string &raw, Request *obj);
     //..
 
     //---getters
