@@ -3,9 +3,11 @@
 int main(int ac, char *av[])
 {
 	if (ac != 2) {
-		std::cerr << "Wrong number of arguments!\n";
+		std::cerr << "Usage: " << av[0] << " <config_file>\n";
 		return 1;
 	}
+
+	(void)av; // parse config file
 
 	Server server;
 	if (!server.setupServer(8080)) {
@@ -13,7 +15,11 @@ int main(int ac, char *av[])
 		return 1; // Server Destructor is called
 	};
 
-	server.run();
+	if (!server.run()) {
+		std::cerr << "Server failed.\n";
+		return 1;
+	};
 
+	// transform all if statements in try/catch blocks
 	return 0;
 }
