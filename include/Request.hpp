@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <map>
 
 class Request
 {
@@ -8,7 +9,7 @@ private:
     std::string _method;
     std::string _path;
     std::string _version;
-    //another dictionary for headers? just a big string? idk lets see how we're going to use it
+    std::map<std::string, std::string> _headers;
     std::string _body;
 
 public:
