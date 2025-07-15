@@ -7,22 +7,54 @@ Request::Request() {
     _body = "";
 };
 
-Request Request::parse(const std::string &raw)
+Request::Request(const Request &obj) : _method(obj._method), _path(obj._path), _version(obj._version), _body(obj._body) {}
+
+Request *Request::parse(const std::string &raw)
 {
     std::string methodToSet;
     std::string pathToSet;
     std::string versionToSet;
     std::string bodyToSet;
+    Request helperReqObj;
 
-    // proceed with parsing
-    //...
-    // end parsing
+    if (!parseRequestLine(raw, &helperReqObj))
+        ;//deu ruim
+    if (!parseHeaders(raw, &helperReqObj))
+        ;//deu ruim
+    if (!parseBody(raw, &helperReqObj))
+        ;//deu ruim
 
-    //maybe writing a fluent builder looks better?
-    Request *reqObj = new Request();
-    reqObj->setMethod(methodToSet);
-    reqObj->setPath(pathToSet);
-    reqObj->setVersion(versionToSet);
-    reqObj->setBody(bodyToSet);
+    Request *reqObj = new Request(helperReqObj);
+    return (reqObj);
 }
 
+int Request::parseRequestLine(const std::string &raw, Request *obj) {
+    std::string temp = raw;
+
+    // ----- PARSE METHOD -----
+    int len = temp.find(" ");
+    std::string possibleMethod = temp.substr(0, len);
+    temp = temp.substr(len + 1);
+    if (possibleMethod != "GET" && possibleMethod != "POST" && possibleMethod != "DELETE") //im sure theres a more graceful way to do this
+        return (0);
+    obj->_method = possibleMethod;
+
+    // ----- PARSE PATH ------
+    len = temp.find(" ");
+    std::string possiblePath = temp.substr(0, len);
+    temp = temp.substr(len + 1);
+    if (possiblePath[0] != '/') //didnt check if there are more things to validate.
+        return (0);
+    //maybe at this point i could check if path exists? otherwise we can already return an HTTP error..
+    obj->_path = possiblePath;
+
+    // ----- PARSE VERSION ---
+    len = temp.find(" ");
+    std::string possibleVersion = temp.substr(0, len);
+    temp = temp.substr(len + 1);
+    if (temp.substr(0, 4) != "HTTP") // didnt check if there are more things that i could validate here.
+        return (0);
+    obj->_path = possibleVersion;
+
+    return (1);
+}
