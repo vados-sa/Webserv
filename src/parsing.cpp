@@ -4,7 +4,7 @@
 int main(void) {
     std::string req;
 
-    req = "> GET / HTTP/1.1\nHost : localhost : 8080\n User - Agent : curl / 8.7.1 > Accept : */*";
+    req = "GET / HTTP/1.1\nHost : localhost : 8080\n User - Agent : curl / 8.7.1 > Accept : */*";
 
-    Request r(req);
+    std::cout << Request::parse(req) << std::endl;
 }

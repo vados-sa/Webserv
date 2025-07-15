@@ -1,86 +1,101 @@
 #include "../include/Request.hpp"
 
 Request::Request() {
-    _method = "";
-    _path = "";
-    _version = "";
-    _body = "";
+    method_ = "";
+    path_ = "";
+    version_ = "";
+    body_ = "";
 };
 
-Request::Request(const Request &obj) : _method(obj._method), _path(obj._path), _version(obj._version), _body(obj._body) {}
+Request::Request(const Request &obj) : method_(obj.method_), path_(obj.path_), version_(obj.version_), body_(obj.body_) {}
 
-Request *Request::parse(const std::string &raw)
+Request Request::parse(const std::string &raw)
 {
-    std::string methodToSet;
-    std::string pathToSet;
-    std::string versionToSet;
-    std::string bodyToSet;
     Request helperReqObj;
-
-    if (!parseRequestLine(raw, &helperReqObj))
-        ;//deu ruim
-    if (!parseHeaders(raw, &helperReqObj))
-        ;//deu ruim
-    if (!parseBody(raw, &helperReqObj))
-        ;//deu ruim
-
-    Request *reqObj = new Request(helperReqObj);
-    return (reqObj);
-}
-
-int Request::parseRequestLine(const std::string &raw, Request *obj) {
     std::string temp = raw;
 
+    if (!parseRequestLine(temp, &helperReqObj))
+        ;//deu ruim
+    if (!parseHeaders(temp, &helperReqObj))
+        ;//deu ruim
+    if (!parseBody(temp, &helperReqObj))
+        ;//deu ruim
+
+    return (helperReqObj);
+}
+
+int Request::parseRequestLine(std::string &raw, Request *obj) {
+
     // ----- PARSE METHOD -----
-    int len = temp.find(" ");
-    std::string possibleMethod = temp.substr(0, len);
-    temp = temp.substr(len + 1);
+    int len = raw.find(" ");
+    std::string possibleMethod = raw.substr(0, len);
+    raw = raw.substr(len + 1);
     if (possibleMethod != "GET" && possibleMethod != "POST" && possibleMethod != "DELETE") //im sure theres a more graceful way to do this
         return (0);
-    obj->_method = possibleMethod;
+    obj->method_ = possibleMethod;
 
     // ----- PARSE PATH ------
-    len = temp.find(" ");
-    std::string possiblePath = temp.substr(0, len);
-    temp = temp.substr(len + 1);
+    len = raw.find(" ");
+    std::string possiblePath = raw.substr(0, len);
+    raw = raw.substr(len + 1);
     if (possiblePath[0] != '/') //didnt check if there are more things to validate.
         return (0);
     //maybe at this point i could check if path exists? otherwise we can already return an HTTP error..
-    obj->_path = possiblePath;
+    obj->path_ = possiblePath;
 
     // ----- PARSE VERSION ---
-    len = temp.find("\n");
-    std::string possibleVersion = temp.substr(0, len);
-    temp = temp.substr(len + 1);
-    if (temp.substr(0, 4) != "HTTP") // didnt check if there are more things that i could validate here.
+    len = raw.find("\n");
+    std::string possibleVersion = raw.substr(0, len);
+    raw = raw.substr(len + 1);
+    if (raw.substr(0, 4) != "HTTP") // didnt check if there are more things that i could validate here.
         return (0);
-    obj->_path = possibleVersion;
+    obj->version_ = possibleVersion;
 
     return (1);
 }
 
-int Request::parseHeaders(const std::string &raw, Request *obj)
+int Request::parseHeaders(std::string &raw, Request *obj)
 {
     std::map<std::string, std::string> headers;
-    std::string temp = raw;
     int len;
     std::string possibleKey;
 
-    while (!temp.compare("\r\n"))
+    while (!raw.compare("\r\n\r\n"))
     {
-        len = temp.find(":");
+        len = raw.find(":");
         if (len < 0)
             return (0);
-        possibleKey = temp.substr(0, len);
-        temp = temp.substr(len + 2); // considering ": ", im not considering multiple whitespaces yet
-        len = temp.find("\r\n");
+        possibleKey = raw.substr(0, len);
+        raw = raw.substr(len + 2); // considering ": ", im not considering multiple whitespaces yet
+        len = raw.find("\r\n");
         if (len < 0)
             return (0);
-        std::string possibleValue = temp.substr(0, len);
+        std::string possibleValue = raw.substr(0, len);
         // insert a check if possibleValue is empty?
         headers[possibleKey] = possibleValue;
-        temp = temp.substr(len + 2);
+        raw = raw.substr(len + 2);
     }
-    obj->_headers = headers;
+    obj->headers_ = headers;
     return (1);
+}
+
+int Request::parseBody(std::string &raw, Request *obj) {
+    std::map<std::string, std::string>::iterator it;
+
+    it = obj->headers_.find("Content-Length");
+    if (it == obj->headers_.end())
+        return (0);
+    std::string lengthStr = obj->headers_["Content-Length"];
+    //convert lengthStr to int
+    //...
+    return (1);
+}
+
+std::ostream &operator<<(std::ostream &out, const Request &obj) {
+    out << "Method: " << obj.getMethod() << std::endl
+        << "Path: " << obj.getPath() << std::endl
+        << "Version: " << obj.getVersion() << std::endl
+        << "Body: " << obj.getBody() << std::endl;
+    //to include headers!
+    return (out);
 }
