@@ -1,15 +1,4 @@
-#include <iostream>
-#include <string>
-#include <cstring>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <poll.h>
-#include <vector>
-#include <fcntl.h>
-
-#define PORT 8080
-#define MAX_CLIENTS 100
+#include "../include/webserv.hpp"
 
 std::string build_http_response() {
     std::string body = "<html><body><h1>Hello from Webserv</h1></body></html>";
