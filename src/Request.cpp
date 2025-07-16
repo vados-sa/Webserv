@@ -1,25 +1,27 @@
-#include "../include/Request.hpp"
+#include "Request.hpp"
 
-Request::Request() {
-    method_ = "";
-    path_ = "";
-    version_ = "";
-    body_ = "";
+Request::Request() : method_(""), path_(""), version_(""), body_("") {
 };
 
-Request::Request(const Request &obj) : method_(obj.method_), path_(obj.path_), version_(obj.version_), body_(obj.body_) {}
+Request::Request(const Request &obj) : method_(obj.method_), path_(obj.path_), version_(obj.version_), headers_(obj.headers_), body_(obj.body_) {}
 
 Request Request::parse(const std::string &raw)
 {
     Request helperReqObj;
     std::string temp = raw;
 
-    if (!parseRequestLine(temp, &helperReqObj))
-        ;//deu ruim
-    if (!parseHeaders(temp, &helperReqObj))
-        ;//deu ruim
-    if (!parseBody(temp, &helperReqObj))
-        ;//deu ruim
+    if (!parseRequestLine(temp, &helperReqObj)) {
+        std::cerr << "Failed to parse request line" << std::endl; // we can throw exceptions later, rn i dont want the program to quit
+        return (helperReqObj);
+    }
+    if (!parseHeaders(temp, &helperReqObj)){
+        std::cerr << "Failed to parse headers" << std::endl;
+        return (helperReqObj);
+    }
+    if (!parseBody(temp, &helperReqObj)){
+        std::cerr << "Failed to parse body" << std::endl;
+        return (helperReqObj);
+    }
 
     return (helperReqObj);
 }
@@ -44,10 +46,10 @@ int Request::parseRequestLine(std::string &raw, Request *obj) {
     obj->path_ = possiblePath;
 
     // ----- PARSE VERSION ---
-    len = raw.find("\n");
+    len = raw.find("\r\n");
     std::string possibleVersion = raw.substr(0, len);
-    raw = raw.substr(len + 1);
-    if (raw.substr(0, 4) != "HTTP") // didnt check if there are more things that i could validate here.
+    raw = raw.substr(len + 2);
+    if (possibleVersion.substr(0, 4) != "HTTP") // didnt check if there are more things that i could validate here.
         return (0);
     obj->version_ = possibleVersion;
 
@@ -60,7 +62,7 @@ int Request::parseHeaders(std::string &raw, Request *obj)
     int len;
     std::string possibleKey;
 
-    while (!raw.compare("\r\n\r\n"))
+    while (raw.substr(0, 4).compare("\r\n\r\n"))
     {
         len = raw.find(":");
         if (len < 0)
@@ -73,29 +75,46 @@ int Request::parseHeaders(std::string &raw, Request *obj)
         std::string possibleValue = raw.substr(0, len);
         // insert a check if possibleValue is empty?
         headers[possibleKey] = possibleValue;
-        raw = raw.substr(len + 2);
+        raw = raw.substr(len);
+        if (raw.substr(0, 4).compare("\r\n\r\n"))
+            raw = raw.substr(2);
     }
+    raw = raw.substr(4);
     obj->headers_ = headers;
     return (1);
 }
 
 int Request::parseBody(std::string &raw, Request *obj) {
+    if (raw.empty())
+        return (1); //for now its ok body to be empty, but maybe we should allow it to be empty if its POST.
     std::map<std::string, std::string>::iterator it;
-    (void) raw;
     it = obj->headers_.find("Content-Length");
     if (it == obj->headers_.end())
         return (0);
     std::string lengthStr = obj->headers_["Content-Length"];
-    //convert lengthStr to int
-    //...
+    int lenght;
+    std::istringstream(lengthStr) >> lenght; //i wonder if we can use this to convert from string to int
+    obj->body_= raw;
     return (1);
 }
+
 
 std::ostream &operator<<(std::ostream &out, const Request &obj) {
     out << "Method: " << obj.getMethod() << std::endl
         << "Path: " << obj.getPath() << std::endl
         << "Version: " << obj.getVersion() << std::endl
+        << " ----- " << std::endl
+        << "Headers: " << std::endl
+        << obj.getHeaders() << std::endl
+        << " ----- " << std::endl
         << "Body: " << obj.getBody() << std::endl;
-    //to include headers!
     return (out);
 }
+
+std::ostream &operator<<(std::ostream &os, const std::map<std::string, std::string> &map)
+{
+    for (std::map<std::string, std::string>::const_iterator it = map.begin(); it != map.end(); ++it)
+        os << it->first << ": " << it->second << '\n';
+    return os;
+}
+
