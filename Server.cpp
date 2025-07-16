@@ -68,6 +68,8 @@ bool Server::listenMode() {
 		return false;
 	}
 
+	std::cout << "✅ Server listening on http://localhost:" << port << "\n";
+
 	return true;
 };
 
@@ -114,7 +116,8 @@ void Server::handleNewConnection() {
 	clients.emplace_back(Client(client_fd));
 	pollfd client_pollfd = {client_fd, POLLIN, 0};
 	poll_fds.push_back(client_pollfd);
-	
+
+	clients.back().setConnectionState(true);
 	std::cout << "New client connected: FD " << client_fd << std::endl;
 }
 
@@ -143,8 +146,8 @@ void Server::handleClientRequest(size_t index) {
 		std::string request = clients[index - 1].getRequestData();
 		std::cout << "📥 Complete request received:\n" << request << std::endl;
 		
-		// For now: hardcoded response - depend on Natalia
-		std::string response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 13\r\n\r\nHello World!";
+		// For now, hardcoded response - depend on Natalia
+		std::string response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 13\r\n\r\nHello World!\n";
 		send(client_fd, response.c_str(), response.size(), 0);
 		
 		close(client_fd);

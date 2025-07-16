@@ -5,7 +5,7 @@ Client::Client(int fd) : client_fd(fd) {
 };
 
 Client::~Client() {
-	close(client_fd);
+	//close(client_fd);
 };
 
 void Client::appendRequestData(char* buffer, int bytes) {
