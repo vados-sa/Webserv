@@ -3,6 +3,7 @@
 #include <string>
 #include <map>
 #include <iostream>
+#include <sstream>
 
 class Request
 {
@@ -30,6 +31,7 @@ public:
     std::string getMethod() const { return method_; };
     std::string getPath() const { return path_; };
     std::string getVersion() const { return version_; };
+    std::map<std::string, std::string> getHeaders() const { return headers_; };
     std::string getBody() const { return body_; };
 
     //---setters
@@ -40,3 +42,5 @@ public:
 };
 
 std::ostream &operator<<(std::ostream &out, const Request &obj);
+std::ostream &operator<<(std::ostream &out, const std::map<std::string, std::string> &map);
+int strToInt(std::string &str);
