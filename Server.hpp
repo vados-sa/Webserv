@@ -30,6 +30,7 @@ class Server {
 		
 		void handleNewConnection();
 		void handleClientRequest(size_t index);
+		void cleanup();
 
 	public:
 		Server();

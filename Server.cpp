@@ -78,17 +78,26 @@ bool Server::run() {
 	poll_fds.push_back(server_pollfd);
 
 	while (true) {
-		int ready = poll(poll_fds.data(), poll_fds.size(), -1); // check timeout
+		int ready = poll(poll_fds.data(), poll_fds.size(), 5000); // evry 5s check for timeout
 		if (ready < 0) {
             perror("poll failed");
-            return false; // or break?
+            cleanup();
+            return false;
         }
 
-		for (int i = poll_fds.size() - 1; i >= 0; --i) { // backward iteration
-			if (i == 0 && poll_fds[i].revents & POLLIN)
+		for (int i = poll_fds.size() - 1; i >= 0; --i) {
+			if (i == 0 && poll_fds[i].revents & POLLIN) {
 				handleNewConnection();
-			else if (poll_fds[i].revents & POLLIN)
-				handleClientRequest(i);
+			} else if (i > 0) {
+				if (clients[i - 1].isTimedOut(10)) {
+					std::cout << "⏰ Client timed out: FD " << poll_fds[i].fd << std::endl;
+					close(poll_fds[i].fd);
+					poll_fds.erase(poll_fds.begin() + i);
+					clients.erase(clients.begin() + (i - 1));
+				} else if (poll_fds[i].revents & POLLIN) {
+					handleClientRequest(i);
+				}
+			}
 		}
 	}
 
@@ -117,42 +126,53 @@ void Server::handleNewConnection() {
 	pollfd client_pollfd = {client_fd, POLLIN, 0};
 	poll_fds.push_back(client_pollfd);
 
-	clients.back().setConnectionState(true);
-	std::cout << "New client connected: FD " << client_fd << std::endl;
+	std::cout << "New client connected: FD " << client_fd << "\n" << std::endl;
 }
 
+// ver como fzr melhor
 void Server::handleClientRequest(size_t index) {
+	Client& client = clients[index - 1];
 	int client_fd = poll_fds[index].fd;
 	char buffer[4096];
-
+	
+	if (client.getState() == Client::CONNECTED)
+		client.setState(Client::SENDING_REQUEST);
+	
+	// maybe make it cleaner with a separate funciton
 	int bytes = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
-	if (bytes <= 0) {
-		if (errno == EAGAIN || errno == EWOULDBLOCK) {
-            return ;
-        } else if (bytes == 0) {
-            std::cout << "❌ Client disconnected: FD " << client_fd << "\n";
-        } else {
-            perror("recv failed");
-        }
+	if (bytes < 0) {
+            return ; // Can't check errno - just assume EAGAIN/EWOULDBLOCK. If fail, next poll cycle will handle it
+    } else if (bytes == 0) {
+        std::cout << "❌ Client disconnected: FD " << client_fd << "\n";
 		close(client_fd);
 		poll_fds.erase(poll_fds.begin() + index);
 		clients.erase(clients.begin() + (index - 1));
-		return ;
+		return ; // not needed
+    } else {
+		client.appendRequestData(buffer, bytes);
+
+		if(client.isRequestComplete()) {
+			client.setState(Client::WAITING_RESPONSE);
+			std::string request = client.getRequestData();
+			std::cout << "📥 Complete request received:\n" << request << std::endl;
+
+			// ------ For now, hardcoded response - depend on http parser/response
+			std::string response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 13\r\n\r\nHello World!\n";
+
+			send(client_fd, response.c_str(), response.size(), 0); // check for send() errors + chunck sends
+
+			close(client_fd);
+			poll_fds.erase(poll_fds.begin() + index);
+			clients.erase(clients.begin() + (index - 1));
+			// ------
+		}
 	}
+}
 
-	clients[index - 1].appendRequestData(buffer, bytes);
-
-	if(clients[index - 1].isRequestComplete()) {
-		std::string request = clients[index - 1].getRequestData();
-		std::cout << "📥 Complete request received:\n" << request << std::endl;
-		
-		// For now, hardcoded response - depend on Natalia
-		std::string response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 13\r\n\r\nHello World!\n";
-		send(client_fd, response.c_str(), response.size(), 0);
-		
-		close(client_fd);
-		poll_fds.erase(poll_fds.begin() + index);
-		clients.erase(clients.begin() + (index - 1));
+void Server::cleanup() {
+	for (size_t i = 1; i < poll_fds.size(); ++i) {
+		close(poll_fds[i].fd);
 	}
-
+	clients.clear();
+	poll_fds.clear();
 }
