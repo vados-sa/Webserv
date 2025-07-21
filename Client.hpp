@@ -9,6 +9,7 @@
 #include <iostream>
 #include <string>
 #include <ctime>
+#include <sstream> 
 
 class Client {
 	public:
