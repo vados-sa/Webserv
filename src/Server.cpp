@@ -89,7 +89,7 @@ bool Server::run() {
 			if (i == 0 && poll_fds[i].revents & POLLIN) {
 				handleNewConnection();
 			} else if (i > 0) {
-				if (clients[i - 1].isTimedOut(10)) {
+				if (clients[i - 1].isTimedOut(10)) { // decide final timeout time
 					std::cout << "⏰ Client timed out: FD " << poll_fds[i].fd << std::endl;
 					close(poll_fds[i].fd);
 					poll_fds.erase(poll_fds.begin() + i);
@@ -97,7 +97,7 @@ bool Server::run() {
 				} else if (poll_fds[i].revents & POLLIN) {
 					handleClientRequest(i);
 				} else if (poll_fds[i].revents & POLLOUT) {
-					if (sendResponse(i) == true) {
+					if (sendResponse(i) == true) { // later: swtich connection back to read for long lasting connections
 						close(poll_fds[i].fd);
 						poll_fds.erase(poll_fds.begin() + i);
 						clients.erase(clients.begin() + (i - 1));
