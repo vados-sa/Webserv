@@ -7,7 +7,7 @@ SRC = src/chatgbt.cpp
 OBJ = $(SRC:.cpp=.o)
 
 #pra facilitar minha vida, a gente une dps!
-REQUEST_SRC = src/Request.cpp src/requestMain.cpp src/requestTests.cpp
+REQUEST_SRC = src/Request.cpp src/requestMain.cpp src/Response.cpp src/HttpMessage.cpp
 REQUEST_OBJ = $(REQUEST_SRC:.cpp=.o)
 REQUEST_NAME = request
 
