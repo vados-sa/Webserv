@@ -20,7 +20,7 @@ void Response::handleGet(const Request &reqObj) {
         body_ = ss.str();
 
         setHeader("Content_Length", std::to_string(body_.size()));
-        setHeader("Content-Type", "changethislater");
+        setHeader("Content-Type", "text/html");
         setCode("200");
         return ;
     }

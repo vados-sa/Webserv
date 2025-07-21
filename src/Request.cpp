@@ -44,6 +44,8 @@ int Request::parseRequestLine(std::string &raw, Request *obj) {
         return (0);
     //maybe at this point i could check if path exists? otherwise we can already return an HTTP error..
     obj->path_ = possiblePath;
+    if (obj->path_ == "/")
+        obj->path_.append("index.html");
 
     // ----- PARSE VERSION ---
     len = raw.find("\r\n");
