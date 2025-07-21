@@ -1,8 +1,7 @@
 #include "Client.hpp"
 
-Client::Client(int fd) : client_fd(fd), current_state(CONNECTED), state_start_time(time(NULL)) {
-	// initialize other attributes
-};
+Client::Client(int fd) : client_fd(fd), current_state(CONNECTED), 
+						state_start_time(time(NULL)), bytes_sent(0) {};
 
 Client::~Client() {};
 
@@ -51,4 +50,12 @@ bool Client::isTimedOut(int timeout_seconds) const {
 void Client::setState(State new_state) { 
 	current_state = new_state;
 	state_start_time = time(NULL);  // Reset timer on every state change
+}
+
+void Client::setResponse(std::string response) {
+	response_buffer = response;
+}
+
+void Client::setBytesSent(size_t bytes) {
+	bytes_sent += bytes;
 }

@@ -32,6 +32,7 @@ class Server {
 		
 		void handleNewConnection();
 		void handleClientRequest(size_t index);
+		bool sendResponse(size_t index);
 		void cleanup();
 
 	public:

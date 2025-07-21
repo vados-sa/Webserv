@@ -96,6 +96,12 @@ bool Server::run() {
 					clients.erase(clients.begin() + (i - 1));
 				} else if (poll_fds[i].revents & POLLIN) {
 					handleClientRequest(i);
+				} else if (poll_fds[i].revents & POLLOUT) {
+					if (sendResponse(i) == true) {
+						close(poll_fds[i].fd);
+						poll_fds.erase(poll_fds.begin() + i);
+						clients.erase(clients.begin() + (i - 1));
+					}
 				}
 			}
 		}
@@ -147,25 +153,41 @@ void Server::handleClientRequest(size_t index) {
 		close(client_fd);
 		poll_fds.erase(poll_fds.begin() + index);
 		clients.erase(clients.begin() + (index - 1));
-		return ; // not needed
+		//return ; // not needed
     } else {
 		client.appendRequestData(buffer, bytes);
 
 		if(client.isRequestComplete()) {
 			client.setState(Client::WAITING_RESPONSE);
-			std::string request = client.getRequestData();
+			std::string request = client.getRequest();
 			std::cout << "📥 Complete request received:\n" << request << std::endl;
 
 			Request reqObj = Request::parseRequest(request);
 			std::string response = buildResponse(reqObj);
-
-			send(client_fd, response.c_str(), response.size(), 0); // check for send() errors + chunck sends
-
-			close(client_fd);
-			poll_fds.erase(poll_fds.begin() + index);
-			clients.erase(clients.begin() + (index - 1));
+			poll_fds[index].events = POLLOUT;
+			client.setResponse(response);
 		}
 	}
+}
+
+bool Server::sendResponse(size_t index) {
+	Client& client = clients[index - 1];
+	int client_fd = poll_fds[index].fd;
+	std::string response = client.getResponse();
+	size_t already_sent= client.getBytesSent();
+	size_t remaining = response.size() - already_sent;
+
+	if (remaining == 0) return true;
+	
+	size_t bytes_sent = send(client_fd, response.c_str() + already_sent, remaining, 0);
+	if (bytes_sent < 0) {
+		perror("send failed");
+		return false;
+	}
+	client.setBytesSent(bytes_sent);
+	return client.getBytesSent() == response.size();
+
+	return false;
 }
 
 void Server::cleanup() {

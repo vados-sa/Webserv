@@ -23,10 +23,10 @@ class Client {
 	private:
 		int client_fd;
 		std::string request_buffer;
-		std::string response_buffer;
 		State current_state;
 		time_t state_start_time;
-		//time_t last_activity;
+		std::string response_buffer;
+		size_t bytes_sent;
 
 	public:
 		Client(int fd);
@@ -38,8 +38,14 @@ class Client {
 		bool isRequestComplete() const;
 		bool isTimedOut(int timeout_seconds) const;
 
-		std::string getRequestData() const {return request_buffer;};
-		State getState() const { return Client::current_state; };
-		
+		std::string getRequest() const {return request_buffer;}
+		std::string getResponse() const {return response_buffer;}
+		size_t getBytesSent() const {return bytes_sent;}
+		State getState() const { return Client::current_state; }
+
 		void setState(State new_state);
+		void setResponse(std::string response);
+		void setBytesSent(size_t bytes);
+
+		
 };
