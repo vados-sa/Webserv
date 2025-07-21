@@ -1,11 +1,11 @@
 #include "Request.hpp"
 
-Request::Request() : method_(""), path_(""), version_(""), body_("") {
+Request::Request() : method_(""), path_("") {
 };
 
-Request::Request(const Request &obj) : method_(obj.method_), path_(obj.path_), version_(obj.version_), headers_(obj.headers_), body_(obj.body_) {}
+Request::Request(const Request &obj) : method_(obj.method_), path_(obj.path_) {}
 
-Request Request::parse(const std::string &raw)
+Request Request::parseRequest(const std::string &raw)
 {
     Request helperReqObj;
     std::string temp = raw;
