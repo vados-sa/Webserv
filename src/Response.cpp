@@ -2,21 +2,6 @@
 
 Response::Response() : fullPath_("./www") {}
 
-Response buildResponse(const Request &reqObj) {
-    Response res;
-
-    res.setFullPath(reqObj.getPath());
-    if (!reqObj.getMethod().compare("GET"))
-        res.handleGet(reqObj);
-    if (!reqObj.getMethod().compare("POST"))
-        res.handlePost(reqObj);
-    // if (!reqObj.getMethod().compare("DELETE"))
-    //     res.handleDelete(reqObj);
-
-    // std::string reqStr = writeResponseString(res);
-    return (res);
-}
-
 void Response::handleGet(const Request &reqObj) {
 
     (void) reqObj;
@@ -51,49 +36,58 @@ void Response::handleGet(const Request &reqObj) {
 
 void Response::handlePost(const Request &reqObj)
 {
-    if (reqObj.getPath().compare("/upload/"))
-        return(setCode("404")); //maybe return here?
-    if (reqObj.getBody().empty())
-        return (setCode("404"));
+    if (reqObj.getPath() != "/upload/") {
+        setCode("404");
+        setBody("Wrong path. Expected \"/upload/");
+        setHeader("Content-Type", "text/plain"); //hardcoded for now but write something to deal with error later on
+        setHeader("Content-Length", "31");
+        return;
+    }
+    if (reqObj.getBody().empty()) {
+        setCode("400");
+        setBody("No body detected on request. Body necessary");
+        setHeader("Content-Type", "text/plain");
+        setHeader("Content-Length", "44");
+        return;
+    }
     const std::string *filename = reqObj.findHeader("Filename");
     if (!filename) {
         setCode("400");
         setBody("Missing Filename header");
+        setHeader("Content-Type", "text/plain");
+        setHeader("Content-Length", "24");
         return;
     }
-    std::string filePath = fullPath_;
-    filePath.append(*filename);
 
-    struct stat file_stat;
-    if (stat(filePath.c_str(), &file_stat) == 0) {
-
+    std::ofstream file(filename->c_str());
+    if (file.is_open()) {
+        file << reqObj.getBody();
+        file.close();
+        setCode("201");
+        setBody("File created");
+        setHeader("Content-Type", "text/plain");
+        setHeader("Content-Length", "13");
+    } else {
+        setCode("500");
+        setBody("Server error: could not open file for writing.");
+        setHeader("Content-Type", "text/plain");
+        setHeader("Content-Length", "47");
+        return;
     }
 
-    //build full path with name
-    //open the file for writing
-    //write the body in the file
-    //code 201 created
-
-    /* Validate the request:
-        Does the path make sense?
-        Is the body not empty?
-        Is the filename valid?
-
-    Ensure the directory exists
-        If you're saving to ./www/upload/, create it if it doesn't exist.
-
-    Check write permissions
-        Can the server write to the destination?
-        If the file exists, are you allowed to overwrite it?
-
-    Write the file
-        Save the body content to the resolved full path.
-
-    Set an appropriate response
+    /*Set an appropriate response
         201 Created if the file is newly created
         200 OK if the file was overwritten or updated
         403 Forbidden or 500 Internal Server Error on failure
-*/
+    */
+}
+
+std::string Response::writeResponseString() {
+    std::ostringstream res;
+    res << version_ << " " << statusCode_ << " " << statusMessage_ << "\r\n"
+        << getHeaders() << "\r\n"
+        << body_ << "\r\n";
+    return (res.str());
 }
 
 void Response::setCode(const std::string code)
@@ -135,4 +129,21 @@ std::ostream &operator<<(std::ostream &out, const Response &obj)
         << " ----- " << std::endl
         << "Body: " << obj.getBody() << std::endl;
     return (out);
+}
+
+std::string buildResponse(const Request &reqObj)
+{
+    Response res;
+
+    res.setVersion(reqObj.getVersion());
+    res.setFullPath(reqObj.getPath());
+    if (!reqObj.getMethod().compare("GET"))
+        res.handleGet(reqObj);
+    if (!reqObj.getMethod().compare("POST"))
+        res.handlePost(reqObj);
+    // if (!reqObj.getMethod().compare("DELETE"))
+    //     res.handleDelete(reqObj);
+
+    std::string reqStr = res.writeResponseString();
+    return (reqStr);
 }

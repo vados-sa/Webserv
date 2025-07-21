@@ -1,5 +1,11 @@
 #include "RequestTests.hpp"
 
+int main(void)
+{
+    testParseGET();
+    testParsePOSTFilledHeaders();
+}
+
 void testParseGET()
 {
     std::string req =
@@ -7,7 +13,7 @@ void testParseGET()
         "Host: localhost\r\n"
         "\r\n";
 
-    Request r = Request::parse(req);
+    Request r = Request::parseRequest(req);
     assert(r.getMethod() == "GET");
     assert(r.getPath() == "/");
     assert(r.getVersion() == "HTTP/1.1");
@@ -25,7 +31,7 @@ void testParsePOSTFilledHeaders()
         "\r\n"
         "username=admin&password=123";
 
-    Request r = Request::parse(req);
+    Request r = Request::parseRequest(req);
     assert(r.getMethod() == "POST");
     assert(r.getPath() == "/submit");
     assert(r.getVersion() == "HTTP/1.1");

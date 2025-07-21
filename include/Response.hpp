@@ -1,8 +1,9 @@
 #include <string>
-#include <sys/stat.h>
-#include "Request.hpp"
 #include <fstream>
+#include <sys/stat.h>
+
 #include "HttpMessage.hpp"
+#include "Request.hpp"
 
 #define ROOT "./www"
 
@@ -21,6 +22,7 @@ public:
     void handleGet(const Request &reqObj);
     void handlePost(const Request &reqObj);
     // void handleDelete(const Request &reqObj);
+    std::string writeResponseString();
 
     //getter
     std::string getCode() const { return statusCode_; };
@@ -32,7 +34,5 @@ public:
     void setCode(const std::string code);
 };
 
-
-Response buildResponse(const Request &obj);
-
+std::string buildResponse(const Request &obj);
 std::ostream &operator<<(std::ostream &out, const Response &obj);
