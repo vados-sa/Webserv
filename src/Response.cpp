@@ -1,19 +1,19 @@
 #include "Response.hpp"
 
-Response::Response() : fullPath_("./www") {}
+Response::Response() : fullPath_("./www"), statusCode_(""), statusMessage_("") {}
 
 void Response::handleGet(const Request &reqObj) {
 
     (void) reqObj;
     struct stat file_stat;
     if (stat(fullPath_.c_str(), &file_stat) == 0) {
-        if (!S_ISREG(file_stat.st_mode)) //if it isnt a regular file
-            exit(0);
+        if (!S_ISREG(file_stat.st_mode))
+            return (setError("403", "Requested resource is not a file"));
         if (!(file_stat.st_mode & S_IROTH))
-            exit(0);
-        std::ifstream file(fullPath_.c_str(), std::ios::in | std::ios::binary); //try to read
+            return (setError("403", "You do not have permission to read this file"));
+        std::ifstream file(fullPath_.c_str(), std::ios::in | std::ios::binary);
         if (!file)
-            exit(500);
+            return (setError("500", "Server error: unable to open file."));
 
         std::ostringstream ss;
         ss << file.rdbuf();
@@ -21,65 +21,39 @@ void Response::handleGet(const Request &reqObj) {
 
         setHeader("Content_Length", std::to_string(body_.size()));
         setHeader("Content-Type", "text/html");
-        setCode("200");
-        return ;
+        statusCode_ = "200";
+        return;
     }
     else {
         if (errno == ENOENT)
-            setCode("404");
+            return (setError("404", "File does not exist"));
         else if (errno == EACCES)
-            setCode("403");
+            return (setError("403", "Access denied."));
         else
-            setCode("500");
+            return (setError("500", "Internal server error while accessing file."));
     }
 }
 
 void Response::handlePost(const Request &reqObj)
 {
     if (reqObj.getPath() != "/upload/") {
-        setCode("404");
-        setBody("Wrong path. Expected \"/upload/");
-        setHeader("Content-Type", "text/plain"); //hardcoded for now but write something to deal with error later on
-        setHeader("Content-Length", "31");
+        setBody(generateErrorPage("404", "Wrong path. Expected \"/upload/"));
         return;
     }
     if (reqObj.getBody().empty()) {
-        setCode("400");
-        setBody("No body detected on request. Body necessary");
-        setHeader("Content-Type", "text/plain");
-        setHeader("Content-Length", "44");
-        return;
+        return (setError("400", "No body detected on request. Body necessary"));
     }
     const std::string *filename = reqObj.findHeader("Filename");
-    if (!filename) {
-        setCode("400");
-        setBody("Missing Filename header");
-        setHeader("Content-Type", "text/plain");
-        setHeader("Content-Length", "24");
-        return;
-    }
+    if (!filename)
+        return (setError("400", "Missing Filename header"));
 
     std::ofstream file(filename->c_str());
     if (file.is_open()) {
         file << reqObj.getBody();
         file.close();
-        setCode("201");
-        setBody("File created");
-        setHeader("Content-Type", "text/plain");
-        setHeader("Content-Length", "13");
-    } else {
-        setCode("500");
-        setBody("Server error: could not open file for writing.");
-        setHeader("Content-Type", "text/plain");
-        setHeader("Content-Length", "47");
-        return;
-    }
-
-    /*Set an appropriate response
-        201 Created if the file is newly created
-        200 OK if the file was overwritten or updated
-        403 Forbidden or 500 Internal Server Error on failure
-    */
+        return (setError("201", "File created")); //is this correct?
+    } else
+        return (setError("500", "Server error: could not open file for writing."));
 }
 
 std::string Response::writeResponseString() {
@@ -112,6 +86,22 @@ void Response::setCode(const std::string code)
         statusMessage_ = it->second;
     else
         statusMessage_ = "Unknown Status";
+}
+
+void Response::setError(const std::string &code, const std::string &message) {
+    setCode(code);
+    body_ = generateErrorPage(code, message);
+    setHeader("Content_Length", std::to_string(body_.size()));
+    setHeader("Content-Type", "text/html");
+}
+
+std::string generateErrorPage(const std::string &code, const std::string &message)
+{
+    std::ostringstream html;
+    html << "<!DOCTYPE html>\n<html><head><title>" << code << " " << message << "</title></head>"
+         << "<body style='font-family:sans-serif;text-align:center;margin-top:100px;'>"
+         << "<h1>Error " << code << "</h1><p>" << message << "</p></body></html>";
+    return html.str();
 }
 
 void Response::setFullPath(const std::string &reqPath) {
@@ -147,3 +137,4 @@ std::string buildResponse(const Request &reqObj)
     std::string reqStr = res.writeResponseString();
     return (reqStr);
 }
+

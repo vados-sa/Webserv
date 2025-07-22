@@ -1,6 +1,6 @@
 #include "HttpMessage.hpp"
 
-HttpMessage::HttpMessage() : body_(""), version_("") {}
+HttpMessage::HttpMessage() : body_(""), version_(""), headers_() {}
 
 
 void HttpMessage::setHeader(std::string key, std::string value)

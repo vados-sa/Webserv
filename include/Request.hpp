@@ -15,8 +15,6 @@ private:
 public:
     Request();
     Request(const Request &obj);
-    Request &operator=(const Request &obj);
-    //~Request();
 
     //---methods
     static Request parseRequest(const std::string &raw);
