@@ -17,6 +17,8 @@
 #include "Request.hpp"
 #include "Response.hpp"
 
+const int MAX_CLIENT = 100;
+
 class Server {
 	private:
 		int server_fd;
@@ -25,6 +27,7 @@ class Server {
 		bool isSetup;
 		std::vector<Client> clients;
 		std::vector<pollfd> poll_fds;
+		int client_count;
 		
 		bool createSocket();
 		bool configureSocket();

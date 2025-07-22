@@ -2,7 +2,7 @@
 
 Server* Server::instance = NULL;
 
-Server::Server() : server_fd(-1), port(0), isSetup(false) {
+Server::Server() : server_fd(-1), port(0), isSetup(false), client_count(0) {
 	std::memset(&address, 0, sizeof(address));
 }
 
@@ -102,6 +102,7 @@ bool Server::run() {
 					handleClientRequest(i);
 				} else if (poll_fds[i].revents & POLLOUT) {
 					if (sendResponse(i) == true) { // later: swtich connection back to read for long lasting connections
+						std::cout << "Client disconnected: FD " << poll_fds[i].fd << "\n" << std::endl;
 						close(poll_fds[i].fd);
 						poll_fds.erase(poll_fds.begin() + i);
 						clients.erase(clients.begin() + (i - 1));
@@ -118,6 +119,13 @@ void Server::handleNewConnection() {
 	struct sockaddr_in client_addr;
 	socklen_t client_len = sizeof(client_addr);
 	int client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &client_len);
+	
+	client_count++;
+	if (client_count > MAX_CLIENT) {
+		std::cerr << "Refusing client, max reached\n";
+		close(client_fd);
+		return ;
+	}
 	
 	if (client_fd < 0) {
 		if (errno != EAGAIN && errno != EWOULDBLOCK) {
