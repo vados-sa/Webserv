@@ -27,6 +27,7 @@ class Client {
 		time_t state_start_time;
 		std::string response_buffer;
 		size_t bytes_sent;
+		int port;
 
 	public:
 		Client(int fd);
@@ -42,10 +43,12 @@ class Client {
 		std::string getResponse() const {return response_buffer;}
 		size_t getBytesSent() const {return bytes_sent;}
 		State getState() const { return Client::current_state; }
+		int getPort() const {return port;}
 
 		void setState(State new_state);
 		void setResponse(std::string response);
 		void setBytesSent(size_t bytes);
+		void setPort(int p);
 
 		
 };

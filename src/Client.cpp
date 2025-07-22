@@ -1,7 +1,8 @@
 #include "Client.hpp"
 
 Client::Client(int fd) : client_fd(fd), current_state(CONNECTED), 
-						state_start_time(time(NULL)), bytes_sent(0) {};
+						state_start_time(time(NULL)), bytes_sent(0),
+						port(-1) {};
 
 Client::~Client() {};
 
@@ -58,4 +59,8 @@ void Client::setResponse(std::string response) {
 
 void Client::setBytesSent(size_t bytes) {
 	bytes_sent += bytes;
+}
+
+void Client::setPort(int p) {
+	port = p;
 }

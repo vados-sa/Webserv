@@ -82,7 +82,7 @@ bool Server::run() {
 	poll_fds.push_back(server_pollfd);
 
 	while (true) {
-		int ready = poll(poll_fds.data(), poll_fds.size(), 5000); // evry 5s check for timeout
+		int ready = poll(poll_fds.data(), poll_fds.size(), 5000);
 		if (ready < 0) {
             perror("poll failed");
             cleanup();
@@ -93,8 +93,10 @@ bool Server::run() {
 			if (i == 0 && poll_fds[i].revents & POLLIN) {
 				handleNewConnection();
 			} else if (i > 0) {
-				if (clients[i - 1].isTimedOut(10)) { // decide final timeout time
-					std::cout << "⏰ Client timed out: FD " << poll_fds[i].fd << std::endl;
+				if (clients[i - 1].isTimedOut(10)) { // decide final timeout time !
+					std::cout << "⏰ Client timed out: FD " << "\n" << "fd - " 
+									<< poll_fds[i].fd << "\n" << "port - " 
+									<< clients[i - 1].getPort() << "\n" << std::endl;
 					close(poll_fds[i].fd);
 					poll_fds.erase(poll_fds.begin() + i);
 					clients.erase(clients.begin() + (i - 1));
@@ -102,7 +104,9 @@ bool Server::run() {
 					handleClientRequest(i);
 				} else if (poll_fds[i].revents & POLLOUT) {
 					if (sendResponse(i) == true) { // later: swtich connection back to read for long lasting connections
-						std::cout << "Client disconnected: FD " << poll_fds[i].fd << "\n" << std::endl;
+						std::cout << "❌ Client disconnected: " << "\n" << "fd - " 
+									<< poll_fds[i].fd << "\n" << "port - " 
+									<< clients[i - 1].getPort() << "\n" << std::endl;
 						close(poll_fds[i].fd);
 						poll_fds.erase(poll_fds.begin() + i);
 						clients.erase(clients.begin() + (i - 1));
@@ -144,7 +148,10 @@ void Server::handleNewConnection() {
 	pollfd client_pollfd = {client_fd, POLLIN, 0};
 	poll_fds.push_back(client_pollfd);
 
-	std::cout << "New client connected: FD " << client_fd << "\n" << std::endl;
+	int port = ntohs(client_addr.sin_port);
+	clients.back().setPort(port);
+	std::cout << "🔌 New client (fd " << client_fd << ") connected on port: " 
+				<< port << "\n" << std::endl;
 }
 
 // ver como fzr melhor
@@ -159,13 +166,13 @@ void Server::handleClientRequest(size_t index) {
 	// maybe make it cleaner with a separate funciton
 	int bytes = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
 	if (bytes < 0) {
-            return ; // Can't check errno - just assume EAGAIN/EWOULDBLOCK. If fail, next poll cycle will handle it
+            return ;
     } else if (bytes == 0) {
-        std::cout << "❌ Client disconnected: FD " << client_fd << "\n";
+        std::cout << "❌ Client disconnected: " << "\n" << "fd - " << client_fd << "\n" 
+								<< "port - " << client.getPort() << "\n" << std::endl;
 		close(client_fd);
 		poll_fds.erase(poll_fds.begin() + index);
 		clients.erase(clients.begin() + (index - 1));
-		//return ; // not needed
     } else {
 		client.appendRequestData(buffer, bytes);
 
