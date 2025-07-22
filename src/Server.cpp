@@ -93,10 +93,10 @@ bool Server::run() {
 			if (i == 0 && poll_fds[i].revents & POLLIN) {
 				handleNewConnection();
 			} else if (i > 0) {
-				if (clients[i - 1].isTimedOut(10)) { // decide final timeout time !
-					std::cout << "⏰ Client timed out: FD " << "\n" << "fd - " 
-									<< poll_fds[i].fd << "\n" << "port - " 
-									<< clients[i - 1].getPort() << "\n" << std::endl;
+				if (clients[i - 1].isTimedOut(60)) {
+					std::cout << "⏰ 505: Gateway Timeout\n Client fd("
+							 << poll_fds[i].fd << ")/port(" << clients[i - 1].getPort() 
+							 << ")" << "\n" << std::endl;
 					close(poll_fds[i].fd);
 					poll_fds.erase(poll_fds.begin() + i);
 					clients.erase(clients.begin() + (i - 1));
