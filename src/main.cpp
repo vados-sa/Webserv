@@ -10,6 +10,7 @@ int main(int ac, char *av[])
 	(void)av; // parse config file
 
 	Server server;
+	Server::instance = &server;
 	if (!server.setupServer(8080)) {
 		std::cerr << "Failed to setup server.\n";
 		return 1; // Server Destructor is called

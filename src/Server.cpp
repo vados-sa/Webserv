@@ -1,5 +1,7 @@
 #include "Server.hpp"
 
+Server* Server::instance = NULL;
+
 Server::Server() : server_fd(-1), port(0), isSetup(false) {
 	std::memset(&address, 0, sizeof(address));
 }
@@ -12,12 +14,14 @@ Server::~Server() {
 }
 
 bool Server::setupServer(int port) {
+	signal(SIGINT, Server::signalHandler);
+	
 	this->port = port;
 	if (!createSocket()) return false;
 	if (!configureSocket()) return false;
 	if (!bindSocket(port)) return false;
 	if (!listenMode()) return false;
-	
+
 	isSetup = true;
 	return true;
 }
@@ -196,4 +200,11 @@ void Server::cleanup() {
 	}
 	clients.clear();
 	poll_fds.clear();
+}
+
+void Server::signalHandler(int signum) {
+	std::cout << "\nCaught signal " << signum << ", cleaning up..." << std::endl;
+	if (Server::instance != NULL)
+		Server::instance->cleanup();
+	exit(signum);
 }

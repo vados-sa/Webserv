@@ -10,6 +10,7 @@
 #include <vector>
 #include <string>
 #include <cstring>
+#include <csignal>
 
 
 #include "Client.hpp"
@@ -34,10 +35,13 @@ class Server {
 		void handleClientRequest(size_t index);
 		bool sendResponse(size_t index);
 		void cleanup();
+		static void signalHandler(int signum); // static to be compatible with signal()
 
 	public:
 		Server();
 		~Server();
+
+		static Server* instance;
 
 		bool setupServer(int port); 
 		/* eventually: 
