@@ -40,9 +40,8 @@ int Request::parseRequestLine(std::string &raw, Request *obj) {
     len = raw.find(" ");
     std::string possiblePath = raw.substr(0, len);
     raw = raw.substr(len + 1);
-    if (possiblePath[0] != '/') //didnt check if there are more things to validate.
+    if (possiblePath[0] != '/')
         return (0);
-    //maybe at this point i could check if path exists? otherwise we can already return an HTTP error..
     obj->path_ = possiblePath;
     if (obj->path_ == "/")
         obj->path_.append("index.html");
@@ -51,7 +50,7 @@ int Request::parseRequestLine(std::string &raw, Request *obj) {
     len = raw.find("\r\n");
     std::string possibleVersion = raw.substr(0, len);
     raw = raw.substr(len + 2);
-    if (possibleVersion.substr(0, 4) != "HTTP") // didnt check if there are more things that i could validate here.
+    if (possibleVersion.substr(0, 4) != "HTTP")
         return (0);
     obj->version_ = possibleVersion;
 
