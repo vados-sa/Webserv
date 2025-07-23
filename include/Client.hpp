@@ -10,6 +10,7 @@
 #include <string>
 #include <ctime>
 #include <sstream> 
+#include <map>
 
 class Client {
 	public:
@@ -28,6 +29,7 @@ class Client {
 		std::string response_buffer;
 		size_t bytes_sent;
 		int port;
+		bool keep_alive;
 
 	public:
 		Client(int fd);
@@ -44,11 +46,13 @@ class Client {
 		size_t getBytesSent() const {return bytes_sent;}
 		State getState() const { return Client::current_state; }
 		int getPort() const {return port;}
+		bool getKeepAlive() const {return keep_alive;}
 
 		void setState(State new_state);
 		void setResponse(std::string response);
 		void setBytesSent(size_t bytes);
 		void setPort(int p);
+		void setKeepAlive(std::map<std::string, std::string> headers_);
 
 		
 };

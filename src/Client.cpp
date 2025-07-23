@@ -2,7 +2,7 @@
 
 Client::Client(int fd) : client_fd(fd), current_state(CONNECTED), 
 						state_start_time(time(NULL)), bytes_sent(0),
-						port(-1) {};
+						port(-1), keep_alive(true) {};
 
 Client::~Client() {};
 
@@ -63,4 +63,12 @@ void Client::setBytesSent(size_t bytes) {
 
 void Client::setPort(int p) {
 	port = p;
+}
+
+void Client::setKeepAlive(std::map<std::string, std::string> headers_) {
+	std::map<std::string, std::string>::iterator it = headers_.find("Connection");
+	if (it != headers_.end() && it->second == "close") {
+		keep_alive = false;
+	} else
+		keep_alive = true;
 }

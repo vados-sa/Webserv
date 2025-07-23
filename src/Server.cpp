@@ -103,13 +103,16 @@ bool Server::run() {
 				} else if (poll_fds[i].revents & POLLIN) {
 					handleClientRequest(i);
 				} else if (poll_fds[i].revents & POLLOUT) {
-					if (sendResponse(i) == true) { // later: swtich connection back to read for long lasting connections
-						std::cout << "❌ Client disconnected: " << "\n" << "fd - " 
-									<< poll_fds[i].fd << "\n" << "port - " 
-									<< clients[i - 1].getPort() << "\n" << std::endl;
-						close(poll_fds[i].fd);
-						poll_fds.erase(poll_fds.begin() + i);
-						clients.erase(clients.begin() + (i - 1));
+					if (sendResponse(i) == true) {
+						if (clients[i - 1].getKeepAlive() == false){
+							std::cout << "❌ Client disconnected: " << "\n" << "fd - " 
+										<< poll_fds[i].fd << "\n" << "port - " 
+										<< clients[i - 1].getPort() << "\n" << std::endl;
+							close(poll_fds[i].fd);
+							poll_fds.erase(poll_fds.begin() + i);
+							clients.erase(clients.begin() + (i - 1));
+						} else 
+							poll_fds[i].events = POLLIN;
 					}
 				}
 			}
@@ -183,6 +186,7 @@ void Server::handleClientRequest(size_t index) {
 
 			Request reqObj = Request::parseRequest(request);
 			std::string response = buildResponse(reqObj);
+			client.setKeepAlive(reqObj.getHeaders());
 			poll_fds[index].events = POLLOUT;
 			client.setResponse(response);
 		}
