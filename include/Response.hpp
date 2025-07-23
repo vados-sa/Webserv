@@ -16,7 +16,6 @@ private:
 
 public:
     Response();
-    // ~Response();
 
     //methods
     void handleGet(const Request &reqObj);
@@ -32,7 +31,9 @@ public:
     //setter
     void setFullPath(const std::string &reqPath);
     void setCode(const std::string code);
+    void setError(const std::string &code, const std::string &message);
 };
 
 std::string buildResponse(const Request &obj);
+std::string generateErrorPage(const std::string &code, const std::string &message);
 std::ostream &operator<<(std::ostream &out, const Response &obj);
