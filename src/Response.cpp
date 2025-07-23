@@ -1,6 +1,6 @@
 #include "Response.hpp"
 
-Response::Response() : fullPath_("./www"), statusCode_(""), statusMessage_("") {}
+Response::Response() : statusCode_(""), statusMessage_(""), fullPath_("./www") {}
 
 void Response::handleGet(const Request &reqObj) {
 
@@ -133,7 +133,8 @@ std::string buildResponse(const Request &reqObj)
         res.handlePost(reqObj);
     // if (!reqObj.getMethod().compare("DELETE"))
     //     res.handleDelete(reqObj);
-
+    if (reqObj.findHeader("Connection"))
+        res.setHeader("Connection", *reqObj.findHeader("Connection"));
     std::string reqStr = res.writeResponseString();
     return (reqStr);
 }
