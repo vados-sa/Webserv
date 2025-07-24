@@ -1,39 +1,47 @@
 #include <string>
 #include <fstream>
 #include <sys/stat.h>
-
 #include "HttpMessage.hpp"
 #include "Request.hpp"
+
+using std::string;
+using std::cout;
+using std::endl;
 
 #define ROOT "./www"
 
 class Response : public HttpMessage
 {
 private:
-    std::string statusCode_;
-    std::string statusMessage_;
-    std::string fullPath_;
+    string statusCode_;
+    string statusMessage_;
+    string fullPath_;
+    string filename_;
+    string contentType_;
+
+    // methods
+    void parseContentType(const Request &obj);
 
 public:
     Response();
 
-    //methods
+    // methods
     void handleGet(const Request &reqObj);
     void handlePost(const Request &reqObj);
     // void handleDelete(const Request &reqObj);
-    std::string writeResponseString();
+    string writeResponseString();
 
-    //getter
-    std::string getCode() const { return statusCode_; };
-    std::string getStatusMessage() const { return statusMessage_; };
-    std::string getFullPath() const { return fullPath_; };
+    // getter
+    string getCode() const { return statusCode_; };
+    string getStatusMessage() const { return statusMessage_; };
+    string getFullPath() const { return fullPath_; };
 
     //setter
-    void setFullPath(const std::string &reqPath);
-    void setCode(const std::string code);
-    void setError(const std::string &code, const std::string &message);
+    void setFullPath(const string &reqPath);
+    void setCode(const string code);
+    void setPage(const string &code, const string &message, bool error);
 };
 
-std::string buildResponse(const Request &obj);
-std::string generateErrorPage(const std::string &code, const std::string &message);
+string buildResponse(const Request &obj);
+string generatePage(const string &code, const string &message, bool error);
 std::ostream &operator<<(std::ostream &out, const Response &obj);

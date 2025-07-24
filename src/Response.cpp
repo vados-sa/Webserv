@@ -1,6 +1,6 @@
 #include "Response.hpp"
 
-Response::Response() : statusCode_(""), statusMessage_(""), fullPath_("./www") {}
+Response::Response() : statusCode_(""), statusMessage_(""), fullPath_("./www"), filename_("/upload/") {}
 
 void Response::handleGet(const Request &reqObj) {
 
@@ -8,12 +8,12 @@ void Response::handleGet(const Request &reqObj) {
     struct stat file_stat;
     if (stat(fullPath_.c_str(), &file_stat) == 0) {
         if (!S_ISREG(file_stat.st_mode))
-            return (setError("403", "Requested resource is not a file"));
+            return (setPage("403", "Requested resource is not a file", true));
         if (!(file_stat.st_mode & S_IROTH))
-            return (setError("403", "You do not have permission to read this file"));
+            return (setPage("403", "You do not have permission to read this file", true));
         std::ifstream file(fullPath_.c_str(), std::ios::in | std::ios::binary);
         if (!file)
-            return (setError("500", "Server error: unable to open file."));
+            return (setPage("500", "Server error: unable to open file.", true));
 
         std::ostringstream ss;
         ss << file.rdbuf();
@@ -26,37 +26,84 @@ void Response::handleGet(const Request &reqObj) {
     }
     else {
         if (errno == ENOENT)
-            return (setError("404", "File does not exist"));
+            return (setPage("404", "File does not exist", true));
         else if (errno == EACCES)
-            return (setError("403", "Access denied."));
+            return (setPage("403", "Access denied.", true));
         else
-            return (setError("500", "Internal server error while accessing file."));
+            return (setPage("500", "Internal server error while accessing file.", true));
     }
 }
 
 void Response::handlePost(const Request &reqObj)
 {
     if (reqObj.getPath() != "/upload/") {
-        setBody(generateErrorPage("404", "Wrong path. Expected \"/upload/"));
+        setBody(generatePage("404", "Wrong path. Expected \"/upload/", true));
         return;
     }
     if (reqObj.getBody().empty()) {
-        return (setError("400", "No body detected on request. Body necessary"));
+        return (setPage("400", "No body detected on request. Body necessary", true));
     }
-    const std::string *filename = reqObj.findHeader("Filename");
-    if (!filename)
-        return (setError("400", "Missing Filename header"));
+    parseContentType(reqObj);
 
-    std::ofstream file(filename->c_str());
+    std::ofstream file(filename_.c_str(), std::ios::binary);
     if (file.is_open()) {
-        file << reqObj.getBody();
+        file.write(body_.c_str(), body_.size());
         file.close();
-        return (setError("201", "File created")); //is this correct?
+        return (setPage("201", "File created", false));
     } else
-        return (setError("500", "Server error: could not open file for writing."));
+        return (setPage("500", "Server error: could not open file for writing.", true));
 }
 
-std::string Response::writeResponseString() {
+void Response::parseContentType(const Request &obj)
+{
+    // ------ GET BOUNDARY -----
+
+    string rawValue = *obj.findHeader("Content-Type");
+    size_t pos = rawValue.find("boundary=");
+    string boundary = "--";
+    if (pos != string::npos)
+        boundary.append(rawValue.substr(pos + 9));    //should i check if it comes wrapped in quotes?
+
+    // ----- EXTRACT BOUNDARY FROM BODY
+
+    string rawBody = obj.getBody();
+    size_t start = rawBody.find(boundary);
+    if (start != string::npos)
+        rawBody = rawBody.substr(start + boundary.length() + 2);
+
+    boundary.append("--");
+    size_t end = rawBody.rfind(boundary);
+    if (end != string::npos)
+        rawBody = rawBody.substr(0, end - 2);
+
+    // ----- EXTRACT HEADERS FROM THE BODY
+    string headers;
+    string fileContent;
+    size_t headerEnd = rawBody.find("\r\n\r\n");
+    if (headerEnd != string::npos) {
+        headers = rawBody.substr(0, headerEnd);
+        fileContent = rawBody.substr(headerEnd + 4);
+    }
+
+    // ---- EXTRACT FILENAME
+    pos = headers.find("filename=\"");
+    if (pos != std::string::npos) {
+        size_t start = pos + 10;
+        size_t end = headers.find("\"", start);
+        filename_ = headers.substr(start, end - start);
+    }
+
+    // ---- EXTRACT CONTENT-TYPE
+    pos = headers.find("Content-Type: ");
+    if (pos != std::string::npos) {
+        start = pos + 14;
+        end = headers.find("\r\n", start);
+        contentType_ = headers.substr(start, end - start);
+    }
+    body_ = fileContent;
+}
+
+string Response::writeResponseString() {
     std::ostringstream res;
     res << version_ << " " << statusCode_ << " " << statusMessage_ << "\r\n"
         << getHeaders() << "\r\n"
@@ -64,11 +111,11 @@ std::string Response::writeResponseString() {
     return (res.str());
 }
 
-void Response::setCode(const std::string code)
+void Response::setCode(const string code)
 {
     statusCode_ = code;
 
-    static std::map<std::string, std::string> codeToMessage;
+    static std::map<string, string> codeToMessage;
     if (codeToMessage.empty())
     {
         codeToMessage["200"] = "OK";
@@ -81,47 +128,51 @@ void Response::setCode(const std::string code)
         codeToMessage["500"] = "Internal Server Error";
     }
 
-    std::map<std::string, std::string>::iterator it = codeToMessage.find(code);
+    std::map<string, string>::iterator it = codeToMessage.find(code);
     if (it != codeToMessage.end())
         statusMessage_ = it->second;
     else
         statusMessage_ = "Unknown Status";
 }
 
-void Response::setError(const std::string &code, const std::string &message) {
+void Response::setPage(const string &code, const string &message, bool error) {
     setCode(code);
-    body_ = generateErrorPage(code, message);
+    body_ = generatePage(code, message, error);
     setHeader("Content_Length", std::to_string(body_.size()));
     setHeader("Content-Type", "text/html");
 }
 
-std::string generateErrorPage(const std::string &code, const std::string &message)
+string generatePage(const string &code, const string &message, bool error)
 {
     std::ostringstream html;
     html << "<!DOCTYPE html>\n<html><head><title>" << code << " " << message << "</title></head>"
-         << "<body style='font-family:sans-serif;text-align:center;margin-top:100px;'>"
-         << "<h1>Error " << code << "</h1><p>" << message << "</p></body></html>";
+         << "<body style='font-family:sans-serif;text-align:center;margin-top:100px;'>";
+    if (error)
+        html << "<h1>Error ";
+    else
+        html << "<h1>Status ";
+    html << code << "</h1><p>" << message << "</p></body></html>";
     return html.str();
 }
 
-void Response::setFullPath(const std::string &reqPath) {
+void Response::setFullPath(const string &reqPath) {
     fullPath_.append(reqPath);
 }
 
 std::ostream &operator<<(std::ostream &out, const Response &obj)
 {
-    out << "Version: " << obj.getVersion() << std::endl
-        << "Code: " << obj.getCode() << std::endl
-        << "Status Message: " << obj.getStatusMessage() << std::endl
-        << " ----- " << std::endl
-        << "Headers: " << std::endl
-        << obj.getHeaders() << std::endl
-        << " ----- " << std::endl
-        << "Body: " << obj.getBody() << std::endl;
+    out << "Version: " << obj.getVersion() << endl
+        << "Code: " << obj.getCode() << endl
+        << "Status Message: " << obj.getStatusMessage() << endl
+        << " ----- " << endl
+        << "Headers: " << endl
+        << obj.getHeaders() << endl
+        << " ----- " << endl
+        << "Body: " << obj.getBody() << endl;
     return (out);
 }
 
-std::string buildResponse(const Request &reqObj)
+string buildResponse(const Request &reqObj)
 {
     Response res;
 
@@ -135,7 +186,7 @@ std::string buildResponse(const Request &reqObj)
     //     res.handleDelete(reqObj);
     if (reqObj.findHeader("Connection"))
         res.setHeader("Connection", *reqObj.findHeader("Connection"));
-    std::string reqStr = res.writeResponseString();
+    string reqStr = res.writeResponseString();
     return (reqStr);
 }
 
