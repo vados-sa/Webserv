@@ -1,6 +1,6 @@
 #include "Response.hpp"
 
-Response::Response() : statusCode_(""), statusMessage_(""), fullPath_("./www"), filename_("/upload/") {}
+Response::Response() : statusCode_(""), statusMessage_(""), fullPath_("./www"), filename_("upload/") {}
 
 void Response::handleGet(const Request &reqObj) {
 
@@ -44,7 +44,7 @@ void Response::handlePost(const Request &reqObj)
         return (setPage("400", "No body detected on request. Body necessary", true));
     }
     parseContentType(reqObj);
-
+    mkdir("upload", 0755);
     std::ofstream file(filename_.c_str(), std::ios::binary);
     if (file.is_open()) {
         file.write(body_.c_str(), body_.size());
@@ -52,6 +52,33 @@ void Response::handlePost(const Request &reqObj)
         return (setPage("201", "File created", false));
     } else
         return (setPage("500", "Server error: could not open file for writing.", true));
+}
+
+void Response::handleDelete(const Request &reqObj) {
+    if (reqObj.getPath().substr(0, 8) != "/upload/")
+    {
+        setPage("404", "Wrong path. Expected \"/upload/", true);
+        return;
+    }
+
+    filename_ = filename_.append(reqObj.getPath().substr(8));
+    struct stat fileStat;
+
+    if (stat(filename_.c_str(), &fileStat) != 0) {
+        setPage("404", "\"" + filename_ + "\" is not a regular file", true);
+        return;
+    };
+
+    if(!S_ISREG(fileStat.st_mode)) {
+        setPage("400", "File not found :\"" + filename_ + "\"", true);
+        return;
+    }
+
+    if (remove(filename_.c_str()) != 0) {
+        setPage("500", "Failed to delete file: \"" + filename_ + "\"", true);
+        return;
+    }
+    setPage("200", "File \"" + filename_ + "\" deleted successfully.", true);
 }
 
 void Response::parseContentType(const Request &obj)
@@ -90,7 +117,8 @@ void Response::parseContentType(const Request &obj)
     if (pos != std::string::npos) {
         size_t start = pos + 10;
         size_t end = headers.find("\"", start);
-        filename_ = headers.substr(start, end - start);
+        filename_ = filename_.append(headers.substr(start, end - start));
+        cout << filename_ << endl;
     }
 
     // ---- EXTRACT CONTENT-TYPE
@@ -182,8 +210,8 @@ string buildResponse(const Request &reqObj)
         res.handleGet(reqObj);
     if (!reqObj.getMethod().compare("POST"))
         res.handlePost(reqObj);
-    // if (!reqObj.getMethod().compare("DELETE"))
-    //     res.handleDelete(reqObj);
+    if (!reqObj.getMethod().compare("DELETE"))
+        res.handleDelete(reqObj);
     if (reqObj.findHeader("Connection"))
         res.setHeader("Connection", *reqObj.findHeader("Connection"));
     string reqStr = res.writeResponseString();
