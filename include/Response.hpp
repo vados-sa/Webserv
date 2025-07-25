@@ -28,7 +28,7 @@ public:
     // methods
     void handleGet(const Request &reqObj);
     void handlePost(const Request &reqObj);
-    // void handleDelete(const Request &reqObj);
+    void handleDelete(const Request &reqObj);
     string writeResponseString();
 
     // getter
