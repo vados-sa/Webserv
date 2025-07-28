@@ -19,7 +19,7 @@ void Response::handleGet(const Request &reqObj) {
         ss << file.rdbuf();
         body_ = ss.str();
 
-        setHeader("Content_Length", std::to_string(body_.size()));
+        setHeader("Content-Length", std::to_string(body_.size()));
         setHeader("Content-Type", "text/html");
         statusCode_ = "200";
         return;
@@ -166,7 +166,7 @@ void Response::setCode(const string code)
 void Response::setPage(const string &code, const string &message, bool error) {
     setCode(code);
     body_ = generatePage(code, message, error);
-    setHeader("Content_Length", std::to_string(body_.size()));
+    setHeader("Content-Length", std::to_string(body_.size()));
     setHeader("Content-Type", "text/html");
 }
 
