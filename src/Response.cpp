@@ -249,6 +249,7 @@ string buildResponse(const Request &reqObj)
         res.handleDelete(reqObj);
     else {
         res.setPage("405", "Method not allowed", true);
+        res.setHeader("Allow", "GET, POST, DELETE");
     }
     if (reqObj.findHeader("Connection"))
         res.setHeader("Connection", *reqObj.findHeader("Connection"));
