@@ -32,8 +32,6 @@ int Request::parseRequestLine(string &raw, Request *obj) {
     int len = raw.find(" ");
     string possibleMethod = raw.substr(0, len);
     raw = raw.substr(len + 1);
-    if (possibleMethod != "GET" && possibleMethod != "POST" && possibleMethod != "DELETE") //im sure theres a more graceful way to do this
-        return (0);
     obj->method_ = possibleMethod;
 
     // ----- PARSE PATH ------

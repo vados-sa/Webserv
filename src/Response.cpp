@@ -243,13 +243,15 @@ string buildResponse(const Request &reqObj)
     res.setFullPath(reqObj.getPath());
     if (!reqObj.getMethod().compare("GET"))
         res.handleGet(reqObj);
-    if (!reqObj.getMethod().compare("POST"))
+    else if (!reqObj.getMethod().compare("POST"))
         res.handlePost(reqObj);
-    if (!reqObj.getMethod().compare("DELETE"))
+    else if (!reqObj.getMethod().compare("DELETE"))
         res.handleDelete(reqObj);
-    // if (reqObj.findHeader("Connection"))
-    //     res.setHeader("Connection", *reqObj.findHeader("Connection"));
-    res.setHeader("Connection", "close");
+    else {
+        res.setPage("405", "Method not allowed", true);
+    }
+    if (reqObj.findHeader("Connection"))
+        res.setHeader("Connection", *reqObj.findHeader("Connection"));
     string reqStr = res.writeResponseString();
     return (reqStr);
 }
