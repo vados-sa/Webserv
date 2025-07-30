@@ -20,7 +20,7 @@ void Response::handleGet(const Request &reqObj) {
         body_ = ss.str();
 
         setHeader("Content-Length", std::to_string(body_.size()));
-        setHeader("Content-Type", "text/html");
+        setHeader("Content-Type", getContentType(fullPath_));
         statusCode_ = "200";
         return;
     }
@@ -34,8 +34,38 @@ void Response::handleGet(const Request &reqObj) {
     }
 }
 
+string Response::getContentType(string path) {
+    size_t dot = path.rfind('.');
+    if (dot != string::npos) {
+        std::string ext = path.substr(dot);
+
+        if (ext == ".html" || ext == ".htm")
+            return "text/html";
+        if (ext == ".css")
+            return "text/css";
+        if (ext == ".js")
+            return "application/javascript";
+        if (ext == ".png")
+            return "image/png";
+        if (ext == ".jpg" || ext == ".jpeg")
+            return "image/jpeg";
+        if (ext == ".gif")
+            return "image/gif";
+        if (ext == ".txt")
+            return "text/plain";
+        if (ext == ".pdf")
+            return "application/pdf";
+        if (ext == ".json")
+            return "application/json";
+        if (ext == ".svg")
+            return "image/svg+xml";
+    }
+    return "application/octet-stream";
+}
+
 void Response::handlePost(const Request &reqObj)
 {
+    filename_ = "www/upload/";
     if (reqObj.getPath() != "/upload/") {
         setBody(generatePage("404", "Wrong path. Expected \"/upload/", true));
         return;
@@ -44,7 +74,7 @@ void Response::handlePost(const Request &reqObj)
         return (setPage("400", "No body detected on request. Body necessary", true));
     }
     parseContentType(reqObj);
-    mkdir("upload", 0755);
+    mkdir("www/upload", 0755);
     std::ofstream file(filename_.c_str(), std::ios::binary);
     if (file.is_open()) {
         file.write(body_.c_str(), body_.size());
@@ -60,8 +90,11 @@ void Response::handleDelete(const Request &reqObj) {
         setPage("404", "Wrong path. Expected \"/upload/", true);
         return;
     }
-
+    filename_ = "www/upload/";
+    cout << "This is filename before appending: " << filename_ << endl;
     filename_ = filename_.append(reqObj.getPath().substr(8));
+    cout << "This is filename after appending: " << filename_ << endl;
+
     struct stat fileStat;
 
     if (stat(filename_.c_str(), &fileStat) != 0) {
@@ -83,6 +116,7 @@ void Response::handleDelete(const Request &reqObj) {
 
 void Response::parseContentType(const Request &obj)
 {
+
     // ------ GET BOUNDARY -----
 
     string rawValue = *obj.findHeader("Content-Type");
@@ -113,12 +147,13 @@ void Response::parseContentType(const Request &obj)
     }
 
     // ---- EXTRACT FILENAME
+    //string filename = "www/upload/";
     pos = headers.find("filename=\"");
     if (pos != std::string::npos) {
         size_t start = pos + 10;
         size_t end = headers.find("\"", start);
         filename_ = filename_.append(headers.substr(start, end - start));
-        cout << filename_ << endl;
+        cout << filename_ << endl; //pode apagar dps
     }
 
     // ---- EXTRACT CONTENT-TYPE
@@ -135,7 +170,7 @@ string Response::writeResponseString() {
     std::ostringstream res;
     res << version_ << " " << statusCode_ << " " << statusMessage_ << "\r\n"
         << getHeaders() << "\r\n"
-        << body_ << "\r\n";
+        << body_;
     return (res.str());
 }
 
@@ -212,8 +247,9 @@ string buildResponse(const Request &reqObj)
         res.handlePost(reqObj);
     if (!reqObj.getMethod().compare("DELETE"))
         res.handleDelete(reqObj);
-    if (reqObj.findHeader("Connection"))
-        res.setHeader("Connection", *reqObj.findHeader("Connection"));
+    // if (reqObj.findHeader("Connection"))
+    //     res.setHeader("Connection", *reqObj.findHeader("Connection"));
+    res.setHeader("Connection", "close");
     string reqStr = res.writeResponseString();
     return (reqStr);
 }

@@ -30,6 +30,7 @@ public:
     void handlePost(const Request &reqObj);
     void handleDelete(const Request &reqObj);
     string writeResponseString();
+    string getContentType(string path);
 
     // getter
     string getCode() const { return statusCode_; };
