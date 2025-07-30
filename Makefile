@@ -7,10 +7,6 @@ SRC = src/main.cpp src/Server.cpp src/Client.cpp src/HttpMessage.cpp src/Request
 OBJ_DIR = obj
 OBJ = $(SRC:%.cpp=$(OBJ_DIR)/%.o)
 
-#pra facilitar minha vida, a gente une dps!
-REQUEST_SRC = src/Request.cpp src/requestMain.cpp src/Response.cpp src/HttpMessage.cpp
-REQUEST_OBJ = $(REQUEST_SRC:.cpp=.o)
-REQUEST_NAME = request
 
 # Colors
 GREEN = \033[0;32m
@@ -32,9 +28,6 @@ $(NAME): $(OBJ)
 	@echo "$(YELLOW)Linking $(NAME)...$(NC)"
 	@$(CXX) $(CXXFLAGS) -o $(NAME) $(OBJ)
 	@echo "$(GREEN)✅ $(NAME) is ready to run!$(NC)"
-
-r: $(REQUEST_OBJ)
-	$(CXX) $(CXXFLAGS) -o $(REQUEST_NAME) $(REQUEST_OBJ)
 
 clean:
 	rm -f $(OBJ) $(REQUEST_OBJ)
