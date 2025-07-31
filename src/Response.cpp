@@ -73,6 +73,12 @@ void Response::handlePost(const Request &reqObj)
     if (reqObj.getBody().empty()) {
         return (setPage("400", "No body detected on request. Body necessary", true));
     }
+    cout << getHeaders() << endl;
+    if (!reqObj.findHeader("Content-Type"))
+    {
+        setPage("400", "Missing Content-Type header", true);
+        return;
+    }
     parseContentType(reqObj);
     mkdir("www/upload", 0755);
     std::ofstream file(filename_.c_str(), std::ios::binary);
@@ -103,7 +109,7 @@ void Response::handleDelete(const Request &reqObj) {
     };
 
     if(!S_ISREG(fileStat.st_mode)) {
-        setPage("400", "File not found :\"" + filename_ + "\"", true);
+        setPage("404", "File not found :\"" + filename_ + "\"", true);
         return;
     }
 
@@ -162,6 +168,7 @@ void Response::parseContentType(const Request &obj)
         start = pos + 14;
         end = headers.find("\r\n", start);
         contentType_ = headers.substr(start, end - start);
+        setHeader("Content-Type", contentType_);
     }
     body_ = fileContent;
 }
