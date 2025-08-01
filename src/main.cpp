@@ -1,4 +1,5 @@
 #include "Server.hpp"
+#include "Config.hpp"
 
 int main(int ac, char *av[])
 {
@@ -7,7 +8,8 @@ int main(int ac, char *av[])
 		return 1;
 	}
 
-	(void)av; // parse config file
+    Config config(av[1]); //dps error check ou sei la! fiz aqui pra testar o parse
+    std::cout << config << std::endl;
 
 	Server server;
 	Server::instance = &server;

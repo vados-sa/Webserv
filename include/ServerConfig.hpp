@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <iostream>
 
 #include "LocationConfig.hpp"
 
@@ -16,10 +17,11 @@ public:
     ServerConfig();
     void addLocation(LocationConfig &locConfig);
 
-    const int getPort() { int listen_port; };
-    const std::string &getHost() { std::string host; };
+    int getPort() { return listen_port; };
+    const std::string &getHost() { return host; };
 
     void setHost(std::string set) { host = set; };
     void setPort(int set) { listen_port = set; };
 };
 
+std::ostream &operator<<(std::ostream &os, ServerConfig &obj);

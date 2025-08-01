@@ -1,19 +1,18 @@
 #pragma once
 
 #include <string>
-using std::string;
-
 #include <vector>
-using std::vector;
 
 class LocationConfig
 {
 private:
-    string root;
-    vector<string> index_files;
+    std::string root;
+    std::vector<std::string> index_files;
 public:
     LocationConfig();
 
+    void setRoot(std::string set) { root = set; };
+    void setIndex(std::vector<std::string> set) { index_files = set; };
 };
 
 

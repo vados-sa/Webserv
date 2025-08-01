@@ -1,6 +1,7 @@
 #include "ConfigParser.hpp"
+#include "Config.hpp"
 
-Config ConfigParser::parseConfigFile(std::string &filename) {
+Config ConfigParser::parseConfigFile(const std::string &filename) {
     Config config;
 
     std::ifstream file(filename);
@@ -12,24 +13,35 @@ Config ConfigParser::parseConfigFile(std::string &filename) {
     std::string line;
     while(std::getline(file, line)) {
         line = trimWhitespace(line);
-        if (line == "server {") { //fazer uma funcao pra refinar melhor isso dps
-            std::vector<std::string> serverLines; // = collectBlock(file, line);
+        if (line == "server {") {
+            std::vector<std::string> serverLines = collectBlock(file, line);
             ServerConfig server = parseServerBlock(serverLines);
             config.addServer(server);
         }
     }
+    return (config);
 }
 
-std::vector<std::string> collectBlock(std::ifstream file, std::string line) {
-    std::vector<std::string> serverLines;
+std::vector<std::string> ConfigParser::collectBlock(std::ifstream &file, std::string line) {
+    std::vector<std::string> blockLines;
+    int braceCount = 1;
 
-    serverLines.push_back(line);
-    while(line[0] != '}') { //partindo da logica que o closing } do server nunca tem identacao??
-        std::getline(file, line);
-        serverLines.push_back(line);
+    blockLines.push_back(line);
+    while(std::getline(file, line)) {
+        if (line.find('{') != std::string::npos) {
+            braceCount++;
+        }
+        if (line.find('}') != std::string::npos) {
+            braceCount--;
+        }
+
+        if (braceCount == 0)
+            break;
+
+        blockLines.push_back(line);
     }
 
-    return (serverLines);
+    return (blockLines);
 }
 
 ServerConfig ConfigParser::parseServerBlock(std::vector<std::string> lines) {
@@ -38,7 +50,7 @@ ServerConfig ConfigParser::parseServerBlock(std::vector<std::string> lines) {
     for (size_t i = 0; i < lines.size(); i++) {
         lines[i] = trimLine(lines[i]);
         if (lines[i].find("host")) {
-            servConfig.setHost(parseHost(lines[i]));
+            servConfig.setHost(parseHost(lines[i])); //maybe i should error check
         }
         else if (lines[i].find("listen")) {
             servConfig.setPort(parsePort(lines[i]));
@@ -53,7 +65,8 @@ ServerConfig ConfigParser::parseServerBlock(std::vector<std::string> lines) {
     return servConfig;
 }
 
-std::string parseHost(std::string line) {
+std::string ConfigParser::parseHost(std::string line)
+{
     if (line.compare(0, 4, "host")) {
         size_t pos = line.find_first_of(" \t", 4);
         if (pos == std::string::npos)
@@ -67,7 +80,7 @@ std::string parseHost(std::string line) {
     return ("");
 }
 
-int parsePort(std::string line)
+int ConfigParser::parsePort(std::string line)
 {
     if (!line.compare(0, 6, "listen"))
     {
@@ -85,6 +98,54 @@ int parsePort(std::string line)
         return (portInt);
     }
     return (-1);
+}
+
+LocationConfig ConfigParser::parseLocationBlock(std::vector<std::string> lines)
+{
+    LocationConfig locConfig;
+    for (size_t i = 0; i < lines.size(); i++)
+    {
+        lines[i] = trimLine(lines[i]);
+        if (lines[i].find("root"))
+        {
+            locConfig.setRoot(parseRoot(lines[i]));
+        }
+        else if (lines[i].find("listen"))
+        {
+            locConfig.setIndex(parseIndex(lines[i]));
+        }
+    }
+    return (locConfig);
+}
+
+std::string ConfigParser::parseRoot(std::string line) {
+    if (!line.compare(0, 4, "root")) {
+        size_t pos = line.find_first_of(" \t", 4);
+        if (pos == std::string::npos)
+            return ("");
+
+        line = line.substr(pos);
+        return (line);
+    }
+    return ("");
+}
+
+vector<std::string> ConfigParser::parseIndex(std::string line) {
+    vector<std::string> ret;
+    if (line.compare(0, 5, "index") != 0)
+        return (ret);
+
+    line = line.substr(5);
+    line = trimWhitespace(line);
+    if (!line.empty() && line.back() == ';')
+        line.pop_back();
+
+    std::istringstream iss(line);
+    std::string token;
+    while (iss >> token)
+        ret.push_back(token);
+
+    return (ret);
 }
 
 std::string trimComment(std::string line) {
@@ -113,9 +174,6 @@ std::string trimLine(std::string line) {
     if (line.empty())
         return (line);
     line = trimComment(line);
-    line = trimWhitespace(line);
-    if (line[line.length() - 1] == ';')
-        line.pop_back();
     line = trimWhitespace(line);
     return (line);
 }
