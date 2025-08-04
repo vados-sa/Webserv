@@ -1,6 +1,8 @@
 #include "LocationConfig.hpp"
 
-LocationConfig::LocationConfig() : root("")
+LocationConfig::LocationConfig() : autoindex(false)
 {
-    //hardcoded enquanto n escreve o parser
+    allowed_methods.push_back("GET");
+    allowed_methods.push_back("POST");
+    allowed_methods.push_back("DELETE");
 }
