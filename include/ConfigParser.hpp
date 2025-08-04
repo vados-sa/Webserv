@@ -16,10 +16,15 @@ private:
     ServerConfig parseServerBlock(std::vector<std::string> lines);
     LocationConfig parseLocationBlock(std::vector<std::string> lines);
 
+    // Parsers for the SERVER block
     std::string parseHost(std::string line);
     int parsePort(std::string line);
+    void parseErrorPageLine(std::string line);
+
+    // Parsers for the LOCATION block
     std::string parseRoot(std::string line);
     std::vector<std::string> parseIndex(std::string line);
+
 public:
     Config parseConfigFile(const std::string &filename);
 };

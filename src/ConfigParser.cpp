@@ -49,17 +49,20 @@ ServerConfig ConfigParser::parseServerBlock(std::vector<std::string> lines) {
 
     for (size_t i = 0; i < lines.size(); i++) {
         lines[i] = trimLine(lines[i]);
-        if (lines[i].find("host")) {
-            servConfig.setHost(parseHost(lines[i])); //maybe i should error check
-        }
-        else if (lines[i].find("listen")) {
+        if (lines[i].find("host"))
+            servConfig.setHost(parseHost(lines[i]));
+        else if (lines[i].find("listen"))
             servConfig.setPort(parsePort(lines[i]));
-        }
-        // else if (lines[i].find("location")) {
+        else if (lines[i].find("error_page"))
+            servConfig.parseErrorPageLine(lines[i]);
+        else if (lines[i].find("client_max_body_size"))
+            servConfig.setMaxBodySize(parseMaxBodySize(lines[i]));
+
+        else if (lines[i].find("location")) {
         //     //catch the block and parse it
 
         //     servConfig.addLocation("a");
-        // }
+        }
     }
 
     return servConfig;
@@ -82,7 +85,7 @@ std::string ConfigParser::parseHost(std::string line)
 
 int ConfigParser::parsePort(std::string line)
 {
-    if (!line.compare(0, 6, "listen"))
+    if (!line.compare(0, 7, "listen"))
     {
         size_t pos = line.find_first_of(" \t", 6);
         if (pos == std::string::npos)
@@ -100,6 +103,12 @@ int ConfigParser::parsePort(std::string line)
     return (-1);
 }
 
+void ConfigParser::parseErrorPageLine(std::string line) {
+    if (!line.compare(0, 11, "error_page")) {
+        size_t pos = line.find_first_of(" \t", 6);
+    }
+}
+
 LocationConfig ConfigParser::parseLocationBlock(std::vector<std::string> lines)
 {
     LocationConfig locConfig;
@@ -107,16 +116,22 @@ LocationConfig ConfigParser::parseLocationBlock(std::vector<std::string> lines)
     {
         lines[i] = trimLine(lines[i]);
         if (lines[i].find("root"))
-        {
             locConfig.setRoot(parseRoot(lines[i]));
-        }
         else if (lines[i].find("listen"))
-        {
             locConfig.setIndex(parseIndex(lines[i]));
-        }
+        else if (lines[i].find("allowed_methods"))
+            locConfig.setAllowedMethods(parseAllowedMethods(line[i]));
+        else if (lines[i].find("upload_enable"))
+            locConfig.setUploadDir(parseUploadDir(line[i]));
+        else if (lines[i].find("autoindex"))
+            locConfig.setAutoindex(parseAutoindex(line[i]));
+        //decidir como store a informacao do redirect
+        //e a informacao do cgi
+
     }
     return (locConfig);
 }
+
 
 std::string ConfigParser::parseRoot(std::string line) {
     if (!line.compare(0, 4, "root")) {
