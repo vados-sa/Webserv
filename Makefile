@@ -1,7 +1,7 @@
 NAME = webserv
 
 CXX = c++
-CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -Iinclude/ -g
+CXXFLAGS = -g -O0 -Wall -Wextra -Werror -std=c++98 -Iinclude/
 
 SRC = src/main.cpp src/Server.cpp src/Client.cpp src/HttpMessage.cpp src/Request.cpp src/Response.cpp src/Config.cpp src/ConfigParser.cpp src/ServerConfig.cpp src/LocationConfig.cpp
 OBJ_DIR = obj
@@ -30,14 +30,14 @@ $(NAME): $(OBJ)
 	@echo "$(GREEN)✅ $(NAME) is ready to run!$(NC)"
 
 clean:
-	rm -f $(OBJ) $(REQUEST_OBJ)
-
-re: fclean all
 	@echo "$(RED)Cleaning object files...$(NC)"
+	rm -f $(OBJ) $(REQUEST_OBJ)
 	@rm -rf $(OBJ_DIR)
 
 fclean: clean
 	@echo "$(RED)Cleaning executable...$(NC)"
 	@rm -f $(NAME)
+
+re: fclean all
 
 .PHONY: all clean fclean re
