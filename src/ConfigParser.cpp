@@ -4,11 +4,13 @@
 Config ConfigParser::parseConfigFile(const std::string &filename) {
     Config config;
 
-    std::ifstream file(filename);
-    if (!file.is_open()) {
-        std::cerr << "Couldn't open config file" << std::endl;
-        return (Config()); //wrong, we should exit
-    }
+	if (filename.substr(filename.find_last_of(".") + 1) != "conf") {
+		throw std::runtime_error("Invalid file extension, expected .conf");
+	}
+	std::ifstream file(filename);
+	if (!file.is_open()) {
+		throw std::runtime_error("Couldn't open config file");
+	}
 
     std::vector<std::string> lines;
     std::string line;
