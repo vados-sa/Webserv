@@ -23,11 +23,12 @@ public:
     void setUploadDir(std::string set) { upload_dir = set; };
     void setAutoindex(bool set) { autoindex = set; };
 
-    const std::string &getRoot() { return root; };
-    const std::vector<std::string> &getIndexFiles() { return index_files; };
-    const std::vector<std::string> &getAllowedMethods() { return allowed_methods; };
-    const std::string &getUploadDir() { return upload_dir; };
-    const bool &getAutoindex() { return autoindex; };
+    const std::string &getRoot() const { return root; }
+    const std::vector<std::string> &getIndexFiles() const { return index_files; }
+    const std::vector<std::string> &getAllowedMethods() const { return allowed_methods; };
+    const std::string &getUploadDir() const { return upload_dir; };
+    const bool &getAutoindex() const { return autoindex; };
 };
 
+//std::ostream &operator<<(std::ostream &os, const LocationConfig &obj) ;
 

@@ -34,9 +34,11 @@ void Response::handleGet(const Request &reqObj) {
     }
 }
 
-string Response::getContentType(string path) {
+std::string Response::getContentType(std::string path)
+{
     size_t dot = path.rfind('.');
-    if (dot != string::npos) {
+    if (dot != std::string::npos)
+    {
         std::string ext = path.substr(dot);
 
         if (ext == ".html" || ext == ".htm")
@@ -73,7 +75,7 @@ void Response::handlePost(const Request &reqObj)
     if (reqObj.getBody().empty()) {
         return (setPage("400", "No body detected on request. Body necessary", true));
     }
-    cout << getHeaders() << endl;
+    std::cout << getHeaders() << std::endl;
     if (!reqObj.findHeader("Content-Type"))
     {
         setPage("400", "Missing Content-Type header", true);
@@ -97,9 +99,9 @@ void Response::handleDelete(const Request &reqObj) {
         return;
     }
     filename_ = "www/upload/";
-    cout << "This is filename before appending: " << filename_ << endl;
+    std::cout << "This is filename before appending: " << filename_ << std::endl;
     filename_ = filename_.append(reqObj.getPath().substr(8));
-    cout << "This is filename after appending: " << filename_ << endl;
+    std::cout << "This is filename after appending: " << filename_ << std::endl;
 
     struct stat fileStat;
 
@@ -125,29 +127,30 @@ void Response::parseContentType(const Request &obj)
 
     // ------ GET BOUNDARY -----
 
-    string rawValue = *obj.findHeader("Content-Type");
+    std::string rawValue = *obj.findHeader("Content-Type");
     size_t pos = rawValue.find("boundary=");
-    string boundary = "--";
-    if (pos != string::npos)
+    std::string boundary = "--";
+    if (pos != std::string::npos)
         boundary.append(rawValue.substr(pos + 9));    //should i check if it comes wrapped in quotes?
 
     // ----- EXTRACT BOUNDARY FROM BODY
 
-    string rawBody = obj.getBody();
+    std::string rawBody = obj.getBody();
     size_t start = rawBody.find(boundary);
-    if (start != string::npos)
+    if (start != std::string::npos)
         rawBody = rawBody.substr(start + boundary.length() + 2);
 
     boundary.append("--");
     size_t end = rawBody.rfind(boundary);
-    if (end != string::npos)
+    if (end != std::string::npos)
         rawBody = rawBody.substr(0, end - 2);
 
     // ----- EXTRACT HEADERS FROM THE BODY
-    string headers;
-    string fileContent;
+    std::string headers;
+    std::string fileContent;
     size_t headerEnd = rawBody.find("\r\n\r\n");
-    if (headerEnd != string::npos) {
+    if (headerEnd != std::string::npos)
+    {
         headers = rawBody.substr(0, headerEnd);
         fileContent = rawBody.substr(headerEnd + 4);
     }
@@ -159,7 +162,7 @@ void Response::parseContentType(const Request &obj)
         size_t start = pos + 10;
         size_t end = headers.find("\"", start);
         filename_ = filename_.append(headers.substr(start, end - start));
-        cout << filename_ << endl; //pode apagar dps
+        std::cout << filename_ << std::endl; // pode apagar dps
     }
 
     // ---- EXTRACT CONTENT-TYPE
@@ -173,7 +176,8 @@ void Response::parseContentType(const Request &obj)
     body_ = fileContent;
 }
 
-string Response::writeResponseString() {
+std::string Response::writeResponseString()
+{
     std::ostringstream res;
     res << version_ << " " << statusCode_ << " " << statusMessage_ << "\r\n"
         << getHeaders() << "\r\n"
@@ -181,11 +185,11 @@ string Response::writeResponseString() {
     return (res.str());
 }
 
-void Response::setCode(const string code)
+void Response::setCode(const std::string code)
 {
     statusCode_ = code;
 
-    static std::map<string, string> codeToMessage;
+    static std::map<std::string, std::string> codeToMessage;
     if (codeToMessage.empty())
     {
         codeToMessage["200"] = "OK";
@@ -198,21 +202,22 @@ void Response::setCode(const string code)
         codeToMessage["500"] = "Internal Server Error";
     }
 
-    std::map<string, string>::iterator it = codeToMessage.find(code);
+    std::map<std::string, std::string>::iterator it = codeToMessage.find(code);
     if (it != codeToMessage.end())
         statusMessage_ = it->second;
     else
         statusMessage_ = "Unknown Status";
 }
 
-void Response::setPage(const string &code, const string &message, bool error) {
+void Response::setPage(const std::string &code, const std::string &message, bool error)
+{
     setCode(code);
     body_ = generatePage(code, message, error);
     setHeader("Content-Length", std::to_string(body_.size()));
     setHeader("Content-Type", "text/html");
 }
 
-string generatePage(const string &code, const string &message, bool error)
+std::string generatePage(const std::string &code, const std::string &message, bool error)
 {
     std::ostringstream html;
     html << "<!DOCTYPE html>\n<html><head><title>" << code << " " << message << "</title></head>"
@@ -225,24 +230,25 @@ string generatePage(const string &code, const string &message, bool error)
     return html.str();
 }
 
-void Response::setFullPath(const string &reqPath) {
+void Response::setFullPath(const std::string &reqPath)
+{
     fullPath_.append(reqPath);
 }
 
 std::ostream &operator<<(std::ostream &out, const Response &obj)
 {
-    out << "Version: " << obj.getVersion() << endl
-        << "Code: " << obj.getCode() << endl
-        << "Status Message: " << obj.getStatusMessage() << endl
-        << " ----- " << endl
-        << "Headers: " << endl
-        << obj.getHeaders() << endl
-        << " ----- " << endl
-        << "Body: " << obj.getBody() << endl;
+    out << "Version: " << obj.getVersion() << std::endl
+        << "Code: " << obj.getCode() << std::endl
+        << "Status Message: " << obj.getStatusMessage() << std::endl
+        << " ----- " << std::endl
+        << "Headers: " << std::endl
+        << obj.getHeaders() << std::endl
+        << " ----- " << std::endl
+        << "Body: " << obj.getBody() << std::endl;
     return (out);
 }
 
-string buildResponse(const Request &reqObj)
+std::string buildResponse(const Request &reqObj)
 {
     Response res;
 
@@ -260,7 +266,7 @@ string buildResponse(const Request &reqObj)
     }
     if (reqObj.findHeader("Connection"))
         res.setHeader("Connection", *reqObj.findHeader("Connection"));
-    string reqStr = res.writeResponseString();
+    std::string reqStr = res.writeResponseString();
     return (reqStr);
 }
 

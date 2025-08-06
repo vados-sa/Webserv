@@ -2,12 +2,11 @@
 
 #include "ServerConfig.hpp"
 #include <vector>
-using std::vector;
 
 class Config
 {
 private:
-    vector<ServerConfig> servers;
+    std::vector<ServerConfig> servers;
     void loadFromFile(const std::string &filepath);
 public:
     Config(const std::string &filepath);
