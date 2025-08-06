@@ -7,30 +7,26 @@ LocationConfig::LocationConfig() : autoindex(false)
     allowed_methods.push_back("DELETE");
 }
 
-// std::ostream& operator<<(std::ostream& os, LocationConfig& obj) {
-//      os << "Location Configuration:\n";
-//      (void) obj;
-//     // os << "  Root: " << obj.getRoot() << "\n";
+std::ostream &operator<<(std::ostream &os, const std::vector<LocationConfig>& obj) {
+    for (size_t i = 0; i < obj.size(); i++) {
+        os << "Location " << i << ":\n";
+        os << " -- Root: " << obj[i].getRoot() << "\n";
+        os << " -- Path: " << obj[i].getPath() << "\n";
+        os << " -- Index: " << obj[i].getIndexFiles() << "\n";
+        os << " -- Allowed methods: " << obj[i].getAllowedMethods() << "\n";
+        os << " -- Upload dir: " << obj[i].getUploadDir() << "\n";
+        os << " -- Autoindex: " << obj[i].getAutoindex() << "\n";
+    }
+    return (os);
+}
 
-//     // // os << "  Index Files: ";
-//     // // const std::vector<std::string> &indexFiles = obj.getIndexFiles();
-//     // // for (size_t i = 0; i < indexFiles.size(); ++i) {
-//     // //     os << indexFiles[i];
-//     // //     if (i != indexFiles.size() - 1)
-//     // //         os << ", ";
-//     // // }
-//     // // os << "\n";
-
-//     // // os << "  Allowed Methods: ";
-//     // // const std::vector<std::string> &methods = obj.getAllowedMethods();
-//     // // for (size_t i = 0; i < methods.size(); ++i) {
-//     // //     os << methods[i];
-//     // //     if (i != methods.size() - 1)
-//     // //         os << ", ";
-//     // // }
-//     // // os << "\n";
-
-//     // os << "  Upload Dir: " << obj.getUploadDir() << "\n";
-//     // os << "  Autoindex: " << (obj.getAutoindex() ? "true" : "false") << "\n";
-//     return os;
-// }
+std::ostream &operator<<(std::ostream &os, const std::vector<std::string>& obj) {
+    os << "[";
+    for (size_t i = 0; i < obj.size(); i++) {
+        os << obj[i];
+        if (i != obj.size() - 1)
+            os << ", ";
+    }
+    os << "]/n";
+    return (os);
+}

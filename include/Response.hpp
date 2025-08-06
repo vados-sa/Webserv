@@ -1,6 +1,7 @@
 #include <string>
 #include <fstream>
 #include <sys/stat.h>
+#include <sstream>
 #include "HttpMessage.hpp"
 #include "Request.hpp"
 
