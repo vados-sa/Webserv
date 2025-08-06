@@ -21,18 +21,18 @@ const int MAX_CLIENT = 100;
 
 class Server {
 	private:
-		int server_fd;
-		struct sockaddr_in address;
-		int port;
-		bool isSetup;
+		//int server_fd;
+		//struct sockaddr_in address;
+		//int port;
+		//bool isSetup;
 		std::vector<Client> clients;
 		std::vector<pollfd> poll_fds;
 		int client_count;
 		
-		bool createSocket();
-		bool configureSocket();
-		bool bindSocket(int port);
-		bool listenMode();
+		//bool createSocket();
+		//bool configureSocket();
+		//bool bindSocket(int port);
+		//bool listenMode();
 		
 		void handleNewConnection();
 		void handleClientRequest(size_t index);
