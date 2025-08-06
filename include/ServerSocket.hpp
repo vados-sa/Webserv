@@ -12,37 +12,23 @@
 #include <cstring>
 #include <csignal>
 
+//#include "Server.hpp" ou "ServerConfig.hpp"
 
-//#include "Client.hpp"
-//#include "Request.hpp"
-//#include "Response.hpp"
-
-//const int MAX_CLIENT = 100;
-
-class ServerScoket { // rename to ServerScoketSocket maybe
+class ServerSocket {
 	private:
 		int fd;
 		struct sockaddr_in address;
 		int port;
 		bool isSetup;
-		//std::vector<Client> clients;
-		std::vector<pollfd> poll_fds;
-		//int client_count;
 		
 		bool createSocket();
 		bool configureSocket();
 		bool bindSocket(int port);
 		bool listenMode();
-		
-		//void handleNewConnection();
-		//void handleClientRequest(size_t index);
-		//bool sendResponse(size_t index);
-		//void cleanup();
-		//static void signalHandler(int signum); // static to be compatible with signal()
 
 	public:
-		ServerScoket();
-		//~ServerScoket();
+		ServerSocket();
+		~ServerSocket(); // ver se ta certo msm
 
-		bool setupServerScoket(int port);
+		bool setupServerSocket(/* int port */);
 };
