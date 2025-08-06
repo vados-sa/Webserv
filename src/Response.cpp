@@ -2,6 +2,13 @@
 
 Response::Response() : statusCode_(""), statusMessage_(""), fullPath_("./www"), filename_("upload/") {}
 
+template <typename T>
+std::string int_to_string(T value) {
+    std::ostringstream oss;
+    oss << value;
+    return oss.str();
+}
+
 void Response::handleGet(const Request &reqObj) {
 
     (void) reqObj;
@@ -19,7 +26,7 @@ void Response::handleGet(const Request &reqObj) {
         ss << file.rdbuf();
         body_ = ss.str();
 
-        setHeader("Content-Length", std::to_string(body_.size()));
+        setHeader("Content-Length", int_to_string(body_.size()));
         setHeader("Content-Type", getContentType(fullPath_));
         statusCode_ = "200";
         return;
@@ -213,7 +220,7 @@ void Response::setPage(const std::string &code, const std::string &message, bool
 {
     setCode(code);
     body_ = generatePage(code, message, error);
-    setHeader("Content-Length", std::to_string(body_.size()));
+    setHeader("Content-Length", int_to_string(body_.size()));
     setHeader("Content-Type", "text/html");
 }
 

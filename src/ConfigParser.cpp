@@ -7,7 +7,7 @@ Config ConfigParser::parseConfigFile(const std::string &filename) {
 	if (filename.size() < 5 || filename.substr(filename.size() - 5) != ".conf") {
 		throw std::runtime_error("Invalid file extension, expected .conf");
 	}
-	std::ifstream file(filename);
+	std::ifstream file(filename.c_str());
 	if (!file.is_open()) {
 		throw std::runtime_error("Couldn't open config file");
 	}
@@ -139,10 +139,14 @@ size_t ConfigParser::parseMaxBodySize(const std::vector<std::string> &tokens)
 
     std::string value = tokens[1];
     size_t multiplier = 1;
-    char unit = value.back();
 
-    if (!std::isdigit(unit)) {
-        switch (unit) {
+    // Use operator[] instead of .back()
+    char unit = value[value.size() - 1];
+
+    if (!std::isdigit(unit))
+    {
+        switch (unit)
+        {
             case 'k':
             case 'K':
                 multiplier = 1024;
@@ -159,7 +163,9 @@ size_t ConfigParser::parseMaxBodySize(const std::vector<std::string> &tokens)
                 std::cerr << "Error: Unknown size unit in client_max_body_size\n";
                 return 0;
         }
-        value.pop_back();
+
+        // Use resize() instead of pop_back()
+        value.resize(value.size() - 1);
     }
 
     int number = std::atoi(value.c_str());
@@ -182,9 +188,11 @@ LocationConfig ConfigParser::parseLocationBlock(std::vector<std::string> lines)
         lines[i] = trimLine(lines[i]);
         tokens = tokenize(lines[i]);
 
-        if (tokens[0] == "root")
+        if (tokens[0] == "location")
+            locConfig.setPath(parsePath(tokens));
+        else if (tokens[0] == "root")
             locConfig.setRoot(parseRoot(tokens));
-        else if (tokens[0] =="listen")
+        else if (tokens[0] =="index")
             locConfig.setIndex(parseIndex(tokens));
         else if (tokens[0] == "allowed_methods")
             locConfig.setAllowedMethods(parseAllowedMethods(tokens));
@@ -197,6 +205,19 @@ LocationConfig ConfigParser::parseLocationBlock(std::vector<std::string> lines)
 
     }
     return (locConfig);
+}
+
+std::string ConfigParser::parsePath(const std::vector<std::string> &tokens)
+{
+    if (tokens.size() < 2) {
+        std::cerr << "Error: Missing path value in configuration line.\n";
+        return ("");
+    }
+
+    if (tokens[0] == "location" && tokens[1][0] == '/') {
+        return (tokens[1]);
+    }
+    return ("");
 }
 
 std::string ConfigParser::parseRoot(const std::vector<std::string> &tokens)
@@ -282,7 +303,7 @@ std::string trimWhitespace(std::string line) {
         line = line.substr(1);
     }
     while (!line.empty() && std::isspace(line[line.length() - 1])) {
-        line.pop_back();
+        line.resize(line.length() - 1);
     }
     return (line);
 }
@@ -292,8 +313,8 @@ std::string trimLine(std::string line) {
         return (line);
     line = trimComment(line);
     line = trimWhitespace(line);
-    if (line.back() == ';')
-        line.pop_back();
+   if (!line.empty() && line[line.length() - 1] == ';')
+        line.resize(line.length() - 1);
     return (line);
 }
 

@@ -24,6 +24,7 @@ private:
     size_t parseMaxBodySize(const std::vector<std::string> &tokens);
 
     // Parsers for the LOCATION block
+    std::string parsePath(const std::vector<std::string> &tokens);
     std::string parseRoot(const std::vector<std::string> &tokens);
     std::vector<std::string> parseIndex(const std::vector<std::string> &tokens);
     std::vector<std::string> parseAllowedMethods(const std::vector<std::string> &tokens);
