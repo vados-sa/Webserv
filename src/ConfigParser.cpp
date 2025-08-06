@@ -4,7 +4,7 @@
 Config ConfigParser::parseConfigFile(const std::string &filename) {
     Config config;
 
-	if (filename.substr(filename.find_last_of(".") + 1) != "conf") {
+	if (filename.size() < 5 || filename.substr(filename.size() - 5) != ".conf") {
 		throw std::runtime_error("Invalid file extension, expected .conf");
 	}
 	std::ifstream file(filename);
