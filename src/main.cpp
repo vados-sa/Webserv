@@ -5,8 +5,7 @@ int main(int ac, char *av[])
 {
 	try {
 		if (ac != 2) {
-			std::cerr << "Usage: " << av[0] << " <config_file>\n";
-			return 1;
+			throw std::runtime_error("Usage: ./webserv <config_file>");
 		}
 		// IMPLEMENTAR - Garantir que a extensão do config file é .config
 		Config config(av[1]); //dps error check ou sei la! fiz aqui pra testar o parse
@@ -15,13 +14,11 @@ int main(int ac, char *av[])
 		Server server;
 		Server::instance = &server;
 		if (!server.setupServer(8080)) {
-			std::cerr << "Failed to setup server.\n";
-			return 1; // Server Destructor is called
+			throw std::runtime_error("Failed to setup server.");
 		};
 
 		if (!server.run()) {
-			std::cerr << "Server failed.\n";
-			return 1;
+			throw std::runtime_error("Server failed to run.");
 		};
 	}
 	catch (const std::exception &e)
