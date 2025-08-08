@@ -6,10 +6,9 @@ ServerSocket::ServerSocket() : fd(-1), port(0), isSetup(false) {
 }
 
 ServerSocket::~ServerSocket() {
-	
-	if (fd != -1) {
+	/* if (fd != -1) {
 		close(fd);
-	}
+	} */ // it was causing the server socket to close prematurely
 }
 
 bool ServerSocket::setupServerSocket(int port) {

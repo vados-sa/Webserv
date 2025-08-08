@@ -35,8 +35,8 @@ class Config
 		std::vector<pollfd> poll_fds;
 
         void handleNewConnection(int server_fd);
-		void handleClientRequest(size_t index);
-		bool sendResponse(size_t index);
+		void handleClientRequest(size_t index, int client_idx);
+		bool sendResponse(size_t index, int client_idx);
 		void cleanup();
 
         //static void signalHandler(int signum);

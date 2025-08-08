@@ -37,10 +37,13 @@ bool Config::setupServer() {
 
 bool Config::run() {
     // for each serverSocket
-    for (size_t i = 0; i < serverSockets.size(); i++) {
+    const int server_count = serverSockets.size();
+    for (int i = 0; i < server_count; i++) {
 	    pollfd server_pollfd = {serverSockets[i].getFd(), POLLIN, 0};
 	    poll_fds.push_back(server_pollfd);
     }
+
+    //std::cout << "Server count: " << server_count << ", Clients size: " << clients.size() << std::endl;
 
 	while (true) {
 		int ready = poll(poll_fds.data(), poll_fds.size(), 5000);
@@ -51,32 +54,41 @@ bool Config::run() {
         }
 
 		for (int i = poll_fds.size() - 1; i >= 0; --i) {
-			if (i == 0 && poll_fds[i].revents & POLLIN) {
-				handleNewConnection(poll_fds[i].fd);
-			} else if (i > 0) {
-				if (clients[i - 1].isTimedOut(60)) {
-					std::cout << "⏰ 505: Gateway Timeout\n Client fd("
-							 << poll_fds[i].fd << ")/port(" << clients[i - 1].getPort()
-							 << ")" << "\n" << std::endl;
-					close(poll_fds[i].fd);
-					poll_fds.erase(poll_fds.begin() + i);
-					clients.erase(clients.begin() + (i - 1));
-				} else if (poll_fds[i].revents & POLLIN) {
-					handleClientRequest(i);
-				} else if (poll_fds[i].revents & POLLOUT) {
-					if (sendResponse(i) == true) {
-						if (clients[i - 1].getKeepAlive() == false){
-							std::cout << "❌ Client disconnected: " << "\n" << "fd - "
-										<< poll_fds[i].fd << "\n" << "port - "
-										<< clients[i - 1].getPort() << "\n" << std::endl;
-							close(poll_fds[i].fd);
-							poll_fds.erase(poll_fds.begin() + i);
-							clients.erase(clients.begin() + (i - 1));
-						} else
-							poll_fds[i].events = POLLIN;
-					}
-				}
-			}
+            if ((i < server_count)) {
+                if (poll_fds[i].revents & POLLIN) {
+                    handleNewConnection(poll_fds[i].fd);
+                }
+                continue ;
+			} else {
+                const int client_idx = i - server_count;
+                if (clients[client_idx].isTimedOut(60)) {
+                    std::cout << "⏰ 505: Gateway Timeout\n Client fd("
+                    << poll_fds[i].fd << ")/port(" << clients[client_idx].getPort()
+                    << ")" << "\n" << std::endl;
+    
+                    close(poll_fds[i].fd);
+                    poll_fds.erase(poll_fds.begin() + i);
+                    clients.erase(clients.begin() + client_idx);
+
+                } else if (poll_fds[i].revents & POLLIN) {
+                    handleClientRequest(i, client_idx); // maybe pass client_idx 
+
+                } else if (poll_fds[i].revents & POLLOUT) {
+                    if (sendResponse(i, client_idx) == true) {
+                        if (clients[client_idx].getKeepAlive() == false) {
+                            std::cout << "❌ Client disconnected: " << "\n" << "fd - "
+                            << poll_fds[i].fd << "\n" << "port - "
+                            << clients[client_idx].getPort() << "\n" << std::endl;
+
+                            close(poll_fds[i].fd);
+                            poll_fds.erase(poll_fds.begin() + i);
+                            clients.erase(clients.begin() + client_idx);
+
+                        } else
+                            poll_fds[i].events = POLLIN;
+                    }
+                }
+            }
 		}
 	}
 
@@ -119,8 +131,8 @@ void Config::handleNewConnection(int server_fd) {
 }
 
 // ver como fzr melhor
-void Config::handleClientRequest(size_t index) {
-	Client& client = clients[index - 1];
+void Config::handleClientRequest(size_t index, int client_idx) {
+	Client& client = clients[client_idx];
 	int client_fd = poll_fds[index].fd;
 	char buffer[4096];
 
@@ -154,8 +166,8 @@ void Config::handleClientRequest(size_t index) {
 	}
 }
 
-bool Config::sendResponse(size_t index) {
-	Client& client = clients[index - 1];
+bool Config::sendResponse(size_t index, int client_idx) {
+	Client& client = clients[client_idx];   // Should be (index - server_count)
 	int client_fd = poll_fds[index].fd;
 	std::string response = client.getResponse();
 	size_t already_sent= client.getBytesSent();
