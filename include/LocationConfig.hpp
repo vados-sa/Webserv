@@ -26,7 +26,7 @@ public:
     void setAllowedMethods(std::vector<std::string> set) { allowed_methods = set; };
     void setUploadDir(std::string set) { upload_dir = set; };
     void setAutoindex(bool set) { autoindex = set; };
-    void setAllowUploAD(bool set) { allow_upload = set; };
+    void setAllowUpload(bool set) { allow_upload = set; };
 
     std::string getPath() const { return path; }
     std::string getRoot() const { return root; }

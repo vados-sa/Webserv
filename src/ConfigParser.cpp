@@ -226,6 +226,8 @@ LocationConfig ConfigParser::parseLocationBlock(std::vector<std::string> lines)
             locConfig.setUploadDir(parseUploadDir(tokens));
         else if (tokens[0] == "autoindex")
             locConfig.setAutoindex(parseAutoindex(tokens));
+        else if (tokens[0] == "allow_upload")
+            locConfig.setAllowUpload(parseAllowUpload(tokens));
         //decidir como store a informacao do redirect
         //e a informacao do cgi
 
@@ -243,7 +245,7 @@ std::string ConfigParser::parsePath(const std::vector<std::string> &tokens)
         if (tokens[1][0] != '/')
             throw std::runtime_error("Path missing starting slash");
 
-        if (tokens.size() > 2 && !tokens[2].empty())
+        if (tokens.size() > 3 && !tokens[2].empty())
             throw std::runtime_error("Path contains unexpected spaces or extra tokens");
 
         if (!isValidPath(tokens[1]))
@@ -316,6 +318,21 @@ bool ConfigParser::parseAutoindex(const std::vector<std::string> &tokens)
 
     throw std::runtime_error("Incorrect syntax for autoindex directive.");
 }
+
+bool ConfigParser::parseAllowUpload(const std::vector<std::string> &tokens) {
+    if (tokens.size() < 2)
+        throw std::runtime_error("Missing allow_upload value in configuration line.");
+    if (tokens.size() > 2)
+        throw std::runtime_error("Allow_upload contains unexpected extra tokens.");
+
+    if (tokens[1] == "on")
+        return (true);
+    if (tokens[1] == "off")
+        return (false);
+
+    throw std::runtime_error("Incorrect syntax for allow_upload directive.");
+}
+
 bool isValidPathChar(char c)
 {
     if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||

@@ -30,6 +30,7 @@ private:
     std::vector<std::string> parseAllowedMethods(const std::vector<std::string> &tokens);
     std::string parseUploadDir(const std::vector<std::string> &tokens);
     bool parseAutoindex(const std::vector<std::string> &tokens);
+    bool parseAllowUpload(const std::vector<std::string> &tokens);
 
 public:
     Config  parseConfigFile(const std::string &filename);
