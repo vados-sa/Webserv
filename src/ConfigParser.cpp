@@ -243,7 +243,7 @@ std::string ConfigParser::parsePath(const std::vector<std::string> &tokens)
         if (tokens[1][0] != '/')
             throw std::runtime_error("Path missing starting slash");
 
-        if (tokens.size() > 2 && !tokens[2].empty())
+        if (tokens.size() > 3 && !tokens[2].empty())
             throw std::runtime_error("Path contains unexpected spaces or extra tokens");
 
         if (!isValidPath(tokens[1]))
