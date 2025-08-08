@@ -305,12 +305,16 @@ std::string ConfigParser::parseUploadDir(const std::vector<std::string> &tokens)
 bool ConfigParser::parseAutoindex(const std::vector<std::string> &tokens)
 {
     if (tokens.size() < 2)
-    {
-        throw std::runtime_error("Error: Missing autoindex value in configuration line.");
-    }
+        throw std::runtime_error("Missing autoindex value in configuration line.");
+    if (tokens.size() > 2)
+        throw std::runtime_error("Autoindex contains unexpected extra tokens.");
+
     if (tokens[1] == "on")
         return (true);
-    return (false);
+    if (tokens[1] == "off")
+        return (false);
+
+    throw std::runtime_error("Incorrect syntax for autoindex directive.");
 }
 bool isValidPathChar(char c)
 {
