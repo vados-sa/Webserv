@@ -11,7 +11,7 @@ Server::~Server() {
 
 /* bool Server::setupServer(int port) {
 	signal(SIGINT, Server::signalHandler);
-	
+
 	this->port = port;
 	if (!createSocket()) return false;
 	if (!configureSocket()) return false;
@@ -91,7 +91,7 @@ bool Server::run() {
 			} else if (i > 0) {
 				if (clients[i - 1].isTimedOut(60)) {
 					std::cout << "⏰ 505: Gateway Timeout\n Client fd("
-							 << poll_fds[i].fd << ")/port(" << clients[i - 1].getPort() 
+							 << poll_fds[i].fd << ")/port(" << clients[i - 1].getPort()
 							 << ")" << "\n" << std::endl;
 					close(poll_fds[i].fd);
 					poll_fds.erase(poll_fds.begin() + i);
@@ -101,13 +101,13 @@ bool Server::run() {
 				} else if (poll_fds[i].revents & POLLOUT) {
 					if (sendResponse(i) == true) {
 						if (clients[i - 1].getKeepAlive() == false){
-							std::cout << "❌ Client disconnected: " << "\n" << "fd - " 
-										<< poll_fds[i].fd << "\n" << "port - " 
+							std::cout << "❌ Client disconnected: " << "\n" << "fd - "
+										<< poll_fds[i].fd << "\n" << "port - "
 										<< clients[i - 1].getPort() << "\n" << std::endl;
 							close(poll_fds[i].fd);
 							poll_fds.erase(poll_fds.begin() + i);
 							clients.erase(clients.begin() + (i - 1));
-						} else 
+						} else
 							poll_fds[i].events = POLLIN;
 					}
 				}
@@ -122,34 +122,34 @@ void Server::handleNewConnection() {
 	struct sockaddr_in client_addr;
 	socklen_t client_len = sizeof(client_addr);
 	int client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &client_len);
-	
+
 	client_count++;
 	if (client_count > MAX_CLIENT) {
 		std::cerr << "Refusing client, max reached\n";
 		close(client_fd);
 		return ;
 	}
-	
+
 	if (client_fd < 0) {
 		if (errno != EAGAIN && errno != EWOULDBLOCK) {
 			perror("accept failed");
 		}
 		return ;
 	}
-	
+
 	if (fcntl(client_fd, F_SETFL, O_NONBLOCK) < 0) {
 		perror("fcntl failed for client");
 		close(client_fd);
 		return ;
 	}
-	
-	clients.emplace_back(Client(client_fd));
+
+	clients.push_back(Client(client_fd));
 	pollfd client_pollfd = {client_fd, POLLIN, 0};
 	poll_fds.push_back(client_pollfd);
 
 	int port = ntohs(client_addr.sin_port);
 	clients.back().setPort(port);
-	std::cout << "🔌 New client (fd " << client_fd << ") connected on port: " 
+	std::cout << "🔌 New client (fd " << client_fd << ") connected on port: "
 				<< port << "\n" << std::endl;
 }
 
@@ -158,16 +158,16 @@ void Server::handleClientRequest(size_t index) {
 	Client& client = clients[index - 1];
 	int client_fd = poll_fds[index].fd;
 	char buffer[4096];
-	
+
 	if (client.getState() == Client::CONNECTED)
 		client.setState(Client::SENDING_REQUEST);
-	
+
 	// maybe make it cleaner with a separate funciton
 	int bytes = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
 	if (bytes < 0) {
             return ;
     } else if (bytes == 0) {
-        std::cout << "❌ Client disconnected: " << "\n" << "fd - " << client_fd << "\n" 
+        std::cout << "❌ Client disconnected: " << "\n" << "fd - " << client_fd << "\n"
 								<< "port - " << client.getPort() << "\n" << std::endl;
 		close(client_fd);
 		poll_fds.erase(poll_fds.begin() + index);
@@ -197,7 +197,7 @@ bool Server::sendResponse(size_t index) {
 	size_t remaining = response.size() - already_sent;
 
 	if (remaining == 0) return true;
-	
+
 	size_t bytes_sent = send(client_fd, response.c_str() + already_sent, remaining, 0);
 	if (bytes_sent < 0) {
 		perror("send failed");

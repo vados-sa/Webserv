@@ -11,7 +11,7 @@
 #include <string>
 #include <cstring>
 #include <csignal>
-
+#include <cstdlib>
 
 #include "Client.hpp"
 #include "Request.hpp"
@@ -46,9 +46,9 @@ class Server {
 
 		static Server* instance;
 
-		bool setupServer(int port); 
-		/* eventually: 
-		bool setupServer(const Config& config);  // Multiple ports from config 
+		bool setupServer(int port);
+		/* eventually:
+		bool setupServer(const Config& config);  // Multiple ports from config
 		*/
 		bool run();
 };
