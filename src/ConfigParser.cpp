@@ -86,11 +86,56 @@ ServerConfig ConfigParser::parseServerBlock(std::vector<std::string> lines) {
 
 std::string ConfigParser::parseHost(const std::vector<std::string> &tokens)
 {
+    std::vector<std::string> octets;
     if (tokens.size() < 2) {
         std::cerr << "Error: Missing host value in configuration line.\n";
+        return (""); //is this correct error handling?
+    }
+
+    std::string host = tokens[1];
+
+    //splits address into octets
+    for (int i = 0; i < 4; i++) {
+        size_t pos = host.find('.');
+        if (pos == std::string::npos)
+            break;
+        octets.push_back(host.substr(0, pos));
+        host = host.substr(pos + 1);
+    }
+    octets.push_back(host);
+    if (octets.size() != 4) {
+        std::cerr << "Error: Invalid host IP address in configuration file\n";
         return ("");
     }
-    //is this ok or do we throw exceptions?
+
+    for (int i = 0; i < 4; i++) {
+        //checks if octets empty, which would catch an error if ip address is missing an octet
+        if (octets[i].empty()) {
+            std::cerr << "Error: Host address incomplete in configuration file\n";
+            return ("");
+        }
+
+        //rejects leading 0 ("0" is ok, but "00" ou "01" is not!)
+        if (octets[i][0] == '0' && octets[i].length() > 1){
+            std::cerr << "Error: Host address contains leading zeros in configuration file\n";
+            return ("");
+        }
+
+        //checks if the octet is purely digits. whitespace isnt a problem here, octets[i] is already a token
+        for (std::string::const_iterator it = octets[i].begin(); it != octets[i].end(); ++it) {
+            if (!isdigit(*it)) {
+                std::cerr << "Error: Host address must include digits only\n";
+                return ("");
+            }
+        }
+
+        //converts them to int in order to check the range
+        int num = std::atoi(octets[i].c_str());
+        if ((num == 0 && octets[i] != "0") || num < 0 || num > 255) {
+            std::cerr << "Error: Invalid host IP address in configuration file\n";
+            return ("");
+        }
+    }
     return (tokens[1]);
 }
 
