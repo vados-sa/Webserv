@@ -24,6 +24,17 @@ void Config::loadFromFile(const std::string &filepath) {
     *this = parser.parseConfigFile(filepath);
 }
 
+bool Config::setupServer() {
+    // for each ServerConfig object, setup a ServerSocket object
+    for (int i = 0; i < servers.size(); i++) {
+        ServerSocket socketObj;
+        if (!socketObj.setupServerSocket(servers[i].getPort()))
+            return false;
+        serverSockets.push_back(socketObj);
+    }
+    return true;
+}
+
 std::ostream &operator<<(std::ostream &os, const Config &obj) {
     std::vector<ServerConfig> serversVector = obj.getServers();
 

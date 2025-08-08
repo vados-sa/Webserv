@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ServerConfig.hpp"
+#include "ServerSocket.hpp"
 #include <vector>
 
 class Config
@@ -8,6 +9,7 @@ class Config
 private:
     std::vector<ServerConfig> servers;
     void loadFromFile(const std::string &filepath);
+    std::vector<ServerSocket> serverSockets;
 public:
     Config(const std::string &filepath);
     Config() {};
@@ -17,6 +19,7 @@ public:
 
     void addServer(ServerConfig &server);
     const std::vector<ServerConfig> &getServers() const { return servers; };
+    bool setupServer();
 };
 
 std::ostream &operator<<(std::ostream &os, const Config &obj);

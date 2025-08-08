@@ -46,7 +46,7 @@ class Server {
 
 		static Server* instance;
 
-		bool setupServer(int port);
+		//bool setupServer(int port);
 		/* eventually:
 		bool setupServer(const Config& config);  // Multiple ports from config
 		*/

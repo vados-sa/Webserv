@@ -11,11 +11,18 @@ int main(int ac, char *av[])
 		Config config(av[1]); //dps error check ou sei la! fiz aqui pra testar o parse
 		std::cout << config << std::endl;
 
+		if (!config.setupServer()) {
+			throw std::runtime_error("Failed to set server up.");
+		};
+
+		/* if (!config.run()) {
+			throw std::runtime_error("Server failed to run.");
+		}; */
 		Server server;
 		Server::instance = &server;
-		if (!server.setupServer(8080)) {
+		/* if (!server.setupServer(8080)) {
 			throw std::runtime_error("Failed to setup server.");
-		};
+		}; */
 
 		if (!server.run()) {
 			throw std::runtime_error("Server failed to run.");

@@ -12,7 +12,7 @@
 #include <cstring>
 #include <csignal>
 
-//#include "Server.hpp" ou "ServerConfig.hpp"
+#include "ServerConfig.hpp"
 
 class ServerSocket {
 	private:
@@ -30,5 +30,5 @@ class ServerSocket {
 		ServerSocket();
 		~ServerSocket(); // ver se ta certo msm
 
-		bool setupServerSocket(/* int port */);
+		bool setupServerSocket(int port);
 };

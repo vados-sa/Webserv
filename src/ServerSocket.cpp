@@ -12,10 +12,10 @@ ServerSocket::~ServerSocket() {
 	}
 }
 
-bool ServerSocket::setupServerSocket(/* int port */) {
+bool ServerSocket::setupServerSocket(int port) {
 	//signal(SIGINT, ServerSocket::signalHandler);
 	
-	port = ServerConfig.getPort(); // check how to do it correctly
+	this->port = port;
 	if (!createSocket()) return false;
 	if (!configureSocket()) return false;
 	if (!bindSocket(port)) return false;
