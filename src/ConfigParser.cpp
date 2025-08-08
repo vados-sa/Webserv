@@ -297,10 +297,14 @@ std::vector<std::string> ConfigParser::parseAllowedMethods(const std::vector<std
 std::string ConfigParser::parseUploadDir(const std::vector<std::string> &tokens)
 {
     if (tokens.size() < 2)
-    {
-        throw std::runtime_error("Error: Missing upload_path value in configuration line.");
-    }
-    //also what is allow_upload?
+        throw std::runtime_error("Missing upload_path value in configuration line.");
+
+    if (tokens[1][0] != '/')
+        throw std::runtime_error("Missing leading slash in upload_path value in configuration file.");
+
+    if (tokens[1] == "/")
+        throw std::runtime_error("Upload path cannot be root '/'");
+
     return (tokens[1]);
 }
 
