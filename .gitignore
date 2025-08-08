@@ -4,7 +4,8 @@
 *.exe
 
 # VSCode
-.vscode/
+.vscode/*
+
 
 # OS
 .DS_Store
@@ -15,3 +16,4 @@ request
 
 #test files
 test_upload.txt
+.vscode/settings.json
