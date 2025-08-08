@@ -31,4 +31,6 @@ class ServerSocket {
 		~ServerSocket(); // ver se ta certo msm
 
 		bool setupServerSocket(int port);
+
+		int getFd() const {return fd;}
 };
