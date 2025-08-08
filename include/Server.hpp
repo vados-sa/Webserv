@@ -11,7 +11,7 @@
 #include <string>
 #include <cstring>
 #include <csignal>
-
+#include <cstdlib>
 
 #include "Client.hpp"
 #include "Request.hpp"
@@ -28,12 +28,12 @@ class Server {
 		std::vector<Client> clients;
 		std::vector<pollfd> poll_fds;
 		int client_count;
-		
+
 		bool createSocket();
 		bool configureSocket();
 		bool bindSocket(int port);
 		bool listenMode();
-		
+
 		void handleNewConnection();
 		void handleClientRequest(size_t index);
 		bool sendResponse(size_t index);
@@ -46,9 +46,9 @@ class Server {
 
 		static Server* instance;
 
-		bool setupServer(int port); 
-		/* eventually: 
-		bool setupServer(const Config& config);  // Multiple ports from config 
+		bool setupServer(int port);
+		/* eventually:
+		bool setupServer(const Config& config);  // Multiple ports from config
 		*/
 		bool run();
 };
