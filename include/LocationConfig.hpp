@@ -13,6 +13,7 @@ private:
     std::vector<std::string> allowed_methods;
     std::string upload_dir;
     bool autoindex;
+    bool allow_upload;
     //something about redirection, but im not sure how to store it
     //also something about cgi string
 
