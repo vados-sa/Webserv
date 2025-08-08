@@ -236,13 +236,22 @@ LocationConfig ConfigParser::parseLocationBlock(std::vector<std::string> lines)
 std::string ConfigParser::parsePath(const std::vector<std::string> &tokens)
 {
     if (tokens.size() < 2) {
-		throw std::runtime_error("Error: Missing path value in configuration line.");
+        throw std::runtime_error("Missing path value in configuration line.");
     }
 
-    if (tokens[0] == "location" && tokens[1][0] == '/') {
+    if (tokens[0] == "location") {
+        if (tokens[1][0] != '/')
+            throw std::runtime_error("Path missing starting slash");
+
+        if (tokens.size() > 2 && !tokens[2].empty())
+            throw std::runtime_error("Path contains unexpected spaces or extra tokens");
+
+        if (!isValidPath(tokens[1]))
+            throw std::runtime_error("Path contains illegal characters");
         return (tokens[1]);
     }
-    return (""); //should we throw an exception here?
+
+    throw std::runtime_error("Incorrect syntax for location path.");
 }
 
 std::string ConfigParser::parseRoot(const std::vector<std::string> &tokens)
@@ -302,6 +311,22 @@ bool ConfigParser::parseAutoindex(const std::vector<std::string> &tokens)
     if (tokens[1] == "on")
         return (true);
     return (false);
+}
+bool isValidPathChar(char c)
+{
+    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+        (c >= '0' && c <= '9') ||
+        c == '/' || c == '-' || c == '_' || c == '.' || c == '~')
+        return (true);
+    return (false);
+}
+
+bool isValidPath(const std::string &path)
+{
+    for (std::string::const_iterator it = path.begin(); it != path.end(); ++it)
+        if (!isValidPathChar(*it))
+            return (false);
+    return (true);
 }
 
 std::string trimComment(std::string line) {
