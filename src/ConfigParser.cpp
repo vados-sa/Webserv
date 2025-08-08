@@ -25,8 +25,7 @@ Config ConfigParser::parseConfigFile(const std::string &filename) {
         if (!tokens.empty()) {
             if (tokens[0] == "server") {
                 if (tokens[1] != "{") {
-                    std::cerr << "Error: Expected '{' after 'server'\n";
-                    return (Config()); // wrong, we should exit
+                    throw std::runtime_error("Error: Expected '{' after 'server'");
                 }
                 std::vector<std::string> serverLines = collectBlock(lines, i);
                 ServerConfig server = parseServerBlock(serverLines);
@@ -130,16 +129,14 @@ std::string ConfigParser::parseHost(const std::vector<std::string> &tokens)
 int ConfigParser::parsePort(const std::vector<std::string> &tokens)
 {
     if (tokens.size() < 2) {
-        std::cerr << "Error: Missing port value in configuration line.\n";
-        return (-1); //acho que n ta bom
+		throw std::runtime_error("Error: Missing port value in configuration line.");
     }
 
     //check if tokens[1] is numeric?
     //tem um range de ports acho
     int portInt = std::atoi(tokens[1].c_str());
     if (portInt == 0 && tokens[1] != "0") {
-        std::cerr << "Error: Invalid error code '" << tokens[1] << "'\n";
-        return (-1); //n sei se ta bom
+		throw std::runtime_error(std::string("Error: Invalid error code '") + tokens[1] + "'");
     }
     return (portInt);
 }
@@ -148,13 +145,12 @@ std::pair<int, std::string> ConfigParser::parseErrorPageLine(const std::vector<s
 {
     std::pair<int, std::string> entry;
     if (tokens.size() < 3) {
-        std::cerr << "Error: Unable to parse error_page\n";
-        return (entry); // acho que n ta bom
+		throw std::runtime_error("Error: Unable to parse error_page");
     }
 
     int key = std::atoi(tokens[1].c_str());
     if (key == 0 && tokens[1] != "0") {
-        std::cerr << "Error: Invalid error code '" << tokens[1] << "'\n";
+		throw std::runtime_error(std::string("Error: Invalid error code '") + tokens[1] + "'");
         return (entry);
     }
 
@@ -166,8 +162,7 @@ size_t ConfigParser::parseMaxBodySize(const std::vector<std::string> &tokens)
 {
     if (tokens.size() < 2)
     {
-        std::cerr << "Error: Missing argument for client_max_body_size\n";
-        return 0;
+        throw std::runtime_error("Error: Missing argument for client_max_body_size");
     }
 
     std::string value = tokens[1];
@@ -193,8 +188,7 @@ size_t ConfigParser::parseMaxBodySize(const std::vector<std::string> &tokens)
                 multiplier = 1024 * 1024 * 1024;
                 break;
             default:
-                std::cerr << "Error: Unknown size unit in client_max_body_size\n";
-                return 0;
+				throw std::runtime_error("Error: Unknown size unit in client_max_body_size");
         }
 
         // Use resize() instead of pop_back()
@@ -204,8 +198,7 @@ size_t ConfigParser::parseMaxBodySize(const std::vector<std::string> &tokens)
     int number = std::atoi(value.c_str());
     if (number <= 0)
     {
-        std::cerr << "Error: Invalid numeric value for client_max_body_size\n";
-        return 0;
+        throw std::runtime_error("Error: Invalid numeric value for client_max_body_size");
     }
 
     return static_cast<size_t>(number) * multiplier;
@@ -233,6 +226,8 @@ LocationConfig ConfigParser::parseLocationBlock(std::vector<std::string> lines)
             locConfig.setUploadDir(parseUploadDir(tokens));
         else if (tokens[0] == "autoindex")
             locConfig.setAutoindex(parseAutoindex(tokens));
+        else if (tokens[0] == "allow_upload")
+            locConfig.setAllowUpload(parseAllowUpload(tokens));
         //decidir como store a informacao do redirect
         //e a informacao do cgi
 
@@ -243,23 +238,29 @@ LocationConfig ConfigParser::parseLocationBlock(std::vector<std::string> lines)
 std::string ConfigParser::parsePath(const std::vector<std::string> &tokens)
 {
     if (tokens.size() < 2) {
-        std::cerr << "Error: Missing path value in configuration line.\n";
-        return ("");
+        throw std::runtime_error("Missing path value in configuration line.");
     }
 
-    if (tokens[0] == "location" && tokens[1][0] == '/') {
+    if (tokens[0] == "location") {
+        if (tokens[1][0] != '/')
+            throw std::runtime_error("Path missing starting slash");
+
+        if (tokens.size() > 3 && !tokens[2].empty())
+            throw std::runtime_error("Path contains unexpected spaces or extra tokens");
+
+        if (!isValidPath(tokens[1]))
+            throw std::runtime_error("Path contains illegal characters");
         return (tokens[1]);
     }
-    return ("");
+
+    throw std::runtime_error("Incorrect syntax for location path.");
 }
 
 std::string ConfigParser::parseRoot(const std::vector<std::string> &tokens)
 {
     if (tokens.size() < 2) {
-        std::cerr << "Error: Missing root value in configuration line.\n";
-        return ("");
+		throw std::runtime_error("Error: Missing root value in configuration line.");
     }
-    // is this ok or do we throw exceptions?
     return (tokens[1]);
 }
 
@@ -268,8 +269,7 @@ std::vector<std::string> ConfigParser::parseIndex(const std::vector<std::string>
     std::vector<std::string> ret;
 
     if (tokens.size() < 2) {
-        std::cerr << "Error: Missing index value in configuration line.\n";
-        return (ret);
+        throw std::runtime_error("Error: Missing index value in configuration line.");
     }
 
     for (size_t i = 1; i < tokens.size() && !tokens[i].empty(); i++) {
@@ -284,8 +284,7 @@ std::vector<std::string> ConfigParser::parseAllowedMethods(const std::vector<std
 
     if (tokens.size() < 2)
     {
-        std::cerr << "Error: Missing allowed_methods value in configuration line.\n";
-        return (ret);
+        throw std::runtime_error("Error: Missing allowed_methods value in configuration line.");
     }
 
     for (size_t i = 1; i < tokens.size() && !tokens[i].empty(); i++)
@@ -298,25 +297,61 @@ std::vector<std::string> ConfigParser::parseAllowedMethods(const std::vector<std
 std::string ConfigParser::parseUploadDir(const std::vector<std::string> &tokens)
 {
     if (tokens.size() < 2)
-    {
-        std::cerr << "Error: Missing upload_path value in configuration line.\n";
-        return ("");
-    }
-    //also what is allow_upload?
-    // is this ok or do we throw exceptions?
+        throw std::runtime_error("Missing upload_path value in configuration line.");
+
+    if (tokens[1][0] != '/')
+        throw std::runtime_error("Missing leading slash in upload_path value in configuration file.");
+
+    if (tokens[1] == "/")
+        throw std::runtime_error("Upload path cannot be root '/'");
+
     return (tokens[1]);
 }
 
 bool ConfigParser::parseAutoindex(const std::vector<std::string> &tokens)
 {
     if (tokens.size() < 2)
-    {
-        std::cerr << "Error: Missing autoindex value in configuration line.\n";
-        return ("");
-    }
+        throw std::runtime_error("Missing autoindex value in configuration line.");
+    if (tokens.size() > 2)
+        throw std::runtime_error("Autoindex contains unexpected extra tokens.");
+
     if (tokens[1] == "on")
         return (true);
+    if (tokens[1] == "off")
+        return (false);
+
+    throw std::runtime_error("Incorrect syntax for autoindex directive.");
+}
+
+bool ConfigParser::parseAllowUpload(const std::vector<std::string> &tokens) {
+    if (tokens.size() < 2)
+        throw std::runtime_error("Missing allow_upload value in configuration line.");
+    if (tokens.size() > 2)
+        throw std::runtime_error("Allow_upload contains unexpected extra tokens.");
+
+    if (tokens[1] == "on")
+        return (true);
+    if (tokens[1] == "off")
+        return (false);
+
+    throw std::runtime_error("Incorrect syntax for allow_upload directive.");
+}
+
+bool isValidPathChar(char c)
+{
+    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+        (c >= '0' && c <= '9') ||
+        c == '/' || c == '-' || c == '_' || c == '.' || c == '~')
+        return (true);
     return (false);
+}
+
+bool isValidPath(const std::string &path)
+{
+    for (std::string::const_iterator it = path.begin(); it != path.end(); ++it)
+        if (!isValidPathChar(*it))
+            return (false);
+    return (true);
 }
 
 std::string trimComment(std::string line) {

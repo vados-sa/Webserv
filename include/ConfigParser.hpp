@@ -30,11 +30,14 @@ private:
     std::vector<std::string> parseAllowedMethods(const std::vector<std::string> &tokens);
     std::string parseUploadDir(const std::vector<std::string> &tokens);
     bool parseAutoindex(const std::vector<std::string> &tokens);
+    bool parseAllowUpload(const std::vector<std::string> &tokens);
 
 public:
     Config  parseConfigFile(const std::string &filename);
 };
 
+bool isValidPathChar(char c);
+bool isValidPath(const std::string &path);
 std::string trimComment(std::string line);
 std::string trimWhitespace(std::string line);
 std::string trimLine(std::string line);
