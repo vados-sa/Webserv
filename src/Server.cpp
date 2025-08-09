@@ -2,18 +2,14 @@
 
 Server* Server::instance = NULL;
 
-Server::Server() : server_fd(-1), port(0), isSetup(false), client_count(0) {
-	std::memset(&address, 0, sizeof(address));
+Server::Server() : client_count(0) {
+	
 }
 
 Server::~Server() {
-
-	if (server_fd != -1) {
-		close(server_fd);
-	}
 }
 
-bool Server::setupServer(int port) {
+/* bool Server::setupServer(int port) {
 	signal(SIGINT, Server::signalHandler);
 
 	this->port = port;
@@ -24,9 +20,9 @@ bool Server::setupServer(int port) {
 
 	isSetup = true;
 	return true;
-}
+} */
 
-bool Server::createSocket() {
+/* bool Server::createSocket() {
 	server_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (server_fd < 0) {
 		perror("socket failed");
@@ -34,9 +30,9 @@ bool Server::createSocket() {
 	}
 
 	return true;
-};
+}; */
 
-bool Server::configureSocket() {
+/* bool Server::configureSocket() {
 	// non-blocking
 	if (fcntl(server_fd, F_SETFL, O_NONBLOCK) < 0) {
 		perror("fcntl failed");
@@ -51,9 +47,9 @@ bool Server::configureSocket() {
 	}
 
 	return true;
-};
+}; */
 
-bool Server::bindSocket(int port) {
+/* bool Server::bindSocket(int port) {
 	address.sin_family = AF_INET;
 	address.sin_addr.s_addr = INADDR_ANY;
 	address.sin_port = htons(port);
@@ -65,8 +61,8 @@ bool Server::bindSocket(int port) {
 
 	return true;
 };
-
-bool Server::listenMode() {
+ */
+/* bool Server::listenMode() {
 	if (listen(server_fd, SOMAXCONN) < 0) {
 		perror("listen failed");
 		return false;
@@ -75,7 +71,7 @@ bool Server::listenMode() {
 	std::cout << "✅ Server listening on http://localhost:" << port << "\n";
 
 	return true;
-};
+}; */
 
 bool Server::run() {
 	pollfd server_pollfd = {server_fd, POLLIN, 0};

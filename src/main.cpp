@@ -1,4 +1,4 @@
-#include "Server.hpp"
+//#include "Server.hpp"
 #include "Config.hpp"
 
 int main(int ac, char *av[])
@@ -11,7 +11,15 @@ int main(int ac, char *av[])
 		Config config(av[1]); //dps error check ou sei la! fiz aqui pra testar o parse
 		std::cout << config << std::endl;
 
-		Server server;
+		if (!config.setupServer()) {
+			throw std::runtime_error("Failed to set server up.");
+		};
+
+		if (!config.run()) {
+			throw std::runtime_error("Server failed to run.");
+		};
+
+		/* Server server;
 		Server::instance = &server;
 		if (!server.setupServer(8080)) {
 			throw std::runtime_error("Failed to setup server.");
@@ -19,13 +27,13 @@ int main(int ac, char *av[])
 
 		if (!server.run()) {
 			throw std::runtime_error("Server failed to run.");
-		};
+		}; */
 	}
 	catch (const std::exception &e)
 	{
 		std::cerr << "\033[31mException: " << e.what() << "\033[0m" << std::endl;
 		return 1;
 	}
-	// transform all if statements in try/catch blocks
+
 	return 0;
 }
