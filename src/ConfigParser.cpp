@@ -252,6 +252,8 @@ LocationConfig ConfigParser::parseLocationBlock(std::vector<std::string> lines)
             locConfig.setAllowUpload(parseAllowUpload(tokens));
         //decidir como store a informacao do redirect
         //e a informacao do cgi
+		else if (tokens[0] == "cgi_extension")
+			locConfig.setCgiExtension(parseCgiExtension(tokens));
         else {
             std::stringstream er;
             er << "\"" << tokens[0] << "\" dirrective is not allowed here\n";
@@ -389,6 +391,23 @@ bool ConfigParser::parseAllowUpload(const std::vector<std::string> &tokens) {
         return (false);
 
     throw std::runtime_error("Incorrect syntax for allow_upload directive.");
+}
+
+std::string ConfigParser::parseCgiExtension(const std::vector<std::string> &tokens)
+{
+	if (tokens.size() != 2) {
+		throw std::runtime_error("Error: Exactly one CGI extension must be specified in the configuration line.");
+	}
+
+	const std::string &extension = tokens[1];
+
+	if (extension.empty()) {
+		throw std::runtime_error("Error: Empty CGI extension is not allowed.");
+	}
+	if (!isValidPath(extension)) {
+		throw std::runtime_error("Error: Invalid CGI extension '" + extension + "'.");
+	}
+	return extension;
 }
 
 bool isValidPathChar(char c)
