@@ -155,14 +155,26 @@ std::pair<int, std::string> ConfigParser::parseErrorPageLine(const std::vector<s
 {
     std::pair<int, std::string> entry;
     if (tokens.size() < 3) {
-		throw std::runtime_error("Error: Unable to parse error_page");
+		throw std::runtime_error("Unable to parse error_page, missing value");
+    }
+
+    if (tokens.size() > 3)
+    {
+        throw std::runtime_error("error_page contains unexpected spaces or extra tokens");
+    }
+
+    for (std::string::const_iterator it = tokens[1].begin(); it != tokens[1].end(); ++it)
+    {
+        if (!isdigit(*it))
+            throw std::runtime_error("Error code must include digits only");
     }
 
     int key = std::atoi(tokens[1].c_str());
-    if (key == 0 && tokens[1] != "0") {
-		throw std::runtime_error(std::string("Error: Invalid error code '") + tokens[1] + "'");
-        return (entry);
-    }
+    if (key == 0 && tokens[1] != "0")
+		throw std::runtime_error(std::string("Invalid error code '") + tokens[1] + "'");
+
+    if (key < 300 || key > 599)
+        throw std::runtime_error(std::string("Invalid error code '") + tokens[1] + "': not a valid HTTP error code");
 
     entry = std::make_pair(key, tokens[2]);
     return (entry);
