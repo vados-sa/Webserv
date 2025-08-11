@@ -16,7 +16,6 @@
 #include <iostream>
 #include <string>
 #include <cstring>
-#include <csignal>
 #include <cstdlib>
 
 // check necessity of includes
@@ -38,8 +37,6 @@ class Config
 		void handleClientRequest(size_t index, int client_idx);
 		bool sendResponse(size_t index, int client_idx);
 		void cleanup();
-
-        //static void signalHandler(int signum);
     
     public:
         Config(const std::string &filepath);

@@ -44,8 +44,12 @@ bool Config::run() {
 	while (true) {
 		int ready = poll(poll_fds.data(), poll_fds.size(), 5000);
 		if (ready < 0) {
+			cleanup();
+			if (errno == EINTR) {
+                std::cout << "📡 Signal received, gracefully shutting down..." << std::endl;
+                break ;
+            }
             perror("poll failed");
-            cleanup();
             return false;
         }
 
@@ -89,7 +93,6 @@ bool Config::run() {
             }
 		}
 	}
-
 	return true;
 }
 

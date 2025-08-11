@@ -1,4 +1,3 @@
-//#include "Server.hpp"
 #include "Config.hpp"
 
 int main(int ac, char *av[])
@@ -18,16 +17,6 @@ int main(int ac, char *av[])
 		if (!config.run()) {
 			throw std::runtime_error("Server failed to run.");
 		};
-
-		/* Server server;
-		Server::instance = &server;
-		if (!server.setupServer(8080)) {
-			throw std::runtime_error("Failed to setup server.");
-		};
-
-		if (!server.run()) {
-			throw std::runtime_error("Server failed to run.");
-		}; */
 	}
 	catch (const std::exception &e)
 	{
