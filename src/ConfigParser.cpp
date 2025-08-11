@@ -327,6 +327,8 @@ std::vector<std::string> ConfigParser::parseAllowedMethods(const std::vector<std
     if (tokens.size() < 2)
         throw std::runtime_error("Missing allowed_methods value in configuration line.");
 
+    std::set<std::string> seen;
+
     for (size_t i = 1; i < tokens.size(); i++)
     {
         const std::string &method = tokens[i];
@@ -335,6 +337,11 @@ std::vector<std::string> ConfigParser::parseAllowedMethods(const std::vector<std
 
         if (method != "GET" && method != "POST" && method != "DELETE")
             throw std::runtime_error("allowed_methods: unsupported HTTP method '" + method + "'");
+
+        if (seen.find(method) == seen.end()) {
+            ret.push_back(method);
+            seen.insert(method);
+        }
 
         ret.push_back(tokens[i]);
     }
