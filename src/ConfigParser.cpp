@@ -230,6 +230,11 @@ LocationConfig ConfigParser::parseLocationBlock(std::vector<std::string> lines)
             locConfig.setAllowUpload(parseAllowUpload(tokens));
         //decidir como store a informacao do redirect
         //e a informacao do cgi
+        else {
+            std::stringstream er;
+            er << "\"" << tokens[0] << "\" dirrective is not allowed here\n";
+            throw std::runtime_error(er.str());
+        }
 
     }
     return (locConfig);
@@ -258,9 +263,18 @@ std::string ConfigParser::parsePath(const std::vector<std::string> &tokens)
 
 std::string ConfigParser::parseRoot(const std::vector<std::string> &tokens)
 {
-    if (tokens.size() < 2) {
-		throw std::runtime_error("Error: Missing root value in configuration line.");
-    }
+    if (tokens.size() < 2)
+		throw std::runtime_error("Missing root value in configuration line.");
+
+    if (tokens.size() > 2)
+        throw std::runtime_error("Root path contains unexpected spaces or extra tokens");
+
+    if (tokens[1][0] != '/')
+        throw std::runtime_error("Root path must start with '/'");
+
+    if (!isValidPath(tokens[1]))
+        throw std::runtime_error("Root path contains illegal characters");
+
     return (tokens[1]);
 }
 
