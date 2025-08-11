@@ -302,13 +302,19 @@ std::string ConfigParser::parseRoot(const std::vector<std::string> &tokens)
 
 std::vector<std::string> ConfigParser::parseIndex(const std::vector<std::string> &tokens)
 {
-    std::vector<std::string> ret;
-
     if (tokens.size() < 2) {
-        throw std::runtime_error("Error: Missing index value in configuration line.");
+        throw std::runtime_error("Missing index value in configuration line.");
     }
 
-    for (size_t i = 1; i < tokens.size() && !tokens[i].empty(); i++) {
+    std::vector<std::string> ret;
+
+    for (size_t i = 1; i < tokens.size(); i++) {
+        if (tokens[i].empty())
+            throw std::runtime_error("Index value cannot be empty");
+
+        if (!isValidPath(tokens[i]))
+            throw std::runtime_error("Index value contains illegal characters: " + tokens[i]);
+
         ret.push_back(tokens[i]);
     }
     return (ret);
