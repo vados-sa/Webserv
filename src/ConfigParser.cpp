@@ -129,15 +129,25 @@ std::string ConfigParser::parseHost(const std::vector<std::string> &tokens)
 int ConfigParser::parsePort(const std::vector<std::string> &tokens)
 {
     if (tokens.size() < 2) {
-		throw std::runtime_error("Error: Missing port value in configuration line.");
+		throw std::runtime_error("Missing port value in configuration line.");
     }
 
-    //check if tokens[1] is numeric?
-    //tem um range de ports acho
+    if (tokens.size() > 2)
+        throw std::runtime_error("Port value contains unexpected spaces or extra tokens");
+
+    for (std::string::const_iterator it = tokens[1].begin(); it != tokens[1].end(); ++it)
+    {
+        if (!isdigit(*it))
+            throw std::runtime_error("Port must include digits only");
+    }
+
     int portInt = std::atoi(tokens[1].c_str());
     if (portInt == 0 && tokens[1] != "0") {
-		throw std::runtime_error(std::string("Error: Invalid error code '") + tokens[1] + "'");
+		throw std::runtime_error(std::string("Invalid port number '") + tokens[1] + "'");
     }
+
+    if (portInt < 1 || portInt > 65535)
+        throw std::runtime_error(std::string("Port number '") + tokens[1] + "' out of range");
     return (portInt);
 }
 
@@ -145,14 +155,26 @@ std::pair<int, std::string> ConfigParser::parseErrorPageLine(const std::vector<s
 {
     std::pair<int, std::string> entry;
     if (tokens.size() < 3) {
-		throw std::runtime_error("Error: Unable to parse error_page");
+		throw std::runtime_error("Unable to parse error_page, missing value");
+    }
+
+    if (tokens.size() > 3)
+    {
+        throw std::runtime_error("error_page contains unexpected spaces or extra tokens");
+    }
+
+    for (std::string::const_iterator it = tokens[1].begin(); it != tokens[1].end(); ++it)
+    {
+        if (!isdigit(*it))
+            throw std::runtime_error("Error code must include digits only");
     }
 
     int key = std::atoi(tokens[1].c_str());
-    if (key == 0 && tokens[1] != "0") {
-		throw std::runtime_error(std::string("Error: Invalid error code '") + tokens[1] + "'");
-        return (entry);
-    }
+    if (key == 0 && tokens[1] != "0")
+		throw std::runtime_error(std::string("Invalid error code '") + tokens[1] + "'");
+
+    if (key < 300 || key > 599)
+        throw std::runtime_error(std::string("Invalid error code '") + tokens[1] + "': not a valid HTTP error code");
 
     entry = std::make_pair(key, tokens[2]);
     return (entry);
@@ -230,6 +252,11 @@ LocationConfig ConfigParser::parseLocationBlock(std::vector<std::string> lines)
             locConfig.setAllowUpload(parseAllowUpload(tokens));
         //decidir como store a informacao do redirect
         //e a informacao do cgi
+        else {
+            std::stringstream er;
+            er << "\"" << tokens[0] << "\" dirrective is not allowed here\n";
+            throw std::runtime_error(er.str());
+        }
 
     }
     return (locConfig);
@@ -258,21 +285,36 @@ std::string ConfigParser::parsePath(const std::vector<std::string> &tokens)
 
 std::string ConfigParser::parseRoot(const std::vector<std::string> &tokens)
 {
-    if (tokens.size() < 2) {
-		throw std::runtime_error("Error: Missing root value in configuration line.");
-    }
+    if (tokens.size() < 2)
+		throw std::runtime_error("Missing root value in configuration line.");
+
+    if (tokens.size() > 2)
+        throw std::runtime_error("Root path contains unexpected spaces or extra tokens");
+
+    if (tokens[1][0] != '/')
+        throw std::runtime_error("Root path must start with '/'");
+
+    if (!isValidPath(tokens[1]))
+        throw std::runtime_error("Root path contains illegal characters");
+
     return (tokens[1]);
 }
 
 std::vector<std::string> ConfigParser::parseIndex(const std::vector<std::string> &tokens)
 {
-    std::vector<std::string> ret;
-
     if (tokens.size() < 2) {
-        throw std::runtime_error("Error: Missing index value in configuration line.");
+        throw std::runtime_error("Missing index value in configuration line.");
     }
 
-    for (size_t i = 1; i < tokens.size() && !tokens[i].empty(); i++) {
+    std::vector<std::string> ret;
+
+    for (size_t i = 1; i < tokens.size(); i++) {
+        if (tokens[i].empty())
+            throw std::runtime_error("Index value cannot be empty");
+
+        if (!isValidPath(tokens[i]))
+            throw std::runtime_error("Index value contains illegal characters: " + tokens[i]);
+
         ret.push_back(tokens[i]);
     }
     return (ret);
@@ -283,12 +325,24 @@ std::vector<std::string> ConfigParser::parseAllowedMethods(const std::vector<std
     std::vector<std::string> ret;
 
     if (tokens.size() < 2)
-    {
-        throw std::runtime_error("Error: Missing allowed_methods value in configuration line.");
-    }
+        throw std::runtime_error("Missing allowed_methods value in configuration line.");
 
-    for (size_t i = 1; i < tokens.size() && !tokens[i].empty(); i++)
+    std::set<std::string> seen;
+
+    for (size_t i = 1; i < tokens.size(); i++)
     {
+        const std::string &method = tokens[i];
+        if (method.empty())
+            throw std::runtime_error("allowed_methods: empty method value is not allowed");
+
+        if (method != "GET" && method != "POST" && method != "DELETE")
+            throw std::runtime_error("allowed_methods: unsupported HTTP method '" + method + "'");
+
+        if (seen.find(method) == seen.end()) {
+            ret.push_back(method);
+            seen.insert(method);
+        }
+
         ret.push_back(tokens[i]);
     }
     return (ret);
