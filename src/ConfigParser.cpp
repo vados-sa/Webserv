@@ -129,15 +129,25 @@ std::string ConfigParser::parseHost(const std::vector<std::string> &tokens)
 int ConfigParser::parsePort(const std::vector<std::string> &tokens)
 {
     if (tokens.size() < 2) {
-		throw std::runtime_error("Error: Missing port value in configuration line.");
+		throw std::runtime_error("Missing port value in configuration line.");
     }
 
-    //check if tokens[1] is numeric?
-    //tem um range de ports acho
+    if (tokens.size() > 2)
+        throw std::runtime_error("Port value contains unexpected spaces or extra tokens");
+
+    for (std::string::const_iterator it = tokens[1].begin(); it != tokens[1].end(); ++it)
+    {
+        if (!isdigit(*it))
+            throw std::runtime_error("Port must include digits only");
+    }
+
     int portInt = std::atoi(tokens[1].c_str());
     if (portInt == 0 && tokens[1] != "0") {
-		throw std::runtime_error(std::string("Error: Invalid error code '") + tokens[1] + "'");
+		throw std::runtime_error(std::string("Invalid port number '") + tokens[1] + "'");
     }
+
+    if (portInt < 1 || portInt > 65535)
+        throw std::runtime_error(std::string("Port number '") + tokens[1] + "' out of range");
     return (portInt);
 }
 
