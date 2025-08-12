@@ -87,7 +87,7 @@ ServerConfig ConfigParser::parseServerBlock(std::vector<std::string> lines) {
             i += locationLines.size();
             lineNum ++;
         }
-        else if (!tokens.empty())
+        else if (!tokens.empty() && tokens[0] != "}")
             throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "   \"" + tokens[0] + "\" directive is not allowed here\n");
     }
     return (servConfig);
