@@ -33,8 +33,12 @@ class Config
         std::vector<Client> clients;
 		std::vector<pollfd> poll_fds;
 
+        //void setupPollfdSet(int server_count);
+        //bool pollLoop(int server_count);
         void handleNewConnection(int server_fd);
+        //void handleIdleClient(int client_idx, int pollfd_idx);
 		void handleClientRequest(size_t index, int client_idx);
+        //void handleResponse(int client_idx, int pollfd_idx);
 		bool sendResponse(size_t index, int client_idx);
 		void cleanup();
     
