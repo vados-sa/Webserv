@@ -25,7 +25,6 @@ void Config::loadFromFile(const std::string &filepath) {
 }
 
 bool Config::setupServer() {
-    // for each ServerConfig object, setup a ServerSocket object
     for (size_t i = 0; i < servers.size(); i++) {
         ServerSocket socketObj;
         if (!socketObj.setupServerSocket(servers[i].getPort()))
@@ -36,24 +35,26 @@ bool Config::setupServer() {
 }
 
 bool Config::run() {
-    // for each serverSocket
     const int server_count = serverSockets.size();
     for (int i = 0; i < server_count; i++) {
 	    pollfd server_pollfd = {serverSockets[i].getFd(), POLLIN, 0};
 	    poll_fds.push_back(server_pollfd);
     }
 
-    //std::cout << "Server count: " << server_count << ", Clients size: " << clients.size() << std::endl;
-
 	while (true) {
 		int ready = poll(poll_fds.data(), poll_fds.size(), 5000);
 		if (ready < 0) {
+			cleanup();
+			if (errno == EINTR) {
+                std::cout << "📡 Signal received, gracefully shutting down..." << std::endl;
+                break ;
+            }
             perror("poll failed");
-            cleanup();
             return false;
         }
 
 		for (int i = poll_fds.size() - 1; i >= 0; --i) {
+
             if ((i < server_count)) {
                 if (poll_fds[i].revents & POLLIN) {
                     handleNewConnection(poll_fds[i].fd);
@@ -61,6 +62,7 @@ bool Config::run() {
                 continue ;
 			} else {
                 const int client_idx = i - server_count;
+
                 if (clients[client_idx].isTimedOut(60)) {
                     std::cout << "⏰ 505: Gateway Timeout\n Client fd("
                     << poll_fds[i].fd << ")/port(" << clients[client_idx].getPort()
@@ -71,14 +73,14 @@ bool Config::run() {
                     clients.erase(clients.begin() + client_idx);
 
                 } else if (poll_fds[i].revents & POLLIN) {
-                    handleClientRequest(i, client_idx); // maybe pass client_idx 
+                    handleClientRequest(i, client_idx);
 
                 } else if (poll_fds[i].revents & POLLOUT) {
                     if (sendResponse(i, client_idx) == true) {
                         if (clients[client_idx].getKeepAlive() == false) {
-                            std::cout << "❌ Client disconnected: " << "\n" << "fd - "
-                            << poll_fds[i].fd << "\n" << "port - "
-                            << clients[client_idx].getPort() << "\n" << std::endl;
+							
+							std::cout << "❌ Client disconnected:\nfd - " << poll_fds[i].fd 
+							<< "\nport - " << clients[client_idx].getPort() << "\n" << std::endl;
 
                             close(poll_fds[i].fd);
                             poll_fds.erase(poll_fds.begin() + i);
@@ -91,7 +93,6 @@ bool Config::run() {
             }
 		}
 	}
-
 	return true;
 }
 
@@ -148,7 +149,7 @@ void Config::handleClientRequest(size_t index, int client_idx) {
 								<< "port - " << client.getPort() << "\n" << std::endl;
 		close(client_fd);
 		poll_fds.erase(poll_fds.begin() + index);
-		clients.erase(clients.begin() + (index - 1));
+		clients.erase(clients.begin() + (client_idx));
     } else {
 		client.appendRequestData(buffer, bytes);
 
@@ -167,7 +168,7 @@ void Config::handleClientRequest(size_t index, int client_idx) {
 }
 
 bool Config::sendResponse(size_t index, int client_idx) {
-	Client& client = clients[client_idx];   // Should be (index - server_count)
+	Client& client = clients[client_idx];
 	int client_fd = poll_fds[index].fd;
 	std::string response = client.getResponse();
 	size_t already_sent= client.getBytesSent();

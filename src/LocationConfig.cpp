@@ -17,6 +17,7 @@ std::ostream &operator<<(std::ostream &os, const std::vector<LocationConfig>& ob
         os << " -- Allow upload: " << obj[i].getAllowUpload() << "\n";
         os << " -- Upload dir: " << obj[i].getUploadDir() << "\n";
         os << " -- Autoindex: " << obj[i].getAutoindex() << "\n";
+		os << " -- CGI extension: " << obj[i].getCgiExtension() << "\n";
     }
     return (os);
 }

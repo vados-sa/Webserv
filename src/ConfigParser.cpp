@@ -259,13 +259,11 @@ LocationConfig ConfigParser::parseLocationBlock(std::vector<std::string> lines)
         else if (!tokens.empty() && tokens[0] == "autoindex")
             locConfig.setAutoindex(parseAutoindex(tokens));
         else if (!tokens.empty() && tokens[0] == "allow_upload")
-            locConfig.setAllowUpload(parseAllowUpload(tokens));
-        //decidir como store a informacao do redirect
-        //e a informacao do cgi
+            locConfig.setAllowUpload(parseAllowUpload(tokens))
+        else if (tokens[0] == "cgi_extension")
+          locConfig.setCgiExtension(parseCgiExtension(tokens));
         else if (!tokens.empty() && tokens[0] != "}") {
             throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "   \"" + tokens[0] + "\" directive is not allowed here\n");
-        }
-
     }
     return (locConfig);
 }
@@ -335,6 +333,8 @@ std::vector<std::string> ConfigParser::parseAllowedMethods(const std::vector<std
     if (tokens.size() < 2)
         throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Missing allowed_methods value in configuration line.");
 
+    std::set<std::string> seen;
+
     for (size_t i = 1; i < tokens.size(); i++)
     {
         const std::string &method = tokens[i];
@@ -343,6 +343,11 @@ std::vector<std::string> ConfigParser::parseAllowedMethods(const std::vector<std
 
         if (method != "GET" && method != "POST" && method != "DELETE")
             throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  allowed_methods: unsupported HTTP method '" + method + "'");
+
+        if (seen.find(method) == seen.end()) {
+            ret.push_back(method);
+            seen.insert(method);
+        }
 
         ret.push_back(tokens[i]);
     }
@@ -390,6 +395,23 @@ bool ConfigParser::parseAllowUpload(const std::vector<std::string> &tokens) {
         return (false);
 
     throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Incorrect syntax for allow_upload directive.");
+}
+
+std::string ConfigParser::parseCgiExtension(const std::vector<std::string> &tokens)
+{
+	if (tokens.size() != 2) {
+		throw std::runtime_error("Error: Exactly one CGI extension must be specified in the configuration line.");
+	}
+
+	const std::string &extension = tokens[1];
+
+	if (extension.empty()) {
+		throw std::runtime_error("Error: Empty CGI extension is not allowed.");
+	}
+	if (!isValidPath(extension)) {
+		throw std::runtime_error("Error: Invalid CGI extension '" + extension + "'.");
+	}
+	return extension;
 }
 
 bool isValidPathChar(char c)
