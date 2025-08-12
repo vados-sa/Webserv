@@ -20,9 +20,8 @@ int main(int ac, char *av[])
 	}
 	catch (const std::exception &e)
 	{
-		std::cerr << "\033[31mException: " << e.what() << "\033[0m" << std::endl;
+		std::cerr << "\033[31m" << e.what() << "\033[0m" << std::endl;
 		return 1;
 	}
-
 	return 0;
 }

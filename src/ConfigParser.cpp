@@ -3,6 +3,8 @@
 
 Config ConfigParser::parseConfigFile(const std::string &filename) {
     Config config;
+    fileName = filename;
+    lineNum = 0;
 
 	if (filename.size() < 5 || filename.substr(filename.size() - 5) != ".conf") {
 		throw std::runtime_error("Invalid file extension, expected .conf");
@@ -24,12 +26,13 @@ Config ConfigParser::parseConfigFile(const std::string &filename) {
         tokens = tokenize(line);
         if (!tokens.empty()) {
             if (tokens[0] == "server") {
-                if (tokens[1] != "{") {
-                    throw std::runtime_error("Error: Expected '{' after 'server'");
-                }
+                if (tokens[1] != "{")
+                    throw std::runtime_error(fileName + ":" + std::to_string(i + 1) + "Expected '{' after 'server'");
+                lineNum = i + 1;
                 std::vector<std::string> serverLines = collectBlock(lines, i);
                 ServerConfig server = parseServerBlock(serverLines);
                 config.addServer(server);
+                i += serverLines.size() + 1;
             }
         }
     }
@@ -55,6 +58,7 @@ std::vector<std::string> ConfigParser::collectBlock(std::vector<std::string> lin
         blockLines.push_back(lines[i]);
     }
 
+    blockLines.push_back(lines[i]);
     return (blockLines);
 }
 
@@ -64,6 +68,7 @@ ServerConfig ConfigParser::parseServerBlock(std::vector<std::string> lines) {
 
     for (size_t i = 1; i < lines.size(); i++) {
         std::string line = trimLine(lines[i]);
+        lineNum ++;
         tokens = tokenize(line);
         if (!tokens.empty() && tokens[0] == "host")
             servConfig.setHost(parseHost(tokens));
@@ -75,10 +80,15 @@ ServerConfig ConfigParser::parseServerBlock(std::vector<std::string> lines) {
             servConfig.setMaxBodySize(parseMaxBodySize(tokens));
         else if (!tokens.empty() && tokens[0] == "location")
         {
+            lineNum --;
             std::vector<std::string> locationLines = collectBlock(lines, i);
             LocationConfig loc = parseLocationBlock(locationLines);
             servConfig.addLocation(loc);
+            i += locationLines.size();
+            lineNum ++;
         }
+        else if (!tokens.empty())
+            throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "   \"" + tokens[0] + "\" directive is not allowed here\n");
     }
     return (servConfig);
 }
@@ -87,7 +97,7 @@ std::string ConfigParser::parseHost(const std::vector<std::string> &tokens)
 {
     std::vector<std::string> octets;
     if (tokens.size() < 2)
-        throw std::runtime_error("Missing host value in configuration line.\n");
+        throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Missing host value in configuration line.\n");
 
     std::string host = tokens[1];
 
@@ -101,27 +111,27 @@ std::string ConfigParser::parseHost(const std::vector<std::string> &tokens)
     }
     octets.push_back(host);
     if (octets.size() != 4)
-        throw std::runtime_error("Invalid host IP address in configuration file\n");
+        throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Invalid host IP address in configuration file\n");
 
     for (int i = 0; i < 4; i++) {
         //checks if octets empty, which would catch an error if ip address is missing an octet
         if (octets[i].empty())
-            throw std::runtime_error("Host address incomplete in configuration file\n");
+            throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Host address incomplete in configuration file\n");
 
         //rejects leading 0 ("0" is ok, but "00" ou "01" is not!)
         if (octets[i][0] == '0' && octets[i].length() > 1)
-            throw std::runtime_error("Host address contains leading zeros in configuration file\n");
+            throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Host address contains leading zeros in configuration file\n");
 
         //checks if the octet is purely digits. whitespace isnt a problem here, octets[i] is already a token
         for (std::string::const_iterator it = octets[i].begin(); it != octets[i].end(); ++it) {
             if (!isdigit(*it))
-                throw std::runtime_error("Host address must include digits only\n");
+                throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Host address must include digits only\n");
         }
 
         //converts them to int in order to check the range
         int num = std::atoi(octets[i].c_str());
         if ((num == 0 && octets[i] != "0") || num < 0 || num > 255)
-            throw std::runtime_error("Invalid host IP address in configuration file\n");
+            throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Invalid host IP address in configuration file\n");
     }
     return (tokens[1]);
 }
@@ -129,25 +139,25 @@ std::string ConfigParser::parseHost(const std::vector<std::string> &tokens)
 int ConfigParser::parsePort(const std::vector<std::string> &tokens)
 {
     if (tokens.size() < 2) {
-		throw std::runtime_error("Missing port value in configuration line.");
+		throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Missing port value in configuration line.");
     }
 
     if (tokens.size() > 2)
-        throw std::runtime_error("Port value contains unexpected spaces or extra tokens");
+        throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Port value contains unexpected spaces or extra tokens");
 
     for (std::string::const_iterator it = tokens[1].begin(); it != tokens[1].end(); ++it)
     {
         if (!isdigit(*it))
-            throw std::runtime_error("Port must include digits only");
+            throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Port must include digits only");
     }
 
     int portInt = std::atoi(tokens[1].c_str());
     if (portInt == 0 && tokens[1] != "0") {
-		throw std::runtime_error(std::string("Invalid port number '") + tokens[1] + "'");
+        throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Invalid port number '" + tokens[1] + "'");
     }
 
     if (portInt < 1 || portInt > 65535)
-        throw std::runtime_error(std::string("Port number '") + tokens[1] + "' out of range");
+        throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Port number '" + tokens[1] + "' out of range");
     return (portInt);
 }
 
@@ -155,18 +165,18 @@ std::pair<int, std::string> ConfigParser::parseErrorPageLine(const std::vector<s
 {
     std::pair<int, std::string> entry;
     if (tokens.size() < 3) {
-		throw std::runtime_error("Unable to parse error_page, missing value");
+        throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Unable to parse error_page, missing value");
     }
 
     if (tokens.size() > 3)
     {
-        throw std::runtime_error("error_page contains unexpected spaces or extra tokens");
+        throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  error_page contains unexpected spaces or extra tokens");
     }
 
     for (std::string::const_iterator it = tokens[1].begin(); it != tokens[1].end(); ++it)
     {
         if (!isdigit(*it))
-            throw std::runtime_error("Error code must include digits only");
+            throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Error code must include digits only");
     }
 
     int key = std::atoi(tokens[1].c_str());
@@ -184,7 +194,7 @@ size_t ConfigParser::parseMaxBodySize(const std::vector<std::string> &tokens)
 {
     if (tokens.size() < 2)
     {
-        throw std::runtime_error("Error: Missing argument for client_max_body_size");
+        throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Error: Missing argument for client_max_body_size");
     }
 
     std::string value = tokens[1];
@@ -210,7 +220,7 @@ size_t ConfigParser::parseMaxBodySize(const std::vector<std::string> &tokens)
                 multiplier = 1024 * 1024 * 1024;
                 break;
             default:
-				throw std::runtime_error("Error: Unknown size unit in client_max_body_size");
+				throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Unknown size unit in client_max_body_size");
         }
 
         // Use resize() instead of pop_back()
@@ -220,7 +230,7 @@ size_t ConfigParser::parseMaxBodySize(const std::vector<std::string> &tokens)
     int number = std::atoi(value.c_str());
     if (number <= 0)
     {
-        throw std::runtime_error("Error: Invalid numeric value for client_max_body_size");
+        throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Invalid numeric value for client_max_body_size");
     }
 
     return static_cast<size_t>(number) * multiplier;
@@ -233,33 +243,27 @@ LocationConfig ConfigParser::parseLocationBlock(std::vector<std::string> lines)
 
     for (size_t i = 0; i < lines.size(); i++)
     {
+        lineNum ++;
         lines[i] = trimLine(lines[i]);
         tokens = tokenize(lines[i]);
-
-        if (tokens[0] == "location")
+        if (!tokens.empty() && tokens[0] == "location")
             locConfig.setPath(parsePath(tokens));
-        else if (tokens[0] == "root")
+        else if (!tokens.empty() && tokens[0] == "root")
             locConfig.setRoot(parseRoot(tokens));
-        else if (tokens[0] =="index")
+        else if (!tokens.empty() && tokens[0] == "index")
             locConfig.setIndex(parseIndex(tokens));
-        else if (tokens[0] == "allowed_methods")
+        else if (!tokens.empty() && tokens[0] == "allowed_methods")
             locConfig.setAllowedMethods(parseAllowedMethods(tokens));
-        else if (tokens[0] == "upload_path")
+        else if (!tokens.empty() && tokens[0] == "upload_path")
             locConfig.setUploadDir(parseUploadDir(tokens));
-        else if (tokens[0] == "autoindex")
+        else if (!tokens.empty() && tokens[0] == "autoindex")
             locConfig.setAutoindex(parseAutoindex(tokens));
-        else if (tokens[0] == "allow_upload")
-            locConfig.setAllowUpload(parseAllowUpload(tokens));
-        //decidir como store a informacao do redirect
-        //e a informacao do cgi
-		else if (tokens[0] == "cgi_extension")
-			locConfig.setCgiExtension(parseCgiExtension(tokens));
-        else {
-            std::stringstream er;
-            er << "\"" << tokens[0] << "\" dirrective is not allowed here\n";
-            throw std::runtime_error(er.str());
-        }
-
+        else if (!tokens.empty() && tokens[0] == "allow_upload")
+            locConfig.setAllowUpload(parseAllowUpload(tokens))
+        else if (tokens[0] == "cgi_extension")
+          locConfig.setCgiExtension(parseCgiExtension(tokens));
+        else if (!tokens.empty() && tokens[0] != "}") {
+            throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "   \"" + tokens[0] + "\" directive is not allowed here\n");
     }
     return (locConfig);
 }
@@ -267,37 +271,37 @@ LocationConfig ConfigParser::parseLocationBlock(std::vector<std::string> lines)
 std::string ConfigParser::parsePath(const std::vector<std::string> &tokens)
 {
     if (tokens.size() < 2) {
-        throw std::runtime_error("Missing path value in configuration line.");
+        throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Missing path value in configuration line.");
     }
 
     if (tokens[0] == "location") {
         if (tokens[1][0] != '/')
-            throw std::runtime_error("Path missing starting slash");
+            throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Path missing starting slash");
 
         if (tokens.size() > 3 && !tokens[2].empty())
-            throw std::runtime_error("Path contains unexpected spaces or extra tokens");
+            throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Path contains unexpected spaces or extra tokens");
 
         if (!isValidPath(tokens[1]))
-            throw std::runtime_error("Path contains illegal characters");
+            throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Path contains illegal characters");
         return (tokens[1]);
     }
 
-    throw std::runtime_error("Incorrect syntax for location path.");
+    throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Incorrect syntax for location path.");
 }
 
 std::string ConfigParser::parseRoot(const std::vector<std::string> &tokens)
 {
     if (tokens.size() < 2)
-		throw std::runtime_error("Missing root value in configuration line.");
+		throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Missing root value in configuration line.");
 
     if (tokens.size() > 2)
-        throw std::runtime_error("Root path contains unexpected spaces or extra tokens");
+        throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Root path contains unexpected spaces or extra tokens");
 
     if (tokens[1][0] != '/')
-        throw std::runtime_error("Root path must start with '/'");
+        throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Root path must start with '/'");
 
     if (!isValidPath(tokens[1]))
-        throw std::runtime_error("Root path contains illegal characters");
+        throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Root path contains illegal characters");
 
     return (tokens[1]);
 }
@@ -305,17 +309,17 @@ std::string ConfigParser::parseRoot(const std::vector<std::string> &tokens)
 std::vector<std::string> ConfigParser::parseIndex(const std::vector<std::string> &tokens)
 {
     if (tokens.size() < 2) {
-        throw std::runtime_error("Missing index value in configuration line.");
+        throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Missing index value in configuration line.");
     }
 
     std::vector<std::string> ret;
 
     for (size_t i = 1; i < tokens.size(); i++) {
         if (tokens[i].empty())
-            throw std::runtime_error("Index value cannot be empty");
+            throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Index value cannot be empty");
 
         if (!isValidPath(tokens[i]))
-            throw std::runtime_error("Index value contains illegal characters: " + tokens[i]);
+            throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Index value contains illegal characters: " + tokens[i]);
 
         ret.push_back(tokens[i]);
     }
@@ -327,7 +331,7 @@ std::vector<std::string> ConfigParser::parseAllowedMethods(const std::vector<std
     std::vector<std::string> ret;
 
     if (tokens.size() < 2)
-        throw std::runtime_error("Missing allowed_methods value in configuration line.");
+        throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Missing allowed_methods value in configuration line.");
 
     std::set<std::string> seen;
 
@@ -335,10 +339,10 @@ std::vector<std::string> ConfigParser::parseAllowedMethods(const std::vector<std
     {
         const std::string &method = tokens[i];
         if (method.empty())
-            throw std::runtime_error("allowed_methods: empty method value is not allowed");
+            throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  allowed_methods: empty method value is not allowed");
 
         if (method != "GET" && method != "POST" && method != "DELETE")
-            throw std::runtime_error("allowed_methods: unsupported HTTP method '" + method + "'");
+            throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  allowed_methods: unsupported HTTP method '" + method + "'");
 
         if (seen.find(method) == seen.end()) {
             ret.push_back(method);
@@ -353,13 +357,13 @@ std::vector<std::string> ConfigParser::parseAllowedMethods(const std::vector<std
 std::string ConfigParser::parseUploadDir(const std::vector<std::string> &tokens)
 {
     if (tokens.size() < 2)
-        throw std::runtime_error("Missing upload_path value in configuration line.");
+        throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Missing upload_path value in configuration line.");
 
     if (tokens[1][0] != '/')
-        throw std::runtime_error("Missing leading slash in upload_path value in configuration file.");
+        throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Missing leading slash in upload_path value in configuration file.");
 
     if (tokens[1] == "/")
-        throw std::runtime_error("Upload path cannot be root '/'");
+        throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Upload path cannot be root '/'");
 
     return (tokens[1]);
 }
@@ -367,30 +371,30 @@ std::string ConfigParser::parseUploadDir(const std::vector<std::string> &tokens)
 bool ConfigParser::parseAutoindex(const std::vector<std::string> &tokens)
 {
     if (tokens.size() < 2)
-        throw std::runtime_error("Missing autoindex value in configuration line.");
+        throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Missing autoindex value in configuration line.");
     if (tokens.size() > 2)
-        throw std::runtime_error("Autoindex contains unexpected extra tokens.");
+        throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Autoindex contains unexpected extra tokens.");
 
     if (tokens[1] == "on")
         return (true);
     if (tokens[1] == "off")
         return (false);
 
-    throw std::runtime_error("Incorrect syntax for autoindex directive.");
+    throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Incorrect syntax for autoindex directive.");
 }
 
 bool ConfigParser::parseAllowUpload(const std::vector<std::string> &tokens) {
     if (tokens.size() < 2)
-        throw std::runtime_error("Missing allow_upload value in configuration line.");
+        throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Missing allow_upload value in configuration line.");
     if (tokens.size() > 2)
-        throw std::runtime_error("Allow_upload contains unexpected extra tokens.");
+        throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Allow_upload contains unexpected extra tokens.");
 
     if (tokens[1] == "on")
         return (true);
     if (tokens[1] == "off")
         return (false);
 
-    throw std::runtime_error("Incorrect syntax for allow_upload directive.");
+    throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "  Incorrect syntax for allow_upload directive.");
 }
 
 std::string ConfigParser::parseCgiExtension(const std::vector<std::string> &tokens)
