@@ -34,7 +34,7 @@ bool Config::setupServer() {
     return true;
 }
 
-/* bool Config::run() {
+bool Config::run() {
 	const int server_count = serverSockets.size();
 	setupPollfdSet(server_count);
 	return pollLoop(server_count);
@@ -45,9 +45,9 @@ void Config::setupPollfdSet(int server_count) {
 	    pollfd server_pollfd = {serverSockets[i].getFd(), POLLIN, 0};
 	    poll_fds.push_back(server_pollfd);
     }
-} */
+}
 
-/* bool Config::pollLoop(int server_count) {
+bool Config::pollLoop(int server_count) {
 	while (true) {
 		int ready = poll(poll_fds.data(), poll_fds.size(), 5000);
 		if (ready < 0) {
@@ -78,7 +78,7 @@ void Config::setupPollfdSet(int server_count) {
 		}
 	}
 	return true;
-} */
+}
 
 void Config::handleNewConnection(int server_fd) {
 	struct sockaddr_in client_addr;
@@ -115,14 +115,14 @@ void Config::handleNewConnection(int server_fd) {
 				<< port << "\n" << std::endl;
 }
 
-/* void Config::handleIdleClient(int client_idx, int pollfd_idx) {
+void Config::handleIdleClient(int client_idx, int pollfd_idx) {
 	std::cout << "⏰ 505: Gateway Timeout\n Client fd("
 			  << poll_fds[pollfd_idx].fd << ")/port(" << clients[client_idx].getPort()
 			  << ")" << "\n" << std::endl;
 	close(poll_fds[pollfd_idx].fd);
 	poll_fds.erase(poll_fds.begin() + pollfd_idx);
 	clients.erase(clients.begin() + client_idx);
-} */
+}
 
 // ver como fzr melhor
 void Config::handleClientRequest(size_t index, int client_idx) {
@@ -160,7 +160,7 @@ void Config::handleClientRequest(size_t index, int client_idx) {
 	}
 }
 
-/* void Config::handleResponse(int client_idx, int pollfd_idx) {
+void Config::handleResponse(int client_idx, int pollfd_idx) {
 	if (sendResponse(pollfd_idx, client_idx) == true) {
 		if (clients[client_idx].getKeepAlive() == false) {
 			std::cout << "❌ Client disconnected:\nfd - " << poll_fds[pollfd_idx].fd 
@@ -172,7 +172,7 @@ void Config::handleClientRequest(size_t index, int client_idx) {
 		} else
             poll_fds[pollfd_idx].events = POLLIN;
     }	
-} */
+}
 
 bool Config::sendResponse(size_t index, int client_idx) {
 	Client& client = clients[client_idx];
@@ -211,7 +211,7 @@ std::ostream &operator<<(std::ostream &os, const Config &obj) {
     return os;
 }
 
-bool Config::run() {
+/* bool Config::run() {
     const int server_count = serverSockets.size();
     for (int i = 0; i < server_count; i++) {
 	    pollfd server_pollfd = {serverSockets[i].getFd(), POLLIN, 0};
@@ -271,4 +271,4 @@ bool Config::run() {
 		}
 	}
 	return true;
-}
+} */
