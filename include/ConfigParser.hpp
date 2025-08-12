@@ -14,6 +14,8 @@ class Config;
 
 class ConfigParser {
 private:
+    std::string fileName;
+    size_t lineNum;
     std::vector<std::string> collectBlock(std::vector<std::string> lines, size_t i);
     ServerConfig parseServerBlock(std::vector<std::string> lines);
     LocationConfig parseLocationBlock(std::vector<std::string> lines);
@@ -32,6 +34,7 @@ private:
     std::string parseUploadDir(const std::vector<std::string> &tokens);
     bool parseAutoindex(const std::vector<std::string> &tokens);
     bool parseAllowUpload(const std::vector<std::string> &tokens);
+	std::string parseCgiExtension(const std::vector<std::string> &tokens);
 
 public:
     Config  parseConfigFile(const std::string &filename);
