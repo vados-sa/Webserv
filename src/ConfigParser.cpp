@@ -259,10 +259,10 @@ LocationConfig ConfigParser::parseLocationBlock(std::vector<std::string> lines)
         else if (!tokens.empty() && tokens[0] == "autoindex")
             locConfig.setAutoindex(parseAutoindex(tokens));
         else if (!tokens.empty() && tokens[0] == "allow_upload")
-            locConfig.setAllowUpload(parseAllowUpload(tokens))
+            locConfig.setAllowUpload(parseAllowUpload(tokens));
         else if (tokens[0] == "cgi_extension")
-          locConfig.setCgiExtension(parseCgiExtension(tokens));
-        else if (!tokens.empty() && tokens[0] != "}") {
+        	locConfig.setCgiExtension(parseCgiExtension(tokens));
+        else if (!tokens.empty() && tokens[0] != "}")
             throw std::runtime_error(fileName + ":" + std::to_string(lineNum) + "   \"" + tokens[0] + "\" directive is not allowed here\n");
     }
     return (locConfig);
