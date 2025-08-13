@@ -11,6 +11,7 @@
 #include <string>
 #include <cstring>
 #include <csignal>
+#include <cstdio> 
 
 #include "ServerConfig.hpp"
 
