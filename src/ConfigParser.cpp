@@ -410,7 +410,7 @@ std::vector<std::string> ConfigParser::parseAllowedMethods(const std::vector<std
             seen.insert(method);
         }
 
-        ret.push_back(tokens[i]);
+        //ret.push_back(tokens[i]);
     }
     return (ret);
 }
