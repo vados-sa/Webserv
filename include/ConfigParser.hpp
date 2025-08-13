@@ -14,6 +14,7 @@ class Config;
 
 class ConfigParser {
 private:
+    std::ostringstream errorMessage;
     std::string fileName;
     size_t lineNum;
     std::vector<std::string> collectBlock(std::vector<std::string> lines, size_t i);
