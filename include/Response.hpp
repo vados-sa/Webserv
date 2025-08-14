@@ -4,6 +4,7 @@
 #include <sstream>
 #include "HttpMessage.hpp"
 #include "Request.hpp"
+#include "LocationConfig.hpp"
 
 #define ROOT "./www"
 
@@ -38,8 +39,9 @@ public:
     void setFullPath(const std::string &reqPath);
     void setCode(const std::string code);
     void setPage(const std::string &code, const std::string &message, bool error);
+	void handleCgi(const Request &reqObj, const LocationConfig &locConfig);
 };
 
-std::string buildResponse(const Request &obj);
+std::string buildResponse(const Request &reqObj, LocationConfig &locConfig);
 std::string generatePage(const std::string &code, const std::string &message, bool error);
 std::ostream &operator<<(std::ostream &out, const Response &obj);

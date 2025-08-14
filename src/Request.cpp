@@ -118,3 +118,11 @@ std::ostream &operator<<(std::ostream &os, const std::map<std::string, std::stri
     return os;
 }
 
+
+std::string Request::getQueryString() const {
+    size_t pos = path_.find('?');
+    if (pos != std::string::npos) {
+        return path_.substr(pos + 1); // Extract everything after '?'
+    }
+    return ""; // No query string found
+}

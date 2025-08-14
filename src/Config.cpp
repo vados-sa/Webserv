@@ -152,7 +152,8 @@ void Config::handleClientRequest(size_t index, int client_idx) {
 			std::cout << "📥 Complete request received:\n" << request << std::endl;
 
 			Request reqObj = Request::parseRequest(request);
-			std::string response = buildResponse(reqObj);
+			LocationConfig locConfig = findLocationConfig(reqObj.getPath());
+			std::string response = buildResponse(reqObj, locConfig);
 			client.setKeepAlive(reqObj.getHeaders());
 			poll_fds[index].events = POLLOUT;
 			client.setResponse(response);
@@ -209,6 +210,18 @@ std::ostream &operator<<(std::ostream &os, const Config &obj) {
         os << serversVector[i] << std::endl;
     }
     return os;
+}
+
+LocationConfig Config::findLocationConfig(const std::string &path) const {
+    for (std::vector<ServerConfig>::const_iterator serverIt = servers.begin(); serverIt != servers.end(); ++serverIt) {
+        const std::vector<LocationConfig> &locations = serverIt->getLocations();
+        for (std::vector<LocationConfig>::const_iterator locationIt = locations.begin(); locationIt != locations.end(); ++locationIt) {
+            if (path.find(locationIt->getPath()) == 0) { // Match the beginning of the path
+                return *locationIt;
+            }
+        }
+    }
+    throw std::runtime_error("No matching location configuration found for path: " + path);
 }
 
 /* bool Config::run() {

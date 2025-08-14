@@ -32,3 +32,12 @@ std::ostream &operator<<(std::ostream &os, const std::vector<std::string>& obj) 
     os << "]/n";
     return (os);
 }
+
+bool LocationConfig::isCgiRequest(std::string &uri) {
+    size_t pos = uri.rfind('.');
+    if (pos != std::string::npos) {
+        std::string extension = uri.substr(pos);
+        return extension == cgi_extension;
+    }
+    return false;
+}

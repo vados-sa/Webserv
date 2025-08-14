@@ -51,6 +51,7 @@ class Config
 
         void addServer(ServerConfig &server);
         const std::vector<ServerConfig> &getServers() const { return servers; };
+		LocationConfig findLocationConfig(const std::string &path) const;
         bool setupServer();
         bool run();
 };

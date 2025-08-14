@@ -32,6 +32,7 @@ public:
     //---setters
     void setMethod(const std::string &methodToSet) { method_ = methodToSet; };
     void setPath(const std::string &pathToSet) { path_ = pathToSet; };
+	std::string getQueryString() const;
 };
 
 std::ostream &operator<<(std::ostream &out, const Request &obj);
