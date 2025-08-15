@@ -1,5 +1,6 @@
 #include "Response.hpp"
 #include "LocationConfig.hpp"
+#include "Config.hpp"
 
 Response::Response() : statusCode_(""), statusMessage_(""), fullPath_("./www"), filename_("upload/") {}
 
@@ -256,7 +257,7 @@ std::ostream &operator<<(std::ostream &out, const Response &obj)
     return (out);
 }
 
-std::string buildResponse(const Request &reqObj, LocationConfig &locConfig)
+std::string buildResponse(const Request &reqObj, Config &locConfig)
 {
     Response res;
 

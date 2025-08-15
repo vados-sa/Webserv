@@ -42,6 +42,6 @@ public:
 	void handleCgi(const Request &reqObj, const LocationConfig &locConfig);
 };
 
-std::string buildResponse(const Request &reqObj, LocationConfig &locConfig);
+std::string buildResponse(const Request &reqObj, Config &Config);
 std::string generatePage(const std::string &code, const std::string &message, bool error);
 std::ostream &operator<<(std::ostream &out, const Response &obj);
