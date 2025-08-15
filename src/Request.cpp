@@ -41,9 +41,35 @@ int Request::parseRequestLine(std::string &raw, Request *obj)
     raw = raw.substr(len + 1);
     if (possiblePath[0] != '/')
         return (0);
-    obj->path_ = possiblePath;
+
+    // Split query string
+    std::string::size_type qpos = possiblePath.find('?');
+    if (qpos != std::string::npos)
+    {
+        obj->query_string = possiblePath.substr(qpos + 1);
+        obj->path_ = possiblePath.substr(0, qpos);
+    }
+    else
+    {
+        obj->query_string.clear();
+        obj->path_ = possiblePath;
+    }
+
+    // Default index.html
     if (obj->path_ == "/")
         obj->path_.append("index.html");
+
+    // // ----- CGI DETECTION -----
+    // obj->is_cgi = false;
+    // if (!loc.cgi_extension.empty())
+    // {
+    //     std::string ext = loc.cgi_extension;
+    //     if (obj->path_.size() >= ext.size() &&
+    //         obj->path_.substr(obj->path_.size() - ext.size()) == ext)
+    //     {
+    //         obj->is_cgi = true;
+    //     }
+    // }
 
     // ----- PARSE VERSION ---
     len = raw.find("\r\n");
@@ -119,10 +145,10 @@ std::ostream &operator<<(std::ostream &os, const std::map<std::string, std::stri
 }
 
 
-std::string Request::getQueryString() const {
-    size_t pos = path_.find('?');
-    if (pos != std::string::npos) {
-        return path_.substr(pos + 1); // Extract everything after '?'
-    }
-    return ""; // No query string found
-}
+// std::string Request::getQueryString() const {
+//     size_t pos = path_.find('?');
+//     if (pos != std::string::npos) {
+//         return path_.substr(pos + 1); // Extract everything after '?'
+//     }
+//     return ""; // No query string found
+// }

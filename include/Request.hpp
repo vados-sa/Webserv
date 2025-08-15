@@ -12,6 +12,8 @@ class Request : public HttpMessage
 private:
     std::string method_;
     std::string path_;
+    std::string query_string;
+    bool is_cgi;
 
 public:
     Request();
@@ -28,11 +30,15 @@ public:
     std::string getMethod() const { return method_; };
     std::string getPath() const { return path_; };
     std::string getVersion() const { return version_; };
+    std::string getQueryString() const { return query_string; }
+    bool getIsCgi() const { return is_cgi; }
 
     //---setters
-    void setMethod(const std::string &methodToSet) { method_ = methodToSet; };
-    void setPath(const std::string &pathToSet) { path_ = pathToSet; };
-	std::string getQueryString() const;
+    void setMethod(const std::string &methodToSet) { method_ = methodToSet; }
+    void setPath(const std::string &pathToSet) { path_ = pathToSet; }
+    void setQueryString(const std::string &set) { query_string = set;}
+    void setIsCgi(const bool &set) { is_cgi = set; }
+	//std::string parseQueryString() const;
 };
 
 std::ostream &operator<<(std::ostream &out, const Request &obj);
