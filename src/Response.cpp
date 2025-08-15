@@ -257,7 +257,7 @@ std::ostream &operator<<(std::ostream &out, const Response &obj)
     return (out);
 }
 
-std::string buildResponse(const Request &reqObj, Config &locConfig)
+std::string buildResponse(const Request &reqObj, const LocationConfig &locConfig)
 {
     Response res;
 
@@ -266,7 +266,9 @@ std::string buildResponse(const Request &reqObj, Config &locConfig)
 
     // Check if the request is a CGI request
     std::string reqPath = reqObj.getPath();
-    if (locConfig.isCgiRequest(reqPath)) {
+    // if (locConfig.isCgiRequest(reqPath)) {
+    //     res.handleCgi(reqObj, locConfig);
+    if (reqObj.getIsCgi()) {
         res.handleCgi(reqObj, locConfig);
     } else if (!reqObj.getMethod().compare("GET")) {
         res.handleGet(reqObj);
