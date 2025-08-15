@@ -27,7 +27,7 @@ void Config::loadFromFile(const std::string &filepath) {
 bool Config::setupServer() {
     for (size_t i = 0; i < servers.size(); i++) {
         ServerSocket socketObj;
-        if (!socketObj.setupServerSocket(servers[i].getPort()))
+        if (!socketObj.setupServerSocket(servers[i].getPort(), servers[i].getHost()))
             return false;
         serverSockets.push_back(socketObj);
     }

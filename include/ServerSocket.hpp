@@ -2,6 +2,7 @@
 
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netdb.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <poll.h>
@@ -20,18 +21,19 @@ class ServerSocket {
 		int fd;
 		struct sockaddr_in address;
 		int port;
+		std::string host;
 		bool isSetup;
 		
 		bool createSocket();
 		bool configureSocket();
-		bool bindSocket(int port);
+		bool bindSocket();
 		bool listenMode();
 
 	public:
 		ServerSocket();
-		~ServerSocket(); // ver se ta certo msm
+		~ServerSocket();
 
-		bool setupServerSocket(int port);
+		bool setupServerSocket(int port, std::string host);
 
 		int getFd() const {return fd;}
 };
