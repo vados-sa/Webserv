@@ -35,7 +35,7 @@ class Config
 
         void setupPollfdSet(int server_count);
         bool pollLoop(int server_count);
-        void handleNewConnection(int server_fd);
+        void handleNewConnection(int server_fd, int server_idx);
         void handleIdleClient(int client_idx, int pollfd_idx);
 		void handleClientRequest(int pollfd_idx, int client_idx);
         void handleResponse(int client_idx, int pollfd_idx);
