@@ -74,6 +74,8 @@ bool Request::parseHeaders(std::string &raw)
 
         if (key.empty())
             return (false); //a header cant have an empty key but may have an empty value
+
+        std::transform(key.begin(), key.end(), key.begin(), ::tolower);
         headers[key] = value;
         raw = raw.substr(line.length());
     }
