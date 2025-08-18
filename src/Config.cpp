@@ -131,15 +131,15 @@ void Config::handleIdleClient(int client_idx, int pollfd_idx) {
 void Config::handleClientRequest(int pollfd_idx, int client_idx) {
 	Client& client = clients[client_idx];
 	const int client_fd = poll_fds[pollfd_idx].fd;
-	
+
 	if (client.getState() == Client::CONNECTED)
 	client.setState(Client::SENDING_REQUEST);
-	
+
 	char buffer[4096];
 	int bytes = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
 	if (bytes < 0) {
             return ; // check with valgrind if client_fd has to be closed
-  }
+    }
 	if (bytes == 0) {
         std::cout << "❌ Client disconnected: " << "\n" << "fd - " << client_fd << "\n"
 								<< "port - " << client.getPort() << "\n" << std::endl;
@@ -147,7 +147,7 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx) {
 		poll_fds.erase(poll_fds.begin() + pollfd_idx);
 		clients.erase(clients.begin() + (client_idx));
 		return ;
-  }
+    }
 
 	client.appendRequestData(buffer, bytes);
 	if(client.isRequestComplete()) {
@@ -155,24 +155,24 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx) {
 		std::string request = client.getRequest();
 		std::cout << "📥 Complete request received:\n" << request << std::endl;
 		Request reqObj = Request::parseRequest(request);
-    ServerConfig srv = this->servers[0];
-    const LocationConfig *loc = matchLocation(reqObj.getPath(), srv);
-    if (loc)
-    {
-        // Normalize path relative to location root
-        reqObj.setPath(loc->getRoot() + reqObj.getPath());
+        //ServerConfig srv = servers[pollfd_idx];
+        const LocationConfig *loc = matchLocation(reqObj.getPath(), servers[pollfd_idx - 1]);
+        if (loc)
+        {
+            // Normalize path relative to location root
+            reqObj.setPath(loc->getRoot() + reqObj.getPath());
 
-        // Detect if this request should be handled by CGI
-        if (!loc->getCgiExtension().empty()) {
-            std::string ext = loc->getCgiExtension();
-            std::string path = reqObj.getPath();
-            if (path.size() >= ext.size() &&
-                path.substr(path.size() - ext.size()) == ext) {
-                reqObj.setIsCgi(true);
+            // Detect if this request should be handled by CGI
+            if (!loc->getCgiExtension().empty()) {
+                std::string ext = loc->getCgiExtension();
+                std::string path = reqObj.getPath();
+                if (path.size() >= ext.size() &&
+                    path.substr(path.size() - ext.size()) == ext) {
+                    reqObj.setIsCgi(true);
+                }
             }
         }
-    }
-    std::string response = buildResponse(reqObj, *loc);
+        std::string response = buildResponse(reqObj, *loc);
 		client.setKeepAlive(reqObj.getHeaders());
 		poll_fds[pollfd_idx].events = POLLOUT;
 		client.setResponse(response);
