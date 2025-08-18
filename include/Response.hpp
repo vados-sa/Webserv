@@ -1,3 +1,5 @@
+#pragma once
+
 #include <string>
 #include <fstream>
 #include <sys/stat.h>
@@ -5,8 +7,11 @@
 #include "HttpMessage.hpp"
 #include "Request.hpp"
 #include "LocationConfig.hpp"
+#include "Config.hpp"
 
 #define ROOT "./www"
+
+class Config;
 
 class Response : public HttpMessage
 {
@@ -42,6 +47,6 @@ public:
 	void handleCgi(const Request &reqObj, const LocationConfig &locConfig);
 };
 
-std::string buildResponse(const Request &reqObj, Config &Config);
+std::string buildResponse(const Request &reqObj, const LocationConfig& Config);
 std::string generatePage(const std::string &code, const std::string &message, bool error);
 std::ostream &operator<<(std::ostream &out, const Response &obj);

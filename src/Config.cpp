@@ -152,9 +152,26 @@ void Config::handleClientRequest(size_t index, int client_idx) {
 			std::cout << "📥 Complete request received:\n" << request << std::endl;
 
 			Request reqObj = Request::parseRequest(request);
-			//LocationConfig locConfig = findLocationConfig(reqObj.getPath());
-			std::string response = buildResponse(reqObj, *this);
-			client.setKeepAlive(reqObj.getHeaders());
+            ServerConfig srv = this->servers[0];
+            const LocationConfig *loc = matchLocation(reqObj.getPath(), srv);
+            if (loc)
+            {
+                // Normalize path relative to location root
+                reqObj.setPath(loc->getRoot() + reqObj.getPath());
+
+                // Detect if this request should be handled by CGI
+                if (!loc->getCgiExtension().empty()) {
+                    std::string ext = loc->getCgiExtension();
+                    std::string path = reqObj.getPath();
+                    if (path.size() >= ext.size() &&
+                        path.substr(path.size() - ext.size()) == ext) {
+                        reqObj.setIsCgi(true);
+                    }
+                }
+            }
+            std::string response = buildResponse(reqObj, *loc);
+
+            client.setKeepAlive(reqObj.getHeaders());
 			poll_fds[index].events = POLLOUT;
 			client.setResponse(response);
 		}
@@ -210,18 +227,6 @@ std::ostream &operator<<(std::ostream &os, const Config &obj) {
         os << serversVector[i] << std::endl;
     }
     return os;
-}
-
-LocationConfig Config::findLocationConfig(const std::string &path) const {
-    for (std::vector<ServerConfig>::const_iterator serverIt = servers.begin(); serverIt != servers.end(); ++serverIt) {
-        const std::vector<LocationConfig> &locations = serverIt->getLocations();
-        for (std::vector<LocationConfig>::const_iterator locationIt = locations.begin(); locationIt != locations.end(); ++locationIt) {
-            if (path.find(locationIt->getPath()) == 0) { // Match the beginning of the path
-                return *locationIt;
-            }
-        }
-    }
-    throw std::runtime_error("No matching location configuration found for path: " + path);
 }
 
 /* bool Config::run() {
@@ -285,3 +290,23 @@ LocationConfig Config::findLocationConfig(const std::string &path) const {
 	}
 	return true;
 } */
+
+const LocationConfig *matchLocation(const std::string &reqPath, ServerConfig &srv)
+{
+	const LocationConfig *bestMatch = NULL;
+	size_t longest = 0;
+
+	const std::vector<LocationConfig> &locations = srv.getLocations();
+
+	for (size_t i = 0; i < locations.size(); ++i) {
+		const std::string &prefix = locations[i].getPath();
+		if (reqPath.compare(0, prefix.size(), prefix) == 0) {
+			if (prefix.size() > longest) {
+				longest = prefix.size();
+				bestMatch = &locations[i];
+			}
+		}
+	}
+	return (bestMatch);
+}
+
