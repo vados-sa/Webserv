@@ -1,9 +1,8 @@
 #include "Client.hpp"
 
-Client::Client(int fd, int server_index) : client_fd(fd), server_idx(server_index), 
-						current_state(CONNECTED), state_start_time(time(NULL)), 
-						bytes_sent(0), port(-1), keep_alive(true) {};
-
+Client::Client(int fd, int server_index) : client_fd(fd), server_idx(server_index),
+                                           current_state(CONNECTED), state_start_time(time(NULL)),
+                                           bytes_sent(0), port(-1), keep_alive(true) {};
 Client::~Client() {};
 
 void Client::appendRequestData(char* buffer, int bytes) {
@@ -48,7 +47,7 @@ bool Client::isTimedOut(int timeout_seconds) const {
 	return (time(NULL) - state_start_time) >= timeout_seconds;
 }
 
-void Client::setState(State new_state) { 
+void Client::setState(State new_state) {
 	current_state = new_state;
 	state_start_time = time(NULL);  // Reset timer on every state change
 }
