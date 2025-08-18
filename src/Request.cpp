@@ -33,8 +33,16 @@ bool Request::parseRequestLine(std::string &raw)
         return (false);
     }
 
+    if (method != "GET" && method != "POST" && method != "DELETE")
+        return (false);
+
     setMethod(method);
-    setPath(path); //i have to check later if its "/" and get the info from configparser
+
+    std::string cleanPath = normalizePath(path_);
+    if (cleanPath.empty())
+        return (false);
+
+    setPath(cleanPath);
     setVersion(version);
 
     size_t pos = raw.find("\r\n");
@@ -77,7 +85,6 @@ bool Request::parseHeaders(std::string &raw)
 
         std::transform(key.begin(), key.end(), key.begin(), ::tolower);
         headers[key] = value;
-        raw = raw.substr(line.length());
     }
 
     std::string::size_type headerEnd = raw.find("\r\n\r\n");
@@ -105,8 +112,8 @@ bool Request::parseBody(std::string &raw)
     if (raw.empty() && method_ == "POST" && length != 0)
         return (false); //post cant have empty body unless it says so in Content Length
 
-    if (raw.size() < static_cast<size_t>(length))
-        return (false); // incomplete body
+    if (length < 0 || raw.size() < static_cast<size_t>(length))
+        return (false); // incomplete body or failed conversion
 
     body_= raw.substr(0, length);
     raw = raw.substr(length);
@@ -132,11 +139,26 @@ std::ostream &operator<<(std::ostream &os, const std::map<std::string, std::stri
     return os;
 }
 
+std::string &normalizePath(const std::string &rawPath) {
+    std::istringstream iss(rawPath);
+    std::vector<std::string> parts;
+    std::string token;
 
-// std::string Request::getQueryString() const {
-//     size_t pos = path_.find('?');
-//     if (pos != std::string::npos) {
-//         return path_.substr(pos + 1); // Extract everything after '?'
-//     }
-//     return ""; // No query string found
-// }
+    while (std::getline(iss, token, '/')) {
+        if (token.empty() || token == ".")
+            continue ;
+        else if (token == "..")
+            parts.pop_back();
+        else
+            parts.push_back(token);
+    }
+
+    std::string normalized = "/";
+    for (std::vector<std::string>::iterator it = parts.begin(); it != parts.end(); ++it)
+    {
+        normalized += *it;
+        if (it + 1 != parts.end())
+            normalized += "/";
+    }
+    return (normalized);
+}
