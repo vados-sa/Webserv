@@ -27,7 +27,7 @@ void Config::loadFromFile(const std::string &filepath) {
 bool Config::setupServer() {
     for (size_t i = 0; i < servers.size(); i++) {
         ServerSocket socketObj;
-        if (!socketObj.setupServerSocket(servers[i].getPort()))
+        if (!socketObj.setupServerSocket(servers[i].getPort(), servers[i].getHost()))
             return false;
         serverSockets.push_back(socketObj);
     }
@@ -61,22 +61,24 @@ bool Config::pollLoop(int server_count) {
 		}
 
 		for (int i = poll_fds.size() - 1; i >= 0; --i) {
+
 			if ((i < server_count)) {
                 if (poll_fds[i].revents & POLLIN) {
                     handleNewConnection(poll_fds[i].fd);
                 }
                 continue ;
-			} else {
-				const int client_idx = i - server_count;
-				if (clients[client_idx].isTimedOut(60))
-                    handleIdleClient(client_idx, i);
-				else if (poll_fds[i].revents & POLLIN)
-                    handleClientRequest(i, client_idx);
-				else if (poll_fds[i].revents & POLLOUT)
-                    handleResponse(client_idx, i);
-            }
+			}
+
+			const int client_idx = i - server_count;
+			if (clients[client_idx].isTimedOut(60))
+            	handleIdleClient(client_idx, i);
+			else if (poll_fds[i].revents & POLLIN)
+            	handleClientRequest(i, client_idx);
+			else if (poll_fds[i].revents & POLLOUT)
+            	handleResponse(client_idx, i);
 		}
 	}
+
 	return true;
 }
 
@@ -116,65 +118,64 @@ void Config::handleNewConnection(int server_fd) {
 }
 
 void Config::handleIdleClient(int client_idx, int pollfd_idx) {
+
 	std::cout << "⏰ 505: Gateway Timeout\n Client fd("
 			  << poll_fds[pollfd_idx].fd << ")/port(" << clients[client_idx].getPort()
 			  << ")" << "\n" << std::endl;
+
 	close(poll_fds[pollfd_idx].fd);
 	poll_fds.erase(poll_fds.begin() + pollfd_idx);
 	clients.erase(clients.begin() + client_idx);
 }
 
-// ver como fzr melhor
-void Config::handleClientRequest(size_t index, int client_idx) {
+void Config::handleClientRequest(int pollfd_idx, int client_idx) {
 	Client& client = clients[client_idx];
-	int client_fd = poll_fds[index].fd;
-	char buffer[4096];
-
+	const int client_fd = poll_fds[pollfd_idx].fd;
+	
 	if (client.getState() == Client::CONNECTED)
-		client.setState(Client::SENDING_REQUEST);
-
-	// maybe make it cleaner with a separate funciton
+	client.setState(Client::SENDING_REQUEST);
+	
+	char buffer[4096];
 	int bytes = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
 	if (bytes < 0) {
-            return ;
-    } else if (bytes == 0) {
+            return ; // check with valgrind if client_fd has to be closed
+  }
+	if (bytes == 0) {
         std::cout << "❌ Client disconnected: " << "\n" << "fd - " << client_fd << "\n"
 								<< "port - " << client.getPort() << "\n" << std::endl;
 		close(client_fd);
-		poll_fds.erase(poll_fds.begin() + index);
+		poll_fds.erase(poll_fds.begin() + pollfd_idx);
 		clients.erase(clients.begin() + (client_idx));
-    } else {
-		client.appendRequestData(buffer, bytes);
+		return ;
+  }
 
-		if(client.isRequestComplete()) {
-			client.setState(Client::WAITING_RESPONSE);
-			std::string request = client.getRequest();
-			std::cout << "📥 Complete request received:\n" << request << std::endl;
+	client.appendRequestData(buffer, bytes);
+	if(client.isRequestComplete()) {
+		client.setState(Client::WAITING_RESPONSE);
+		std::string request = client.getRequest();
+		std::cout << "📥 Complete request received:\n" << request << std::endl;
+		Request reqObj = Request::parseRequest(request);
+    ServerConfig srv = this->servers[0];
+    const LocationConfig *loc = matchLocation(reqObj.getPath(), srv);
+    if (loc)
+    {
+        // Normalize path relative to location root
+        reqObj.setPath(loc->getRoot() + reqObj.getPath());
 
-			Request reqObj = Request::parseRequest(request);
-            ServerConfig srv = this->servers[0];
-            const LocationConfig *loc = matchLocation(reqObj.getPath(), srv);
-            if (loc)
-            {
-                // Normalize path relative to location root
-                reqObj.setPath(loc->getRoot() + reqObj.getPath());
-
-                // Detect if this request should be handled by CGI
-                if (!loc->getCgiExtension().empty()) {
-                    std::string ext = loc->getCgiExtension();
-                    std::string path = reqObj.getPath();
-                    if (path.size() >= ext.size() &&
-                        path.substr(path.size() - ext.size()) == ext) {
-                        reqObj.setIsCgi(true);
-                    }
-                }
+        // Detect if this request should be handled by CGI
+        if (!loc->getCgiExtension().empty()) {
+            std::string ext = loc->getCgiExtension();
+            std::string path = reqObj.getPath();
+            if (path.size() >= ext.size() &&
+                path.substr(path.size() - ext.size()) == ext) {
+                reqObj.setIsCgi(true);
             }
-            std::string response = buildResponse(reqObj, *loc);
-
-            client.setKeepAlive(reqObj.getHeaders());
-			poll_fds[index].events = POLLOUT;
-			client.setResponse(response);
-		}
+        }
+    }
+    std::string response = buildResponse(reqObj, *loc);
+		client.setKeepAlive(reqObj.getHeaders());
+		poll_fds[pollfd_idx].events = POLLOUT;
+		client.setResponse(response);
 	}
 }
 
@@ -192,9 +193,9 @@ void Config::handleResponse(int client_idx, int pollfd_idx) {
     }
 }
 
-bool Config::sendResponse(size_t index, int client_idx) {
+bool Config::sendResponse(int pollfd_idx, int client_idx) {
 	Client& client = clients[client_idx];
-	int client_fd = poll_fds[index].fd;
+	int client_fd = poll_fds[pollfd_idx].fd;
 	std::string response = client.getResponse();
 	size_t already_sent= client.getBytesSent();
 	size_t remaining = response.size() - already_sent;

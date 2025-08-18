@@ -2,22 +2,17 @@
 
 ServerSocket::ServerSocket() : fd(-1), port(0), isSetup(false) {
 	std::memset(&address, 0, sizeof(address));
-	//setupServerSocket(); // I can't call it here, because I wouldn't be able to control possible errors
 }
 
-ServerSocket::~ServerSocket() {
-	/* if (fd != -1) {
-		close(fd);
-	} */ // it was causing the server socket to close prematurely
-}
+ServerSocket::~ServerSocket() {}
 
-bool ServerSocket::setupServerSocket(int port) {
-	//signal(SIGINT, ServerSocket::signalHandler);
+bool ServerSocket::setupServerSocket(int port, std::string host) {
 	
 	this->port = port;
+	this->host = host;
 	if (!createSocket()) return false;
 	if (!configureSocket()) return false;
-	if (!bindSocket(port)) return false;
+	if (!bindSocket()) return false;
 	if (!listenMode()) return false;
 
 	isSetup = true;
@@ -51,10 +46,31 @@ bool ServerSocket::configureSocket() {
 	return true;
 };
 
-bool ServerSocket::bindSocket(int port) {
-	address.sin_family = AF_INET;
-	address.sin_addr.s_addr = INADDR_ANY;
-	address.sin_port = htons(port);
+bool ServerSocket::bindSocket() {
+	
+	if (host.empty() || host == "0.0.0.0" || host == "*") {
+		address.sin_family = AF_INET;
+		address.sin_port = htons(port);
+		address.sin_addr.s_addr = htonl(INADDR_ANY);
+	} else {
+		struct addrinfo hints;
+		std::memset(&hints, 0, sizeof(hints));
+		hints.ai_family = AF_INET;
+		hints.ai_socktype = SOCK_STREAM;
+
+		struct addrinfo* res = 0;
+		int rc = getaddrinfo(host.c_str(), 0, &hints, &res);
+		if (rc != 0) {
+			perror("getaddrinfo failed");
+			return false;
+		}
+
+		const struct sockaddr_in* got = reinterpret_cast<const struct sockaddr_in*>(res->ai_addr);
+		address = *got;
+		address.sin_port = htons(port);
+
+		freeaddrinfo(res);
+	}
 
 	if (bind(fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
 		perror("bind failed");
@@ -70,7 +86,9 @@ bool ServerSocket::listenMode() {
 		return false;
 	}
 
-	std::cout << "✅ Server listening on http://localhost:" << port << "\n";
+	std::cout << "✅ Server listening on " 
+          << (host.empty() ? "0.0.0.0" : host)
+          << ":" << port << "\n";
 
 	return true;
 };
