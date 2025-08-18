@@ -38,7 +38,7 @@ bool Request::parseRequestLine(std::string &raw)
 
     setMethod(method);
 
-    std::string cleanPath = normalizePath(path_);
+    std::string cleanPath = normalizePath(path);
     if (cleanPath.empty())
         return (false);
 
@@ -59,9 +59,12 @@ bool Request::parseHeaders(std::string &raw)
 
     std::istringstream iss (raw);
     std::string line;
+    size_t consumed = 0;
 
     while (std::getline(iss, line))
     {
+        consumed += line.size() + 1;
+
         if (!line.empty() && line[line.length() - 1] == '\r')
             line.erase(line.length() - 1);
 
@@ -89,9 +92,10 @@ bool Request::parseHeaders(std::string &raw)
 
     std::string::size_type headerEnd = raw.find("\r\n\r\n");
     if (headerEnd != std::string::npos)
-        raw = raw.substr(headerEnd + 4);
+        raw.erase(0, headerEnd + 4);
     else
-        raw.clear();
+        return (false);
+
     headers_ = headers;
     return (true);
 }
@@ -101,22 +105,25 @@ bool Request::parseBody(std::string &raw)
     if (raw.empty() && method_ != "POST")
         return (true);
 
-    std::map<std::string, std::string>::iterator it;
-    it = headers_.find("content-length");
+    std::map<std::string, std::string>::iterator it = headers_.find("content-length");
     if (it == headers_.end())
         return (false);
-    std::string lengthStr = headers_["content-length"];
-    std::string::size_type length;
+
+    const std::string &lengthStr = it->second;
+    long length = -1;
     std::istringstream(lengthStr) >> length;
 
-    if (raw.empty() && method_ == "POST" && length != 0)
-        return (false); //post cant have empty body unless it says so in Content Length
+    if (length < 0)
+        return false; // invalid Content-Length
 
-    if (length < 0 || raw.size() < static_cast<size_t>(length))
-        return (false); // incomplete body or failed conversion
+    if (raw.empty() && method_ == "POST" && length != 0)
+        return false; // POST with missing body
+
+    if (raw.size() < static_cast<size_t>(length))
+        return false; // incomplete body
 
     body_= raw.substr(0, length);
-    raw = raw.substr(length);
+    raw.erase(0, length);
     return (true);
 }
 
