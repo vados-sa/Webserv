@@ -42,38 +42,52 @@ bool Request::parseRequestLine(std::string &raw)
         return (false);
     raw.erase(0, pos + 2);
 
-    return (true)
+    return (true);
 }
 
-int Request::parseHeaders(std::string &raw)
+bool Request::parseHeaders(std::string &raw)
 {
     std::map<std::string, std::string> headers;
-    int len;
-    std::string possibleKey;
 
-    while (raw.substr(0, 4).compare("\r\n\r\n"))
+    std::istringstream iss (raw);
+    std::string line;
+
+    while (std::getline(iss, line))
     {
-        len = raw.find(":");
-        if (len < 0)
-            return (0);
-        possibleKey = raw.substr(0, len);
-        raw = raw.substr(len + 2); // considering ": ", im not considering multiple whitespaces yet
-        len = raw.find("\r\n");
-        if (len < 0)
-            return (0);
-        std::string possibleValue = raw.substr(0, len);
-        // insert a check if possibleValue is empty?
-        headers[possibleKey] = possibleValue;
-        raw = raw.substr(len);
-        if (raw.substr(0, 4).compare("\r\n\r\n"))
-            raw = raw.substr(2);
+        if (!line.empty() && line[line.length() - 1] == '\r')
+            line.erase(line.length() - 1);
+
+        if (line.empty())
+            break;
+
+        std::string::size_type pos = line.find(":");
+        if (pos == std::string::npos)
+            return (false); // mal formed request; every header MUST have ':'
+
+        std::string key = line.substr(0, pos);
+        std::string value = line.substr(pos + 1);
+
+        key.erase(0, key.find_first_not_of(" \t\r\n"));
+        key.erase(key.find_last_not_of(" \t\r\n") + 1);
+        value.erase(0, value.find_first_not_of(" \t\r\n"));
+        value.erase(value.find_last_not_of(" \t\r\n") + 1);
+
+        if (key.empty())
+            return (false); //a header cant have an empty key but may have an empty value
+        headers[key] = value;
+        raw = raw.substr(line.length());
     }
-    raw = raw.substr(4);
+
+    std::string::size_type headerEnd = raw.find("\r\n\r\n");
+    if (headerEnd != std::string::npos)
+        raw = raw.substr(headerEnd + 4);
+    else
+        raw.clear();
     headers_ = headers;
-    return (1);
+    return (true);
 }
 
-int Request::parseBody(std::string &raw)
+bool Request::parseBody(std::string &raw)
 {
     if (raw.empty())
         return (1); //for now its ok body to be empty, but maybe we should allow it to be empty if its POST.

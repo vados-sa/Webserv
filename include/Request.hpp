@@ -16,8 +16,8 @@ private:
     bool is_cgi;
 
     bool parseRequestLine(std::string &raw);
-    int parseHeaders(std::string &raw);
-    int parseBody(std::string &raw);
+    bool parseHeaders(std::string &raw);
+    bool parseBody(std::string &raw);
 public:
     Request();
     Request(const Request &obj);
