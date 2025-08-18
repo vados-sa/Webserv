@@ -84,7 +84,7 @@ bool Config::pollLoop(int server_count) {
 
 void Config::handleNewConnection(int server_fd, int server_idx)
 {
-    struct sockaddr_in client_addr;
+  struct sockaddr_in client_addr;
 	socklen_t client_len = sizeof(client_addr);
 	int client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &client_len);
 

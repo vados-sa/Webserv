@@ -15,15 +15,15 @@ private:
     std::string query_string;
     bool is_cgi;
 
+    bool parseRequestLine(std::string &raw);
+    bool parseHeaders(std::string &raw);
+    bool parseBody(std::string &raw);
 public:
     Request();
     Request(const Request &obj);
 
     //---methods
     static Request parseRequest(const std::string &raw);
-    static int parseRequestLine(std::string &raw, Request *obj);
-    static int parseHeaders(std::string &raw, Request *obj);
-    static int parseBody(std::string &raw, Request *obj);
     //..
 
     //---getters
@@ -43,4 +43,4 @@ public:
 
 std::ostream &operator<<(std::ostream &out, const Request &obj);
 std::ostream &operator<<(std::ostream &out, const std::map<std::string, std::string> &map);
-int strToInt(std::string &str);
+std::string normalizePath(const std::string &rawPath);

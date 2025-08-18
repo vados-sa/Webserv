@@ -23,8 +23,8 @@ class Client {
 
 	private:
 		int client_fd;
-        int server_idx;
-        std::string request_buffer;
+		int server_idx;
+		std::string request_buffer;
 		State current_state;
 		time_t state_start_time;
 		std::string response_buffer;
@@ -34,8 +34,8 @@ class Client {
 
 	public:
 		Client(int fd);
-        Client(int fd, int server_index);
-        ~Client();
+    Client(int fd, int server_index);
+    ~Client();
 
 
 		int getFd() const { return client_fd;}
@@ -44,8 +44,9 @@ class Client {
 		bool isTimedOut(int timeout_seconds) const;
 
 		std::string getRequest() const {return request_buffer;}
-        int getServerIndex() const { return server_idx; }
-        std::string getResponse() const {return response_buffer;}
+    int getServerIndex() const { return server_idx; }
+    std::string getResponse() const {return response_buffer;}
+
 		size_t getBytesSent() const {return bytes_sent;}
 		State getState() const { return Client::current_state; }
 		int getPort() const {return port;}

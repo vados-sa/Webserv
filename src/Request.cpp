@@ -10,119 +10,116 @@ Request Request::parseRequest(const std::string &raw)
     Request helperReqObj;
     std::string temp = raw;
 
-    if (!parseRequestLine(temp, &helperReqObj)) {
-        std::cerr << "Failed to parse request line" << std::endl; // we can throw exceptions later, rn i dont want the program to quit
-        return (helperReqObj);
+    if (!helperReqObj.parseRequestLine(temp)) {
+        throw std::runtime_error("Failed to parse request line");
     }
-    if (!parseHeaders(temp, &helperReqObj)){
-        std::cerr << "Failed to parse headers" << std::endl;
-        return (helperReqObj);
+    if (!helperReqObj.parseHeaders(temp)) {
+        throw std::runtime_error("Failed to parse request headers");
     }
-    if (!parseBody(temp, &helperReqObj)){
-        std::cerr << "Failed to parse body" << std::endl;
-        return (helperReqObj);
+    if (!helperReqObj.parseBody(temp)) {
+        throw std::runtime_error("Failed to parse request body");
     }
 
     return (helperReqObj);
 }
 
-int Request::parseRequestLine(std::string &raw, Request *obj)
+bool Request::parseRequestLine(std::string &raw)
 {
+    std::istringstream iss(raw);
 
-    // ----- PARSE METHOD -----
-    int len = raw.find(" ");
-    std::string possibleMethod = raw.substr(0, len);
-    raw = raw.substr(len + 1);
-    obj->method_ = possibleMethod;
+    std::string method, path, version;
 
-    // ----- PARSE PATH ------
-    len = raw.find(" ");
-    std::string possiblePath = raw.substr(0, len);
-    raw = raw.substr(len + 1);
-    if (possiblePath[0] != '/')
-        return (0);
-
-    // Split query string
-    std::string::size_type qpos = possiblePath.find('?');
-    if (qpos != std::string::npos)
-    {
-        obj->query_string = possiblePath.substr(qpos + 1);
-        obj->path_ = possiblePath.substr(0, qpos);
-    }
-    else
-    {
-        obj->query_string.clear();
-        obj->path_ = possiblePath;
+    if (!(iss >> method >> path >> version)) {
+        return (false);
     }
 
-    // Default index.html
-    if (obj->path_ == "/")
-        obj->path_.append("index.html");
+    if (method != "GET" && method != "POST" && method != "DELETE")
+        return (false);
 
-    // // ----- CGI DETECTION -----
-    // obj->is_cgi = false;
-    // if (!loc.cgi_extension.empty())
-    // {
-    //     std::string ext = loc.cgi_extension;
-    //     if (obj->path_.size() >= ext.size() &&
-    //         obj->path_.substr(obj->path_.size() - ext.size()) == ext)
-    //     {
-    //         obj->is_cgi = true;
-    //     }
-    // }
+    setMethod(method);
 
-    // ----- PARSE VERSION ---
-    len = raw.find("\r\n");
-    std::string possibleVersion = raw.substr(0, len);
-    raw = raw.substr(len + 2);
-    if (possibleVersion.substr(0, 4) != "HTTP")
-        return (0);
-    obj->version_ = possibleVersion;
+    std::string cleanPath = normalizePath(path);
+    if (cleanPath.empty())
+        return (false);
 
-    return (1);
+    setPath(cleanPath);
+    setVersion(version);
+
+    size_t pos = raw.find("\r\n");
+    if (pos == std::string::npos)
+        return (false);
+    raw.erase(0, pos + 2);
+
+    return (true);
 }
 
-int Request::parseHeaders(std::string &raw, Request *obj)
+bool Request::parseHeaders(std::string &raw)
 {
-    std::map<std::string, std::string> headers;
-    int len;
-    std::string possibleKey;
+    std::string::size_type headerEnd = raw.find("\r\n\r\n");
+    if (headerEnd == std::string::npos)
+        return (false);
 
-    while (raw.substr(0, 4).compare("\r\n\r\n"))
+    std::string headersBlock = raw.substr(0, headerEnd);
+    raw.erase(0, headerEnd + 4);
+
+    std::istringstream iss(headersBlock);
+    std::string line;
+
+    while (std::getline(iss, line))
     {
-        len = raw.find(":");
-        if (len < 0)
-            return (0);
-        possibleKey = raw.substr(0, len);
-        raw = raw.substr(len + 2); // considering ": ", im not considering multiple whitespaces yet
-        len = raw.find("\r\n");
-        if (len < 0)
-            return (0);
-        std::string possibleValue = raw.substr(0, len);
-        // insert a check if possibleValue is empty?
-        headers[possibleKey] = possibleValue;
-        raw = raw.substr(len);
-        if (raw.substr(0, 4).compare("\r\n\r\n"))
-            raw = raw.substr(2);
+        if (!line.empty() && line.back() == '\r')
+            line.pop_back();
+
+        if (line.empty())
+            continue;
+
+        std::string::size_type pos = line.find(":");
+        if (pos == std::string::npos)
+            return (false);
+
+        std::string key = line.substr(0, pos);
+        std::string value = line.substr(pos + 1);
+
+        key.erase(0, key.find_first_not_of(" \t\r\n"));
+        key.erase(key.find_last_not_of(" \t\r\n") + 1);
+        value.erase(0, value.find_first_not_of(" \t\r\n"));
+        value.erase(value.find_last_not_of(" \t\r\n") + 1);
+
+        if (key.empty())
+            return (false);
+
+        std::transform(key.begin(), key.end(), key.begin(), ::tolower);
+        headers_[key] = value;
     }
-    raw = raw.substr(4);
-    obj->headers_ = headers;
-    return (1);
+
+    return (true);
 }
 
-int Request::parseBody(std::string &raw, Request *obj)
+bool Request::parseBody(std::string &raw)
 {
-    if (raw.empty())
-        return (1); //for now its ok body to be empty, but maybe we should allow it to be empty if its POST.
-    std::map<std::string, std::string>::iterator it;
-    it = obj->headers_.find("Content-Length");
-    if (it == obj->headers_.end())
-        return (0);
-    std::string lengthStr = obj->headers_["Content-Length"];
-    int lenght;
-    std::istringstream(lengthStr) >> lenght; //i wonder if we can use this to convert from string to int
-    obj->body_= raw;
-    return (1);
+    if (raw.empty() && method_ != "POST")
+        return (true);
+
+    std::map<std::string, std::string>::iterator it = headers_.find("content-length");
+    if (it == headers_.end())
+        return (false);
+
+    const std::string &lengthStr = it->second;
+    long length = -1;
+    std::istringstream(lengthStr) >> length;
+
+    if (length < 0)
+        return false; // invalid Content-Length
+
+    if (raw.empty() && method_ == "POST" && length != 0)
+        return false; // POST with missing body
+
+    if (raw.size() < static_cast<size_t>(length))
+        return false; // incomplete body
+
+    body_= raw.substr(0, length);
+    raw.erase(0, length);
+    return (true);
 }
 
 std::ostream &operator<<(std::ostream &out, const Request &obj) {
@@ -144,11 +141,26 @@ std::ostream &operator<<(std::ostream &os, const std::map<std::string, std::stri
     return os;
 }
 
+std::string normalizePath(const std::string &rawPath) {
+    std::istringstream iss(rawPath);
+    std::vector<std::string> parts;
+    std::string token;
 
-// std::string Request::getQueryString() const {
-//     size_t pos = path_.find('?');
-//     if (pos != std::string::npos) {
-//         return path_.substr(pos + 1); // Extract everything after '?'
-//     }
-//     return ""; // No query string found
-// }
+    while (std::getline(iss, token, '/')) {
+        if (token.empty() || token == ".")
+            continue ;
+        else if (token == "..")
+            parts.pop_back();
+        else
+            parts.push_back(token);
+    }
+
+    std::string normalized = "/";
+    for (std::vector<std::string>::iterator it = parts.begin(); it != parts.end(); ++it)
+    {
+        normalized += *it;
+        if (it + 1 != parts.end())
+            normalized += "/";
+    }
+    return (normalized);
+}
