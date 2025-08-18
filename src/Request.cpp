@@ -55,25 +55,27 @@ bool Request::parseRequestLine(std::string &raw)
 
 bool Request::parseHeaders(std::string &raw)
 {
-    std::map<std::string, std::string> headers;
+    std::string::size_type headerEnd = raw.find("\r\n\r\n");
+    if (headerEnd == std::string::npos)
+        return (false);
 
-    std::istringstream iss (raw);
+    std::string headersBlock = raw.substr(0, headerEnd);
+    raw.erase(0, headerEnd + 4);
+
+    std::istringstream iss(headersBlock);
     std::string line;
-    size_t consumed = 0;
 
     while (std::getline(iss, line))
     {
-        consumed += line.size() + 1;
-
-        if (!line.empty() && line[line.length() - 1] == '\r')
-            line.erase(line.length() - 1);
+        if (!line.empty() && line.back() == '\r')
+            line.pop_back();
 
         if (line.empty())
-            break;
+            continue;
 
         std::string::size_type pos = line.find(":");
         if (pos == std::string::npos)
-            return (false); // mal formed request; every header MUST have ':'
+            return (false);
 
         std::string key = line.substr(0, pos);
         std::string value = line.substr(pos + 1);
@@ -84,19 +86,12 @@ bool Request::parseHeaders(std::string &raw)
         value.erase(value.find_last_not_of(" \t\r\n") + 1);
 
         if (key.empty())
-            return (false); //a header cant have an empty key but may have an empty value
+            return (false);
 
         std::transform(key.begin(), key.end(), key.begin(), ::tolower);
-        headers[key] = value;
+        headers_[key] = value;
     }
 
-    std::string::size_type headerEnd = raw.find("\r\n\r\n");
-    if (headerEnd != std::string::npos)
-        raw.erase(0, headerEnd + 4);
-    else
-        return (false);
-
-    headers_ = headers;
     return (true);
 }
 
@@ -146,7 +141,7 @@ std::ostream &operator<<(std::ostream &os, const std::map<std::string, std::stri
     return os;
 }
 
-std::string &normalizePath(const std::string &rawPath) {
+std::string normalizePath(const std::string &rawPath) {
     std::istringstream iss(rawPath);
     std::vector<std::string> parts;
     std::string token;
