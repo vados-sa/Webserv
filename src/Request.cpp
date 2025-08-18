@@ -23,60 +23,26 @@ Request Request::parseRequest(const std::string &raw)
     return (helperReqObj);
 }
 
-int Request::parseRequestLine(std::string &raw)
+bool Request::parseRequestLine(std::string &raw)
 {
+    std::istringstream iss(raw);
 
-    // ----- PARSE METHOD -----
-    int len = raw.find(" ");
-    std::string possibleMethod = raw.substr(0, len);
-    raw = raw.substr(len + 1);
-    method_ = possibleMethod;
+    std::string method, path, version;
 
-    // ----- PARSE PATH ------
-    len = raw.find(" ");
-    std::string possiblePath = raw.substr(0, len);
-    raw = raw.substr(len + 1);
-    if (possiblePath[0] != '/')
-        return (0);
-
-    // Split query string
-    std::string::size_type qpos = possiblePath.find('?');
-    if (qpos != std::string::npos)
-    {
-        query_string = possiblePath.substr(qpos + 1);
-        path_ = possiblePath.substr(0, qpos);
-    }
-    else
-    {
-        query_string.clear();
-        path_ = possiblePath;
+    if (!(iss >> method >> path >> version)) {
+        return (false);
     }
 
-    // Default index.html
-    if (path_ == "/")
-        path_.append("index.html");
+    setMethod(method);
+    setPath(path); //i have to check later if its "/" and get the info from configparser
+    setVersion(version);
 
-    // // ----- CGI DETECTION -----
-    // obj->is_cgi = false;
-    // if (!loc.cgi_extension.empty())
-    // {
-    //     std::string ext = loc.cgi_extension;
-    //     if (obj->path_.size() >= ext.size() &&
-    //         obj->path_.substr(obj->path_.size() - ext.size()) == ext)
-    //     {
-    //         obj->is_cgi = true;
-    //     }
-    // }
+    size_t pos = raw.find("\r\n");
+    if (pos == std::string::npos)
+        return (false);
+    raw.erase(0, pos + 2);
 
-    // ----- PARSE VERSION ---
-    len = raw.find("\r\n");
-    std::string possibleVersion = raw.substr(0, len);
-    raw = raw.substr(len + 2);
-    if (possibleVersion.substr(0, 4) != "HTTP")
-        return (0);
-    version_ = possibleVersion;
-
-    return (1);
+    return (true)
 }
 
 int Request::parseHeaders(std::string &raw)

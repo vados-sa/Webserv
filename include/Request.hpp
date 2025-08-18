@@ -15,7 +15,7 @@ private:
     std::string query_string;
     bool is_cgi;
 
-    int parseRequestLine(std::string &raw);
+    bool parseRequestLine(std::string &raw);
     int parseHeaders(std::string &raw);
     int parseBody(std::string &raw);
 public:
