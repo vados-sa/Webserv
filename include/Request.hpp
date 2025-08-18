@@ -15,15 +15,15 @@ private:
     std::string query_string;
     bool is_cgi;
 
+    int parseRequestLine(std::string &raw);
+    int parseHeaders(std::string &raw);
+    int parseBody(std::string &raw);
 public:
     Request();
     Request(const Request &obj);
 
     //---methods
     static Request parseRequest(const std::string &raw);
-    static int parseRequestLine(std::string &raw, Request *obj);
-    static int parseHeaders(std::string &raw, Request *obj);
-    static int parseBody(std::string &raw, Request *obj);
     //..
 
     //---getters
