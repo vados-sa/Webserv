@@ -36,7 +36,8 @@ public:
     const std::string &getUploadDir() const { return upload_dir; };
     const bool &getAutoindex() const { return autoindex; };
     const bool &getAllowUpload() const { return allow_upload; };
-	const std::string &getCgiExtension() const { return cgi_extension; }
+	const std::string &getCgiExtension() const { return cgi_extension; };
+	bool isCgiRequest(std::string &uri);
 };
 
 std::ostream &operator<<(std::ostream &os, const std::vector<LocationConfig> &obj);

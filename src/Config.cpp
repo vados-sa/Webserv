@@ -59,7 +59,7 @@ bool Config::pollLoop(int server_count) {
 			perror("poll failed");
 			return false;
 		}
-		
+
 		for (int i = poll_fds.size() - 1; i >= 0; --i) {
 
 			if ((i < server_count)) {
@@ -139,7 +139,7 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx) {
 	int bytes = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
 	if (bytes < 0) {
             return ; // check with valgrind if client_fd has to be closed
-    }
+  }
 	if (bytes == 0) {
         std::cout << "❌ Client disconnected: " << "\n" << "fd - " << client_fd << "\n"
 								<< "port - " << client.getPort() << "\n" << std::endl;
@@ -147,7 +147,7 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx) {
 		poll_fds.erase(poll_fds.begin() + pollfd_idx);
 		clients.erase(clients.begin() + (client_idx));
 		return ;
-    }
+  }
 
 	client.appendRequestData(buffer, bytes);
 	if(client.isRequestComplete()) {
@@ -155,7 +155,24 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx) {
 		std::string request = client.getRequest();
 		std::cout << "📥 Complete request received:\n" << request << std::endl;
 		Request reqObj = Request::parseRequest(request);
-		std::string response = buildResponse(reqObj);
+    ServerConfig srv = this->servers[0];
+    const LocationConfig *loc = matchLocation(reqObj.getPath(), srv);
+    if (loc)
+    {
+        // Normalize path relative to location root
+        reqObj.setPath(loc->getRoot() + reqObj.getPath());
+
+        // Detect if this request should be handled by CGI
+        if (!loc->getCgiExtension().empty()) {
+            std::string ext = loc->getCgiExtension();
+            std::string path = reqObj.getPath();
+            if (path.size() >= ext.size() &&
+                path.substr(path.size() - ext.size()) == ext) {
+                reqObj.setIsCgi(true);
+            }
+        }
+    }
+    std::string response = buildResponse(reqObj, *loc);
 		client.setKeepAlive(reqObj.getHeaders());
 		poll_fds[pollfd_idx].events = POLLOUT;
 		client.setResponse(response);
@@ -165,7 +182,7 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx) {
 void Config::handleResponse(int client_idx, int pollfd_idx) {
 	if (sendResponse(pollfd_idx, client_idx) == true) {
 		if (clients[client_idx].getKeepAlive() == false) {
-			std::cout << "❌ Client disconnected:\nfd - " << poll_fds[pollfd_idx].fd 
+			std::cout << "❌ Client disconnected:\nfd - " << poll_fds[pollfd_idx].fd
 			<< "\nport - " << clients[client_idx].getPort() << "\n" << std::endl;
 
 			close(poll_fds[pollfd_idx].fd);
@@ -173,7 +190,7 @@ void Config::handleResponse(int client_idx, int pollfd_idx) {
 			clients.erase(clients.begin() + client_idx);
 		} else
             poll_fds[pollfd_idx].events = POLLIN;
-    }	
+    }
 }
 
 bool Config::sendResponse(int pollfd_idx, int client_idx) {
@@ -246,7 +263,7 @@ std::ostream &operator<<(std::ostream &os, const Config &obj) {
                     std::cout << "⏰ 505: Gateway Timeout\n Client fd("
                     << poll_fds[i].fd << ")/port(" << clients[client_idx].getPort()
                     << ")" << "\n" << std::endl;
-    
+
                     close(poll_fds[i].fd);
                     poll_fds.erase(poll_fds.begin() + i);
                     clients.erase(clients.begin() + client_idx);
@@ -257,8 +274,8 @@ std::ostream &operator<<(std::ostream &os, const Config &obj) {
                 } else if (poll_fds[i].revents & POLLOUT) {
                     if (sendResponse(i, client_idx) == true) {
                         if (clients[client_idx].getKeepAlive() == false) {
-							
-							std::cout << "❌ Client disconnected:\nfd - " << poll_fds[i].fd 
+
+							std::cout << "❌ Client disconnected:\nfd - " << poll_fds[i].fd
 							<< "\nport - " << clients[client_idx].getPort() << "\n" << std::endl;
 
                             close(poll_fds[i].fd);
@@ -274,3 +291,23 @@ std::ostream &operator<<(std::ostream &os, const Config &obj) {
 	}
 	return true;
 } */
+
+const LocationConfig *matchLocation(const std::string &reqPath, ServerConfig &srv)
+{
+	const LocationConfig *bestMatch = NULL;
+	size_t longest = 0;
+
+	const std::vector<LocationConfig> &locations = srv.getLocations();
+
+	for (size_t i = 0; i < locations.size(); ++i) {
+		const std::string &prefix = locations[i].getPath();
+		if (reqPath.compare(0, prefix.size(), prefix) == 0) {
+			if (prefix.size() > longest) {
+				longest = prefix.size();
+				bestMatch = &locations[i];
+			}
+		}
+	}
+	return (bestMatch);
+}
+

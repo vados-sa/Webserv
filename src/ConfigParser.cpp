@@ -488,6 +488,9 @@ std::string ConfigParser::parseCgiExtension(const std::vector<std::string> &toke
 	if (extension.empty()) {
 		throw std::runtime_error("Error: Empty CGI extension is not allowed.");
 	}
+	if (extension[0] != '.') {
+        throw std::runtime_error("Error: CGI extension must start with a '.' character.");
+    }
 	if (!isValidPath(extension)) {
 		throw std::runtime_error("Error: Invalid CGI extension '" + extension + "'.");
 	}

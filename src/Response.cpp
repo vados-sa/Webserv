@@ -1,4 +1,6 @@
 #include "Response.hpp"
+#include "LocationConfig.hpp"
+#include "Config.hpp"
 
 Response::Response() : statusCode_(""), statusMessage_(""), fullPath_("./www"), filename_("upload/") {}
 
@@ -255,25 +257,63 @@ std::ostream &operator<<(std::ostream &out, const Response &obj)
     return (out);
 }
 
-std::string buildResponse(const Request &reqObj)
+std::string buildResponse(const Request &reqObj, const LocationConfig &locConfig)
 {
     Response res;
 
     res.setVersion(reqObj.getVersion());
     res.setFullPath(reqObj.getPath());
-    if (!reqObj.getMethod().compare("GET"))
+
+    // Check if the request is a CGI request
+    std::string reqPath = reqObj.getPath();
+    // if (locConfig.isCgiRequest(reqPath)) {
+    //     res.handleCgi(reqObj, locConfig);
+    if (reqObj.getIsCgi()) {
+        res.handleCgi(reqObj, locConfig);
+    } else if (!reqObj.getMethod().compare("GET")) {
         res.handleGet(reqObj);
-    else if (!reqObj.getMethod().compare("POST"))
+    } else if (!reqObj.getMethod().compare("POST")) {
         res.handlePost(reqObj);
-    else if (!reqObj.getMethod().compare("DELETE"))
+    } else if (!reqObj.getMethod().compare("DELETE")) {
         res.handleDelete(reqObj);
-    else {
+    } else {
         res.setPage("405", "Method not allowed", true);
         res.setHeader("Allow", "GET, POST, DELETE");
     }
+
     if (reqObj.findHeader("Connection"))
         res.setHeader("Connection", *reqObj.findHeader("Connection"));
+
     std::string reqStr = res.writeResponseString();
-    return (reqStr);
+    return reqStr;
 }
 
+void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
+{
+    std::string cgiScriptPath = locConfig.getRoot() + reqObj.getPath();
+
+    // Set up environment variables for the CGI script
+    setenv("REQUEST_METHOD", reqObj.getMethod().c_str(), 1);
+    setenv("SCRIPT_FILENAME", cgiScriptPath.c_str(), 1);
+    setenv("QUERY_STRING", reqObj.getQueryString().c_str(), 1);
+
+    // Execute the CGI script and capture its output
+    FILE *pipe = popen(cgiScriptPath.c_str(), "r");
+    if (!pipe) {
+        setPage("500", "Failed to execute CGI script.", true);
+        return;
+    }
+
+    std::ostringstream output;
+    char buffer[1024];
+    while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+        output << buffer;
+    }
+    pclose(pipe);
+
+    // Set the response body and headers
+    body_ = output.str();
+    setHeader("Content-Length", int_to_string(body_.size()));
+    setHeader("Content-Type", "text/html");
+    setCode("200");
+}

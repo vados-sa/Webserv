@@ -41,7 +41,7 @@ class Config
         void handleResponse(int client_idx, int pollfd_idx);
 		bool sendResponse(int pollfd_idx, int client_idx);
 		void cleanup();
-    
+
     public:
         Config(const std::string &filepath);
         Config() {};
@@ -51,8 +51,10 @@ class Config
 
         void addServer(ServerConfig &server);
         const std::vector<ServerConfig> &getServers() const { return servers; };
+		LocationConfig findLocationConfig(const std::string &path) const;
         bool setupServer();
         bool run();
 };
 
 std::ostream &operator<<(std::ostream &os, const Config &obj);
+const LocationConfig *matchLocation(const std::string &path, ServerConfig &obj);
