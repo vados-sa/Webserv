@@ -1,6 +1,6 @@
 #include "Request.hpp"
 
-Request::Request() : method_(""), path_("") {
+Request::Request() : method_(""), path_(""), is_cgi(false) {
 };
 
 Request::Request(const Request &obj) : method_(obj.method_), path_(obj.path_) {}

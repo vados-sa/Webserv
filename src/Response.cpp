@@ -2,7 +2,7 @@
 #include "LocationConfig.hpp"
 #include "Config.hpp"
 
-Response::Response() : statusCode_(""), statusMessage_(""), fullPath_("./www"), filename_("upload/") {}
+Response::Response() : statusCode_(""), statusMessage_(""), fullPath_("."), filename_("upload/") {}
 
 template <typename T>
 std::string int_to_string(T value) {
@@ -265,7 +265,7 @@ std::string buildResponse(const Request &reqObj, const LocationConfig &locConfig
     res.setFullPath(reqObj.getPath());
 
     // Check if the request is a CGI request
-    std::string reqPath = reqObj.getPath();
+    //std::string reqPath = reqObj.getPath();
     // if (locConfig.isCgiRequest(reqPath)) {
     //     res.handleCgi(reqObj, locConfig);
     if (reqObj.getIsCgi()) {
@@ -290,8 +290,8 @@ std::string buildResponse(const Request &reqObj, const LocationConfig &locConfig
 
 void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
 {
-    std::string cgiScriptPath = locConfig.getRoot() + reqObj.getPath();
-
+    std::string cgiScriptPath = "." + reqObj.getPath();
+    (void) locConfig;
     // Set up environment variables for the CGI script
     setenv("REQUEST_METHOD", reqObj.getMethod().c_str(), 1);
     setenv("SCRIPT_FILENAME", cgiScriptPath.c_str(), 1);
