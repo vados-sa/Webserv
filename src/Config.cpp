@@ -64,7 +64,7 @@ bool Config::pollLoop(int server_count) {
 
 			if ((i < server_count)) {
                 if (poll_fds[i].revents & POLLIN) {
-                    handleNewConnection(poll_fds[i].fd);
+                    handleNewConnection(poll_fds[i].fd, i);
                 }
                 continue ;
 			}
@@ -82,7 +82,7 @@ bool Config::pollLoop(int server_count) {
 	return true;
 }
 
-void Config::handleNewConnection(int server_fd) {
+void Config::handleNewConnection(int server_fd, int server_idx) {
 	struct sockaddr_in client_addr;
 	socklen_t client_len = sizeof(client_addr);
 	int client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &client_len);
@@ -107,7 +107,7 @@ void Config::handleNewConnection(int server_fd) {
 		return ;
 	}
 
-	clients.push_back(Client(client_fd));
+	clients.push_back(Client(client_fd, server_idx));
 	pollfd client_pollfd = {client_fd, POLLIN, 0};
 	poll_fds.push_back(client_pollfd);
 
@@ -155,8 +155,7 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx) {
 		std::string request = client.getRequest();
 		std::cout << "📥 Complete request received:\n" << request << std::endl;
 		Request reqObj = Request::parseRequest(request);
-        //ServerConfig srv = servers[pollfd_idx];
-        const LocationConfig *loc = matchLocation(reqObj.getPath(), servers[pollfd_idx - 1]);
+        const LocationConfig *loc = matchLocation(reqObj.getPath(), servers[client.getServerIndex()]);
         if (loc)
         {
             // Normalize path relative to location root

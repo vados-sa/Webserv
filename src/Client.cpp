@@ -1,8 +1,8 @@
 #include "Client.hpp"
 
-Client::Client(int fd) : client_fd(fd), current_state(CONNECTED), 
-						state_start_time(time(NULL)), bytes_sent(0),
-						port(-1), keep_alive(true) {};
+Client::Client(int fd, int server_index) : client_fd(fd), server_idx(server_index), 
+						current_state(CONNECTED), state_start_time(time(NULL)), 
+						bytes_sent(0), port(-1), keep_alive(true) {};
 
 Client::~Client() {};
 
