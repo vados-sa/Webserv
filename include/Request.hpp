@@ -43,4 +43,4 @@ public:
 
 std::ostream &operator<<(std::ostream &out, const Request &obj);
 std::ostream &operator<<(std::ostream &out, const std::map<std::string, std::string> &map);
-std::string &normalizePath(const std::string &rawPath);
+std::string normalizePath(const std::string &rawPath);
