@@ -89,17 +89,26 @@ bool Request::parseHeaders(std::string &raw)
 
 bool Request::parseBody(std::string &raw)
 {
-    if (raw.empty())
-        return (1); //for now its ok body to be empty, but maybe we should allow it to be empty if its POST.
+    if (raw.empty() && method_ != "POST")
+        return (true);
+
     std::map<std::string, std::string>::iterator it;
-    it = headers_.find("Content-Length");
+    it = headers_.find("content-length");
     if (it == headers_.end())
-        return (0);
-    std::string lengthStr = headers_["Content-Length"];
-    int lenght;
-    std::istringstream(lengthStr) >> lenght; //i wonder if we can use this to convert from string to int
-    body_= raw;
-    return (1);
+        return (false);
+    std::string lengthStr = headers_["content-length"];
+    std::string::size_type length;
+    std::istringstream(lengthStr) >> length;
+
+    if (raw.empty() && method_ == "POST" && length != 0)
+        return (false); //post cant have empty body unless it says so in Content Length
+
+    if (raw.size() < static_cast<size_t>(length))
+        return (false); // incomplete body
+
+    body_= raw.substr(0, length);
+    raw = raw.substr(length);
+    return (true);
 }
 
 std::ostream &operator<<(std::ostream &out, const Request &obj) {
