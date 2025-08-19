@@ -26,31 +26,39 @@ Request Request::parseRequest(const std::string &raw)
 bool Request::parseRequestLine(std::string &raw)
 {
     std::istringstream iss(raw);
-
     std::string method, path, version;
 
-    if (!(iss >> method >> path >> version)) {
-        return (false);
+    if (!(iss >> method >> path >> version))
+    {
+        return false;
     }
 
     if (method != "GET" && method != "POST" && method != "DELETE")
-        return (false);
+        return false;
 
     setMethod(method);
+    std::string query;
+    size_t qpos = path.find('?');
+    if (qpos != std::string::npos)
+    {
+        query = path.substr(qpos + 1);
+        path = path.substr(0, qpos);
+    }
 
     std::string cleanPath = normalizePath(path);
     if (cleanPath.empty())
-        return (false);
+        return false;
 
     setPath(cleanPath);
+    setQueryString(query);
     setVersion(version);
 
     size_t pos = raw.find("\r\n");
     if (pos == std::string::npos)
-        return (false);
+        return false;
     raw.erase(0, pos + 2);
 
-    return (true);
+    return true;
 }
 
 bool Request::parseHeaders(std::string &raw)
