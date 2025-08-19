@@ -28,7 +28,7 @@ void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
                     return handleGet(reqObj, loc);
                 }
             }
-            // if (autoindex_)
+            // if (loc.getAutoindex())
             //     return generateAutoIndex(fullPath_);
             // else
                 return setPage("403", "Directory listing denied.", true);
