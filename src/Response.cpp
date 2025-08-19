@@ -11,10 +11,33 @@ std::string int_to_string(T value) {
     return oss.str();
 }
 
-void Response::handleGet(const Request &reqObj) {
+void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
 
     (void) reqObj;
     struct stat file_stat;
+
+    std::vector<std::string> index_files = loc.getIndexFiles();
+
+    if (stat(fullPath_.c_str(), &file_stat) == 0) {
+        if (S_ISDIR(file_stat.st_mode)) {
+            for (size_t i = 0; i < index_files.size(); ++i) {
+                std::string candidate = fullPath_ + "/" + index_files[i];
+                if (stat(candidate.c_str(), &file_stat) == 0 && S_ISREG(file_stat.st_mode))
+                {
+                    fullPath_ = candidate;
+                    return handleGet(reqObj, loc);
+                }
+            }
+            // if (loc.getAutoindex())
+            //     return generateAutoIndex(fullPath_);
+            // else
+                return setPage("403", "Directory listing denied.", true);
+            }
+
+            if (!S_ISREG(file_stat.st_mode))
+                return setPage("403", "Requested resource is not a file", true);
+        }
+
     if (stat(fullPath_.c_str(), &file_stat) == 0) {
         if (!S_ISREG(file_stat.st_mode))
             return (setPage("403", "Requested resource is not a file", true));
@@ -33,7 +56,8 @@ void Response::handleGet(const Request &reqObj) {
         statusCode_ = "200";
         return;
     }
-    else {
+    else
+    {
         if (errno == ENOENT)
             return (setPage("404", "File does not exist", true));
         else if (errno == EACCES)
@@ -271,7 +295,7 @@ std::string buildResponse(const Request &reqObj, const LocationConfig &locConfig
     if (reqObj.getIsCgi()) {
         res.handleCgi(reqObj, locConfig);
     } else if (!reqObj.getMethod().compare("GET")) {
-        res.handleGet(reqObj);
+        res.handleGet(reqObj, locConfig);
     } else if (!reqObj.getMethod().compare("POST")) {
         res.handlePost(reqObj);
     } else if (!reqObj.getMethod().compare("DELETE")) {

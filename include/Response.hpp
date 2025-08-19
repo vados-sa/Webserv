@@ -29,7 +29,7 @@ public:
     Response();
 
     // methods
-    void handleGet(const Request &reqObj);
+    void handleGet(const Request &reqObj, const LocationConfig &loc);
     void handlePost(const Request &reqObj);
     void handleDelete(const Request &reqObj);
     std::string writeResponseString();
