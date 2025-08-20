@@ -32,6 +32,7 @@ private:
     std::string parseRoot(const std::vector<std::string> &tokens);
     std::vector<std::string> parseIndex(const std::vector<std::string> &tokens);
     std::vector<std::string> parseAllowedMethods(const std::vector<std::string> &tokens);
+    std::pair<int, std::string> parseRedirection(const std::vector<std::string> &tokens);
     std::string parseUploadDir(const std::vector<std::string> &tokens);
     bool parseAutoindex(const std::vector<std::string> &tokens);
     bool parseAllowUpload(const std::vector<std::string> &tokens);
