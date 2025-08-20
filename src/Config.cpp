@@ -157,21 +157,18 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx) {
 		std::cout << "📥 Complete request received:\n" << request << std::endl;
 		Request reqObj = Request::parseRequest(request);
         //ServerConfig srv = servers[pollfd_idx];
-        const LocationConfig *loc = matchLocation(reqObj.getPath(), servers[client.getServerIndex()]);
+        const LocationConfig *loc = matchLocation(reqObj.getreqPath(), servers[client.getServerIndex()]);
         if (loc)
         {
-            // Normalize path relative to location root
-            reqObj.setPath(loc->getRoot() + reqObj.getPath());
-
-            // Detect if this request should be handled by CGI
+            std::string requestPath = reqObj.getreqPath(); // /cgi-bin/test.py
             if (!loc->getCgiExtension().empty()) {
                 std::string ext = loc->getCgiExtension();
-                std::string path = reqObj.getPath();
-                if (path.size() >= ext.size() &&
-                    path.substr(path.size() - ext.size()) == ext) {
+                if (requestPath.size() >= ext.size() &&
+                    requestPath.substr(requestPath.size() - ext.size()) == ext) {
                     reqObj.setIsCgi(true);
                 }
             }
+            reqObj.setfullPath(reqObj.getreqPath() + loc->getUri());
         }
         std::string response = buildResponse(reqObj, *loc);
 		client.setKeepAlive(reqObj.getHeaders());
@@ -301,7 +298,7 @@ const LocationConfig *matchLocation(const std::string &reqPath, ServerConfig &sr
 	const std::vector<LocationConfig> &locations = srv.getLocations();
 
 	for (size_t i = 0; i < locations.size(); ++i) {
-		const std::string &prefix = locations[i].getPath();
+		const std::string &prefix = locations[i].getUri();
 		if (reqPath.compare(0, prefix.size(), prefix) == 0) {
 			if (prefix.size() > longest) {
 				longest = prefix.size();
