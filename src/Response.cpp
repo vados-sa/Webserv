@@ -1,6 +1,10 @@
 #include "Response.hpp"
 #include "LocationConfig.hpp"
 #include "Config.hpp"
+#include <dirent.h>
+#include <string>
+#include <iostream>
+#include <sstream>
 
 Response::Response() : statusCode_(""), statusMessage_(""), fullPath_("."), filename_("upload/") {}
 
@@ -28,15 +32,16 @@ void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
                     return handleGet(reqObj, loc);
                 }
             }
-            // if (loc.getAutoindex())
-            //     return generateAutoIndex(fullPath_);
-            // else
-                return setPage("403", "Directory listing denied.", true);
-            }
-
-            if (!S_ISREG(file_stat.st_mode))
-                return setPage("403", "Requested resource is not a file", true);
+            if (loc.getAutoindex()) {
+                generateAutoIndex(*this, loc);
+                return;
+            } else
+                return (setPage("403", "Directory listing denied.", true));
         }
+
+        if (!S_ISREG(file_stat.st_mode))
+            return (setPage("403", "Requested resource is not a file", true));
+    }
 
     if (stat(fullPath_.c_str(), &file_stat) == 0) {
         if (!S_ISREG(file_stat.st_mode))
@@ -65,6 +70,48 @@ void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
         else
             return (setPage("500", "Internal server error while accessing file.", true));
     }
+}
+
+std::string generateAutoIndex(Response &res, LocationConfig loc) {
+    std::string uri = loc.getUri();
+    std::string path = res.getFullPath();
+
+    DIR *dir = opendir(path.c_str());
+    if (!dir){
+        res.setPage("403", "Forbidden", true);
+        return ("");
+    }
+
+    std::ostringstream html;
+
+    html << "<!DOCTYPE html>\n"
+            << "<html>\n<head>\n"
+            << "<title>Index of " << uri << "</title>\n"
+            << "</head>\n<body>\n"
+            << "<h1>Index of " << uri << "</h1>\n"
+            << "<ul>\n";
+
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL)
+    {
+        std::string name(entry->d_name);
+        if (name == "." || name == "..")
+            continue;
+        struct stat st;
+        std::string fullpath = path + "/" + name;
+        if (stat(fullpath.c_str(), &st) == 0 && S_ISDIR(st.st_mode))
+            name += "/";
+        html << "<li><a href=\"" << uri;
+        if (uri[uri.size() - 1] != '/')
+            html << "/";
+        html << name << "\">" << name << "</a></li>\n";
+    }
+
+    html << "</ul>\n</body>\n</html>\n";
+    res.setPage("200", "OK", false);
+    closedir(dir);
+    res.setBody(html.str());
+    return (html.str());
 }
 
 std::string Response::getContentType(std::string path)
