@@ -7,7 +7,7 @@
 class LocationConfig
 {
 private:
-    std::string path;
+    std::string uri;
     std::string root;
     std::vector<std::string> index_files;
     std::vector<std::string> allowed_methods;
@@ -22,7 +22,7 @@ private:
 public:
     LocationConfig();
 
-    void setPath(std::string set) { path = set; };
+    void setUri(std::string set) { uri = set; };
     void setRoot(std::string set) { root = set; };
     void setIndex(std::vector<std::string> set) { index_files = set; };
     void setAllowedMethods(std::vector<std::string> set) { allowed_methods = set; };
@@ -33,7 +33,7 @@ public:
     void setAllowUpload(bool set) { allow_upload = set; };
 	void setCgiExtension(std::string set) { cgi_extension = set; };
 
-    std::string getPath() const { return path; }
+    std::string getUri() const { return uri; }
     std::string getRoot() const { return root; }
     const std::vector<std::string> &getIndexFiles() const { return index_files; }
     const std::vector<std::string> &getAllowedMethods() const { return allowed_methods; };

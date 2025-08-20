@@ -280,7 +280,7 @@ LocationConfig ConfigParser::parseLocationBlock(std::vector<std::string> lines)
         lines[i] = trimLine(lines[i]);
         tokens = tokenize(lines[i]);
         if (!tokens.empty() && tokens[0] == "location")
-            locConfig.setPath(parsePath(tokens));
+            locConfig.setUri(parsePath(tokens));
         else if (!tokens.empty() && tokens[0] == "root")
             locConfig.setRoot(parseRoot(tokens));
         else if (!tokens.empty() && tokens[0] == "index")

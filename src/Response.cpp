@@ -1,6 +1,10 @@
 #include "Response.hpp"
 #include "LocationConfig.hpp"
 #include "Config.hpp"
+#include <dirent.h>
+#include <string>
+#include <iostream>
+#include <sstream>
 
 Response::Response() : statusCode_(""), statusMessage_(""), fullPath_("."), filename_("upload/") {}
 
@@ -28,15 +32,16 @@ void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
                     return handleGet(reqObj, loc);
                 }
             }
-            // if (loc.getAutoindex())
-            //     return generateAutoIndex(fullPath_);
-            // else
-                return setPage("403", "Directory listing denied.", true);
-            }
-
-            if (!S_ISREG(file_stat.st_mode))
-                return setPage("403", "Requested resource is not a file", true);
+            if (loc.getAutoindex()) {
+                generateAutoIndex(*this, loc);
+                return;
+            } else
+                return (setPage("403", "Directory listing denied.", true));
         }
+
+        if (!S_ISREG(file_stat.st_mode))
+            return (setPage("403", "Requested resource is not a file", true));
+    }
 
     if (stat(fullPath_.c_str(), &file_stat) == 0) {
         if (!S_ISREG(file_stat.st_mode))
@@ -65,6 +70,48 @@ void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
         else
             return (setPage("500", "Internal server error while accessing file.", true));
     }
+}
+
+std::string generateAutoIndex(Response &res, LocationConfig loc) {
+    std::string uri = loc.getUri();
+    std::string path = res.getFullPath();
+
+    DIR *dir = opendir(path.c_str());
+    if (!dir){
+        res.setPage("403", "Forbidden", true);
+        return ("");
+    }
+
+    std::ostringstream html;
+
+    html << "<!DOCTYPE html>\n"
+            << "<html>\n<head>\n"
+            << "<title>Index of " << uri << "</title>\n"
+            << "</head>\n<body>\n"
+            << "<h1>Index of " << uri << "</h1>\n"
+            << "<ul>\n";
+
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL)
+    {
+        std::string name(entry->d_name);
+        if (name == "." || name == "..")
+            continue;
+        struct stat st;
+        std::string fullpath = path + "/" + name;
+        if (stat(fullpath.c_str(), &st) == 0 && S_ISDIR(st.st_mode))
+            name += "/";
+        html << "<li><a href=\"" << uri;
+        if (uri[uri.size() - 1] != '/')
+            html << "/";
+        html << name << "\">" << name << "</a></li>\n";
+    }
+
+    html << "</ul>\n</body>\n</html>\n";
+    res.setPage("200", "OK", false);
+    closedir(dir);
+    res.setBody(html.str());
+    return (html.str());
 }
 
 std::string Response::getContentType(std::string path)
@@ -101,7 +148,7 @@ std::string Response::getContentType(std::string path)
 void Response::handlePost(const Request &reqObj)
 {
     filename_ = "www/upload/";
-    if (reqObj.getPath() != "/upload/") {
+    if (reqObj.getreqPath() != "/upload/") {
         setBody(generatePage("404", "Wrong path. Expected \"/upload/", true));
         return;
     }
@@ -126,15 +173,13 @@ void Response::handlePost(const Request &reqObj)
 }
 
 void Response::handleDelete(const Request &reqObj) {
-    if (reqObj.getPath().substr(0, 8) != "/upload/")
+    if (reqObj.getreqPath().substr(0, 8) != "/upload/")
     {
         setPage("404", "Wrong path. Expected \"/upload/", true);
         return;
     }
     filename_ = "www/upload/";
-    std::cout << "This is filename before appending: " << filename_ << std::endl;
-    filename_ = filename_.append(reqObj.getPath().substr(8));
-    std::cout << "This is filename after appending: " << filename_ << std::endl;
+    filename_ = filename_.append(reqObj.getreqPath().substr(8));
 
     struct stat fileStat;
 
@@ -286,7 +331,7 @@ std::string buildResponse(const Request &reqObj, const LocationConfig &locConfig
     Response res;
 
     res.setVersion(reqObj.getVersion());
-    res.setFullPath(reqObj.getPath());
+    res.setFullPath(locConfig.getRoot() + reqObj.getreqPath());
 
     // Check if the request is a CGI request
     //std::string reqPath = reqObj.getPath();
@@ -314,8 +359,8 @@ std::string buildResponse(const Request &reqObj, const LocationConfig &locConfig
 
 void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
 {
-    std::string cgiScriptPath = "." + reqObj.getPath();
-    (void) locConfig;
+    std::string cgiScriptPath = "." + locConfig.getRoot() + reqObj.getreqPath();
+
     // Set up environment variables for the CGI script
     setenv("REQUEST_METHOD", reqObj.getMethod().c_str(), 1);
     setenv("SCRIPT_FILENAME", cgiScriptPath.c_str(), 1);

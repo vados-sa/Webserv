@@ -4,6 +4,7 @@
 #include <fstream>
 #include <sys/stat.h>
 #include <sstream>
+#include <dirent.h>
 #include "HttpMessage.hpp"
 #include "Request.hpp"
 #include "LocationConfig.hpp"
@@ -49,4 +50,5 @@ public:
 
 std::string buildResponse(const Request &reqObj, const LocationConfig& Config);
 std::string generatePage(const std::string &code, const std::string &message, bool error);
+std::string generateAutoIndex(Response &res, LocationConfig loc);
 std::ostream &operator<<(std::ostream &out, const Response &obj);
