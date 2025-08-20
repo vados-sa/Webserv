@@ -101,7 +101,7 @@ std::string Response::getContentType(std::string path)
 void Response::handlePost(const Request &reqObj)
 {
     filename_ = "www/upload/";
-    if (reqObj.getPath() != "/upload/") {
+    if (reqObj.getreqPath() != "/upload/") {
         setBody(generatePage("404", "Wrong path. Expected \"/upload/", true));
         return;
     }
@@ -126,15 +126,13 @@ void Response::handlePost(const Request &reqObj)
 }
 
 void Response::handleDelete(const Request &reqObj) {
-    if (reqObj.getPath().substr(0, 8) != "/upload/")
+    if (reqObj.getreqPath().substr(0, 8) != "/upload/")
     {
         setPage("404", "Wrong path. Expected \"/upload/", true);
         return;
     }
     filename_ = "www/upload/";
-    std::cout << "This is filename before appending: " << filename_ << std::endl;
-    filename_ = filename_.append(reqObj.getPath().substr(8));
-    std::cout << "This is filename after appending: " << filename_ << std::endl;
+    filename_ = filename_.append(reqObj.getreqPath().substr(8));
 
     struct stat fileStat;
 
@@ -286,7 +284,7 @@ std::string buildResponse(const Request &reqObj, const LocationConfig &locConfig
     Response res;
 
     res.setVersion(reqObj.getVersion());
-    res.setFullPath(reqObj.getPath());
+    res.setFullPath(locConfig.getRoot() + reqObj.getreqPath());
 
     // Check if the request is a CGI request
     //std::string reqPath = reqObj.getPath();
@@ -314,8 +312,8 @@ std::string buildResponse(const Request &reqObj, const LocationConfig &locConfig
 
 void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
 {
-    std::string cgiScriptPath = "." + reqObj.getPath();
-    (void) locConfig;
+    std::string cgiScriptPath = "." + locConfig.getRoot() + reqObj.getreqPath();
+
     // Set up environment variables for the CGI script
     setenv("REQUEST_METHOD", reqObj.getMethod().c_str(), 1);
     setenv("SCRIPT_FILENAME", cgiScriptPath.c_str(), 1);
