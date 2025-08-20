@@ -287,6 +287,8 @@ LocationConfig ConfigParser::parseLocationBlock(std::vector<std::string> lines)
             locConfig.setIndex(parseIndex(tokens));
         else if (!tokens.empty() && tokens[0] == "allowed_methods")
             locConfig.setAllowedMethods(parseAllowedMethods(tokens));
+        else if (tokens[0] == "return")
+            locConfig.setRedirection(parseRedirection(tokens));
         else if (!tokens.empty() && tokens[0] == "upload_path")
             locConfig.setUploadDir(parseUploadDir(tokens));
         else if (!tokens.empty() && tokens[0] == "autoindex")
@@ -413,6 +415,42 @@ std::vector<std::string> ConfigParser::parseAllowedMethods(const std::vector<std
         //ret.push_back(tokens[i]);
     }
     return (ret);
+}
+
+std::pair<int, std::string> ConfigParser::parseRedirection(const std::vector<std::string> &tokens)
+{
+    std::pair<int, std::string> entry;
+    if (tokens.size() < 3) {
+        errorMessage << fileName << ":" << lineNum << "  Unable to parse return, missing value";
+        throw std::runtime_error(errorMessage.str());
+    }
+
+    if (tokens.size() > 3)
+    {
+        errorMessage << fileName << ":" << lineNum << "  return contains unexpected spaces or extra tokens";
+        throw std::runtime_error(errorMessage.str());
+    }
+
+    for (std::string::const_iterator it = tokens[1].begin(); it != tokens[1].end(); ++it)
+    {
+        if (!isdigit(*it)) {
+            errorMessage << fileName << ":" << lineNum << "  Redirection code must include digits only";
+            throw std::runtime_error(errorMessage.str());
+        }
+    }
+
+    if (tokens[2].empty())
+        throw std::runtime_error("Redirection target must not be empty");
+
+    int key = std::atoi(tokens[1].c_str());
+    if (key == 0 && tokens[1] != "0")
+		throw std::runtime_error(std::string("Invalid redirection code '") + tokens[1] + "'");
+
+    if ((key < 301 || key > 302) && (key < 307 || key > 308))
+        throw std::runtime_error(std::string("Invalid redirection code '") + tokens[1] + "': not a valid HTTP redirection code");
+
+    entry = std::make_pair(key, tokens[2]);
+    return (entry);
 }
 
 std::string ConfigParser::parseUploadDir(const std::vector<std::string> &tokens)
