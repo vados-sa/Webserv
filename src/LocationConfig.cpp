@@ -11,7 +11,7 @@ std::ostream &operator<<(std::ostream &os, const std::vector<LocationConfig>& ob
     for (size_t i = 0; i < obj.size(); i++) {
         os << "Location " << i << ":\n";
         os << " -- Root: " << obj[i].getRoot() << "\n";
-        os << " -- Path: " << obj[i].getPath() << "\n";
+        os << " -- Path: " << obj[i].getUri() << "\n";
         os << " -- Index: " << obj[i].getIndexFiles() << "\n";
         os << " -- Allowed methods: " << obj[i].getAllowedMethods() << "\n";
         os << " -- Allow upload: " << obj[i].getAllowUpload() << "\n";

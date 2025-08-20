@@ -301,7 +301,7 @@ const LocationConfig *matchLocation(const std::string &reqPath, ServerConfig &sr
 	const std::vector<LocationConfig> &locations = srv.getLocations();
 
 	for (size_t i = 0; i < locations.size(); ++i) {
-		const std::string &prefix = locations[i].getPath();
+		const std::string &prefix = locations[i].getUri();
 		if (reqPath.compare(0, prefix.size(), prefix) == 0) {
 			if (prefix.size() > longest) {
 				longest = prefix.size();
