@@ -22,18 +22,15 @@ private:
     std::string fullPath_;
     std::string filename_;
     std::string contentType_;
+    std::map<int, std::string> error_pages_config;
 
     // methods
     void parseContentType(const Request &obj);
-
-public:
-    Response();
-
-    // methods
+    std::string generateDefaultPage(const int code, const std::string &message, bool error);
+    std::string generateAutoIndex(Response &res, LocationConfig loc);
     void handleGet(const Request &reqObj, const LocationConfig &loc);
     void handlePost(const Request &reqObj);
     void handleDelete(const Request &reqObj);
-    std::string writeResponseString();
     std::string getContentType(std::string path);
     std::string writeResponseString();
 
@@ -56,7 +53,4 @@ public:
 	void handleCgi(const Request &reqObj, const LocationConfig &locConfig);
 };
 
-std::string buildResponse(const Request &reqObj, const LocationConfig& Config);
-std::string generatePage(const std::string &code, const std::string &message, bool error);
-std::string generateAutoIndex(Response &res, LocationConfig loc);
 std::ostream &operator<<(std::ostream &out, const Response &obj);
