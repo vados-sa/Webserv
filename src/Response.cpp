@@ -182,25 +182,29 @@ void Response::handlePost(const Request &reqObj, LocationConfig loc)
         setPage(400, "Missing Content-Type header", true);
         return;
     }
-    parseContentType(reqObj);
 
-    if (mkdir(loc.getUploadDir().c_str(), 0755) == -1) {
-        if (errno == EEXIST)
-            std::cout << "Directory already exists: " << loc.getUploadDir() << std::endl;
-        else {
-            std::cerr << "mkdir failed for " << loc.getUploadDir()
-                      << ": " << strerror(errno) << std::endl;
-        }
+    parseContentType(reqObj);
+    std::string uploadFullPath = "." + loc.getUploadDir();
+    createUploadDir(uploadFullPath);
+    uploadFile(uploadFullPath);
+}
+
+void Response::createUploadDir(const std::string &uploadFullPath) {
+    if (mkdir(uploadFullPath.c_str(), 0755) == -1) {
+        if (errno != EEXIST)
+            std::cerr << "mkdir failed for " << uploadFullPath << ": " << strerror(errno) << std::endl;
     }
-    else {
-        std::cout << "Directory created: " << loc.getUploadDir() << std::endl;
-    }
-    std::ofstream file((loc.getUploadDir() + filename_).c_str(), std::ios::binary);
+}
+
+void Response::uploadFile(const std::string &uploadFullPath)
+{
+    std::ofstream file((uploadFullPath + "/" + filename_).c_str(), std::ios::binary);
     if (file.is_open()) {
         file.write(body_.c_str(), body_.size());
         file.close();
         return (setPage(201, "File created", false));
-    } else
+    }
+    else
         return (setPage(500, "Server error: could not open file for writing.", true));
 }
 

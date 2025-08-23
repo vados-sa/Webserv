@@ -26,12 +26,17 @@ private:
 
     // methods
     void parseContentType(const Request &obj);
-    std::string generateDefaultPage(const int code, const std::string &message, bool error);
     std::string generateAutoIndex(Response &res, LocationConfig loc);
     void handleGet(const Request &reqObj, const LocationConfig &loc);
-    void handlePost(const Request &reqObj, LocationConfig loc);
     void handleDelete(const Request &reqObj);
     std::string getContentType(std::string path);
+
+    // methods -- "POST"
+    void handlePost(const Request &reqObj, LocationConfig loc);
+    void createUploadDir(const std::string &uploadFullPath);
+    void uploadFile(const std::string &uploadFullPath);
+
+    // methods -- general
     std::string writeResponseString();
 
     // methods --- utils
