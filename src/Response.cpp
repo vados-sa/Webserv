@@ -51,14 +51,8 @@ void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
             return (setPage(403, "Requested resource is not a file", true));
         if (!(file_stat.st_mode & S_IROTH))
             return (setPage(403, "You do not have permission to read this file", true));
-        std::ifstream file(fullPath_.c_str(), std::ios::in | std::ios::binary);
-        if (!file)
-            return (setPage(500, "Server error: unable to open file.", true));
 
-        std::ostringstream ss;
-        ss << file.rdbuf();
-        body_ = ss.str();
-
+        fileToBody(fullPath_);
         setHeader("Content-Length", int_to_string(body_.size()));
         setHeader("Content-Type", getContentType(fullPath_));
         statusCode_ = 200;
@@ -72,6 +66,23 @@ void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
         else
             return (setPage(500, "Internal server error while accessing file.", true));
     }
+}
+
+void Response:: fileToBody(const std::string &fileName) {
+    std::ifstream file(fileName.c_str(), std::ios::in | std::ios::binary);
+    if (!file) {
+        std::ifstream test(fileName.c_str());
+        if (!test) {
+            setPage(404, "Not Found", true);
+        } else {
+            setPage(500, "Server error: unable to open file.", true);
+        }
+        return;
+    }
+
+    std::ostringstream ss;
+    ss << file.rdbuf();
+    body_ = ss.str();
 }
 
 std::string Response::generateAutoIndex(Response &res, LocationConfig loc) {
@@ -313,15 +324,8 @@ void Response::setPage(const int code, const std::string &message, bool error)
     std::string errorPagePath = error_pages_config[code];
     if (errorPagePath.empty())
         body_ = generateDefaultPage(code, message, error);
-    else {
-        std::ifstream file(("." + errorPagePath).c_str(), std::ios::in | std::ios::binary);
-        if (!file)
-            return (setPage(500, "Server error: unable to open file.", true));
-
-        std::ostringstream ss;
-        ss << file.rdbuf();
-        body_ = ss.str();
-    }
+    else
+        fileToBody("." + errorPagePath);
     setHeader("Content-Length", int_to_string(body_.size()));
     setHeader("Content-Type", "text/html");
 }

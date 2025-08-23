@@ -34,6 +34,10 @@ private:
     std::string getContentType(std::string path);
     std::string writeResponseString();
 
+    // methods --- utils
+    void fileToBody(const std::string &fileName);
+    std::string generateDefaultPage(const int code, const std::string &message, bool error);
+
 public:
     Response();
     Response(std::map<int, std::string> error_pages_config);
