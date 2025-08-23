@@ -72,7 +72,7 @@ void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
     }
 }
 
-std::string generateAutoIndex(Response &res, LocationConfig loc) {
+std::string Response::generateAutoIndex(Response &res, LocationConfig loc) {
     std::string uri = loc.getUri();
     std::string path = res.getFullPath();
 
@@ -295,7 +295,7 @@ void Response::setPage(const std::string &code, const std::string &message, bool
     setHeader("Content-Type", "text/html");
 }
 
-std::string generatePage(const std::string &code, const std::string &message, bool error)
+std::string Response::generateDefaultPage(const int code, const std::string &message, bool error)
 {
     std::ostringstream html;
     html << "<!DOCTYPE html>\n<html><head><title>" << code << " " << message << "</title></head>"
@@ -326,7 +326,7 @@ std::ostream &operator<<(std::ostream &out, const Response &obj)
     return (out);
 }
 
-std::string buildResponse(const Request &reqObj, const LocationConfig &locConfig)
+std::string Response::buildResponse(const Request &reqObj, const LocationConfig &locConfig)
 {
     Response res;
 

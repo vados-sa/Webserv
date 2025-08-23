@@ -35,6 +35,14 @@ public:
     void handleDelete(const Request &reqObj);
     std::string writeResponseString();
     std::string getContentType(std::string path);
+    std::string writeResponseString();
+
+public:
+    Response();
+    Response(std::map<int, std::string> error_pages_config);
+
+    // methods
+    std::string buildResponse(const Request &reqObj, const LocationConfig &Config);
 
     // getter
     std::string getCode() const { return statusCode_; };
