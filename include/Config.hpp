@@ -22,6 +22,14 @@
 
 const int MAX_CLIENT = 100;
 
+struct PortState {
+    bool anyTaken;
+    int  anyServerIdx;
+    std::map<std::string, int> ipToServerIdx;
+
+    PortState() : anyTaken(false), anyServerIdx(-1) {}
+};
+
 class Config
 {
     private:
@@ -33,6 +41,7 @@ class Config
         std::vector<Client> clients;
 		std::vector<pollfd> poll_fds;
 
+        bool validateBindings(std::string &errorMsg) const;
         void setupPollfdSet(int server_count);
         bool pollLoop(int server_count);
         void handleNewConnection(int server_fd, int server_idx);

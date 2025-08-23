@@ -25,13 +25,77 @@ void Config::loadFromFile(const std::string &filepath) {
 }
 
 bool Config::setupServer() {
-    for (size_t i = 0; i < servers.size(); i++) {
+	std::string errorMsg;
+	if (validateBindings(errorMsg) == false) {
+		std::cerr << errorMsg << std::endl;
+		return false;
+	}
+
+	for (size_t i = 0; i < servers.size(); i++) {
         ServerSocket socketObj;
         if (!socketObj.setupServerSocket(servers[i].getPort(), servers[i].getHost()))
             return false;
         serverSockets.push_back(socketObj);
     }
     return true;
+}
+
+bool Config::validateBindings(std::string &errorMsg) const {
+	std::map<int, PortState> ports;
+
+	for (size_t i = 0; i < servers.size(); i++) {
+		const ServerConfig &s = servers[i];
+		const int port = s.getPort();
+		const std::string &host = s.getHost();
+
+		PortState &ps = ports[port];
+
+		if (host == "0.0.0.0") {
+			if (ps.anyTaken) {
+				std::ostringstream oss;
+                oss << "Duplicate binding: 0.0.0.0:" << port
+                    << " already used by server#" << ps.anyServerIdx
+                    << " (also requested by server#" << i << ")";
+                errorMsg = oss.str();
+                return false;
+			}
+			if (!ps.ipToServerIdx.empty()) {
+                std::map<std::string,int>::const_iterator it = ps.ipToServerIdx.begin();
+                std::ostringstream oss;
+                oss << "Conflict: 0.0.0.0:" << port
+                    << " requested by server #" << i
+                    << " but " << it->first << ":" << port
+                    << " is already used by server #" << it->second;
+                errorMsg = oss.str();
+                return false;
+            }
+			ps.anyTaken = true;
+			ps.anyServerIdx = static_cast<int>(i);
+		}
+		else {
+			if (ps.anyTaken) {
+                std::ostringstream oss;
+                oss << "Conflict: " << host << ":" << port
+                    << " requested by server #" << i
+                    << " but 0.0.0.0:" << port
+                    << " is already used by server #" << ps.anyServerIdx;
+                errorMsg = oss.str();
+                return false;
+            }
+			std::map<std::string,int>::const_iterator it = ps.ipToServerIdx.find(host);
+            if (it != ps.ipToServerIdx.end()) {
+                std::ostringstream oss;
+                oss << "Duplicate binding: " << host << ":" << port
+                    << " already used by server #" << it->second
+                    << " (also requested by server #" << i << ")";
+                errorMsg = oss.str();
+                return false;
+            }
+            ps.ipToServerIdx[host] = static_cast<int>(i);
+		}
+	}
+
+	return true;
 }
 
 bool Config::run() {
