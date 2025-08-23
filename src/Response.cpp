@@ -184,7 +184,7 @@ void Response::handlePost(const Request &reqObj, LocationConfig loc)
     }
 
     parseContentType(reqObj);
-    std::string uploadFullPath = "." + loc.getUploadDir();
+    std::string uploadFullPath = "./" + loc.getUploadDir();
     createUploadDir(uploadFullPath);
     uploadFile(uploadFullPath);
 }
@@ -394,7 +394,6 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
 
     return (this->writeResponseString());
 }
-
 
 void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
 {
