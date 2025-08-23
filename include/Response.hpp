@@ -51,8 +51,8 @@ public:
 
     //setter
     void setFullPath(const std::string &reqPath);
-    void setCode(const std::string code);
-    void setPage(const std::string &code, const std::string &message, bool error);
+    void setCode(const int code);
+    void setPage(const  int code, const std::string &message, bool error);
 	void handleCgi(const Request &reqObj, const LocationConfig &locConfig);
 };
 

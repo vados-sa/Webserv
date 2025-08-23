@@ -36,21 +36,21 @@ void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
                 generateAutoIndex(*this, loc);
                 return;
             } else
-                return (setPage("403", "Directory listing denied.", true));
+                return (setPage(403, "Directory listing denied.", true));
         }
 
         if (!S_ISREG(file_stat.st_mode))
-            return (setPage("403", "Requested resource is not a file", true));
+            return (setPage(403, "Requested resource is not a file", true));
     }
 
     if (stat(fullPath_.c_str(), &file_stat) == 0) {
         if (!S_ISREG(file_stat.st_mode))
-            return (setPage("403", "Requested resource is not a file", true));
+            return (setPage(403, "Requested resource is not a file", true));
         if (!(file_stat.st_mode & S_IROTH))
-            return (setPage("403", "You do not have permission to read this file", true));
+            return (setPage(403, "You do not have permission to read this file", true));
         std::ifstream file(fullPath_.c_str(), std::ios::in | std::ios::binary);
         if (!file)
-            return (setPage("500", "Server error: unable to open file.", true));
+            return (setPage(500, "Server error: unable to open file.", true));
 
         std::ostringstream ss;
         ss << file.rdbuf();
@@ -64,11 +64,11 @@ void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
     else
     {
         if (errno == ENOENT)
-            return (setPage("404", "File does not exist", true));
+            return (setPage(404, "File does not exist", true));
         else if (errno == EACCES)
-            return (setPage("403", "Access denied.", true));
+            return (setPage(403, "Access denied.", true));
         else
-            return (setPage("500", "Internal server error while accessing file.", true));
+            return (setPage(500, "Internal server error while accessing file.", true));
     }
 }
 
@@ -78,7 +78,7 @@ std::string Response::generateAutoIndex(Response &res, LocationConfig loc) {
 
     DIR *dir = opendir(path.c_str());
     if (!dir){
-        res.setPage("403", "Forbidden", true);
+        res.setPage(403, "Forbidden", true);
         return ("");
     }
 
@@ -108,7 +108,7 @@ std::string Response::generateAutoIndex(Response &res, LocationConfig loc) {
     }
 
     html << "</ul>\n</body>\n</html>\n";
-    res.setPage("200", "OK", false);
+    res.setPage(200, "OK", false);
     closedir(dir);
     res.setBody(html.str());
     return (html.str());
@@ -153,12 +153,11 @@ void Response::handlePost(const Request &reqObj)
         return;
     }
     if (reqObj.getBody().empty()) {
-        return (setPage("400", "No body detected on request. Body necessary", true));
+        return (setPage(400, "No body detected on request. Body necessary", true));
     }
-    std::cout << getHeaders() << std::endl;
-    if (!reqObj.findHeader("Content-Type"))
-    {
-        setPage("400", "Missing Content-Type header", true);
+
+    if (!reqObj.findHeader("content-type")) {
+        setPage(400, "Missing Content-Type header", true);
         return;
     }
     parseContentType(reqObj);
@@ -167,15 +166,15 @@ void Response::handlePost(const Request &reqObj)
     if (file.is_open()) {
         file.write(body_.c_str(), body_.size());
         file.close();
-        return (setPage("201", "File created", false));
+        return (setPage(201, "File created", false));
     } else
-        return (setPage("500", "Server error: could not open file for writing.", true));
+        return (setPage(500, "Server error: could not open file for writing.", true));
 }
 
 void Response::handleDelete(const Request &reqObj) {
     if (reqObj.getreqPath().substr(0, 8) != "/upload/")
     {
-        setPage("404", "Wrong path. Expected \"/upload/", true);
+        setPage(404, "Wrong path. Expected \"/upload/", true);
         return;
     }
     filename_ = "www/upload/";
@@ -184,20 +183,20 @@ void Response::handleDelete(const Request &reqObj) {
     struct stat fileStat;
 
     if (stat(filename_.c_str(), &fileStat) != 0) {
-        setPage("404", "\"" + filename_ + "\" is not a regular file", true);
+        setPage(404, "\"" + filename_ + "\" is not a regular file", true);
         return;
     };
 
     if(!S_ISREG(fileStat.st_mode)) {
-        setPage("404", "File not found :\"" + filename_ + "\"", true);
+        setPage(404, "File not found :\"" + filename_ + "\"", true);
         return;
     }
 
     if (remove(filename_.c_str()) != 0) {
-        setPage("500", "Failed to delete file: \"" + filename_ + "\"", true);
+        setPage(500, "Failed to delete file: \"" + filename_ + "\"", true);
         return;
     }
-    setPage("200", "File \"" + filename_ + "\" deleted successfully.", true);
+    setPage(200, "File \"" + filename_ + "\" deleted successfully.", true);
 }
 
 void Response::parseContentType(const Request &obj)
@@ -263,27 +262,25 @@ std::string Response::writeResponseString()
     return (res.str());
 }
 
-void Response::setCode(const std::string code)
+void Response::setCode(const int code)
 {
     statusCode_ = code;
 
-    static std::map<std::string, std::string> codeToMessage;
+    static std::map<int, std::string> codeToMessage;
     if (codeToMessage.empty())
     {
-        codeToMessage["200"] = "OK";
-        codeToMessage["201"] = "Created";
-        codeToMessage["204"] = "No Content";
-        codeToMessage["400"] = "Bad Request";
-        codeToMessage["403"] = "Forbidden";
-        codeToMessage["404"] = "Not Found";
-        codeToMessage["405"] = "Method Not Allowed";
-        codeToMessage["500"] = "Internal Server Error";
+        codeToMessage[200] = "OK";
+        codeToMessage[201] = "Created";
+        codeToMessage[204] = "No Content";
+        codeToMessage[400] = "Bad Request";
+        codeToMessage[403] = "Forbidden";
+        codeToMessage[404] = "Not Found";
+        codeToMessage[405] = "Method Not Allowed";
+        codeToMessage[500] = "Internal Server Error";
     }
 
-    std::map<std::string, std::string>::iterator it = codeToMessage.find(code);
-    if (it != codeToMessage.end())
-        statusMessage_ = it->second;
-    else
+    statusMessage_ = codeToMessage[code];
+    if (statusMessage_.empty())
         statusMessage_ = "Unknown Status";
 }
 
@@ -369,7 +366,7 @@ void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
     // Execute the CGI script and capture its output
     FILE *pipe = popen(cgiScriptPath.c_str(), "r");
     if (!pipe) {
-        setPage("500", "Failed to execute CGI script.", true);
+        setPage(500, "Failed to execute CGI script.", true);
         return;
     }
 
@@ -384,5 +381,5 @@ void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
     body_ = output.str();
     setHeader("Content-Length", int_to_string(body_.size()));
     setHeader("Content-Type", "text/html");
-    setCode("200");
+    setCode(200);
 }
