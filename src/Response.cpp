@@ -364,32 +364,28 @@ std::ostream &operator<<(std::ostream &out, const Response &obj)
 
 std::string Response::buildResponse(const Request &reqObj, const LocationConfig &locConfig)
 {
-    Response res;
+    this->setVersion(reqObj.getVersion());
+    this->setFullPath(locConfig.getRoot() + reqObj.getreqPath());
 
-    res.setVersion(reqObj.getVersion());
-    res.setFullPath(locConfig.getRoot() + reqObj.getreqPath());
-
-    // Check if the request is a CGI request
-    //std::string reqPath = reqObj.getPath();
-    // if (locConfig.isCgiRequest(reqPath)) {
-    //     res.handleCgi(reqObj, locConfig);
-    if (reqObj.getIsCgi()) {
-        res.handleCgi(reqObj, locConfig);
+    if (!locConfig.isMethodAllowed(reqObj.getMethod()) && reqObj.getMethod() != "POST")
+        this->setPage(405, "Method not allowed", true);
+    else if (reqObj.getIsCgi()) {
+        this->handleCgi(reqObj, locConfig);
     } else if (!reqObj.getMethod().compare("GET")) {
-        res.handleGet(reqObj, locConfig);
+        this->handleGet(reqObj, locConfig);
     } else if (!reqObj.getMethod().compare("POST")) {
-        res.handlePost(reqObj);
+        this->handlePost(reqObj, locConfig);
     } else if (!reqObj.getMethod().compare("DELETE")) {
-        res.handleDelete(reqObj);
+        this->handleDelete(reqObj);
     } else {
-        res.setPage("405", "Method not allowed", true);
-        res.setHeader("Allow", "GET, POST, DELETE");
+        this->setPage(405, "Method not allowed", true);
+        this->setHeader("Allow", "GET, POST, DELETE");
     }
 
     if (reqObj.findHeader("Connection"))
         this->setHeader("connection", *reqObj.findHeader("Connection"));
 
-    std::string reqStr = res.writeResponseString();
+    std::string reqStr = this->writeResponseString();
     return reqStr;
 }
 
