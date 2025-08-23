@@ -361,8 +361,10 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
     this->setVersion(reqObj.getVersion());
     this->setFullPath(locConfig.getRoot() + reqObj.getreqPath());
 
-    if (!locConfig.isMethodAllowed(reqObj.getMethod()) && reqObj.getMethod() != "POST")
+    if (!locConfig.isMethodAllowed(reqObj.getMethod()) && reqObj.getMethod() != "POST") {
         this->setPage(405, "Method not allowed", true);
+        this->setHeader("Allow", "GET, POST, DELETE");
+    }
     else if (reqObj.getIsCgi()) {
         this->handleCgi(reqObj, locConfig);
     } else if (!reqObj.getMethod().compare("GET")) {
@@ -371,9 +373,6 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
         this->handlePost(reqObj, locConfig);
     } else if (!reqObj.getMethod().compare("DELETE")) {
         this->handleDelete(reqObj);
-    } else {
-        this->setPage(405, "Method not allowed", true);
-        this->setHeader("Allow", "GET, POST, DELETE");
     }
 
     if (reqObj.findHeader("Connection"))
