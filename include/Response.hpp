@@ -17,7 +17,7 @@ class Config;
 class Response : public HttpMessage
 {
 private:
-    std::string statusCode_;
+    int statusCode_;
     std::string statusMessage_;
     std::string fullPath_;
     std::string filename_;
@@ -42,7 +42,7 @@ public:
     std::string buildResponse(const Request &reqObj, const LocationConfig &Config);
 
     // getter
-    std::string getCode() const { return statusCode_; };
+    int getCode() const { return statusCode_; };
     std::string getStatusMessage() const { return statusMessage_; };
     std::string getFullPath() const { return fullPath_; };
 

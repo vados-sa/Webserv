@@ -11,10 +11,10 @@
 #include <cstring>
 
 
-Response::Response() : statusCode_(""), statusMessage_(""), fullPath_("."), filename_("") {}
+Response::Response() : statusMessage_(""), fullPath_("."), filename_("") {}
 
 Response::Response(std::map<int, std::string> error_pages) :
-    statusCode_(""), statusMessage_(""), fullPath_("."), filename_(""), error_pages_config(error_pages) {}
+    statusMessage_(""), fullPath_("."), filename_(""), error_pages_config(error_pages) {}
 
 template <typename T>
 std::string int_to_string(T value) {
@@ -61,7 +61,7 @@ void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
 
         setHeader("Content-Length", int_to_string(body_.size()));
         setHeader("Content-Type", getContentType(fullPath_));
-        statusCode_ = "200";
+        statusCode_ = 200;
         return;
     } else
     {
