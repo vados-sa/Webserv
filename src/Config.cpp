@@ -232,7 +232,13 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx) {
                     reqObj.setIsCgi(true);
                 }
             }
-            reqObj.setfullPath(reqObj.getreqPath() + loc->getUri());
+
+            std::string reqPath = reqObj.getreqPath();
+            std::string locUri = loc->getUri();
+            std::string root = loc->getRoot();
+
+            std::string remainingPath = reqPath.substr(locUri.size());
+            reqObj.setfullPath(root + remainingPath);
         }
         Response res(srv.getErrorPagesConfig());
         std::string response = res.buildResponse(reqObj, *loc);

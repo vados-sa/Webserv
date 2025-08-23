@@ -359,7 +359,7 @@ std::ostream &operator<<(std::ostream &out, const Response &obj)
 std::string Response::buildResponse(const Request &reqObj, const LocationConfig &locConfig)
 {
     this->setVersion(reqObj.getVersion());
-    this->setFullPath(locConfig.getRoot() + reqObj.getreqPath());
+    this->setFullPath(reqObj.getfullPath());
 
     if (reqObj.getreqPath().size() > MAX_URI_LENGTH) {
         this->setPage(414, "URI Too Long", true);
