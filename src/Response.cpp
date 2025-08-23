@@ -209,23 +209,23 @@ void Response::uploadFile(const std::string &uploadFullPath)
 }
 
 void Response::handleDelete(const Request &reqObj) {
-    if (reqObj.getreqPath().substr(0, 8) != "/upload/")
-    {
+    std::string prefix = "/upload/";
+
+    if (reqObj.getreqPath().compare(0, prefix.size(), prefix) != 0) {
         setPage(404, "Wrong path. Expected \"/upload/", true);
         return;
     }
-    filename_ = "www/upload/";
-    filename_ = filename_.append(reqObj.getreqPath().substr(8));
 
+    filename_ = "." + reqObj.getfullPath();
     struct stat fileStat;
 
     if (stat(filename_.c_str(), &fileStat) != 0) {
-        setPage(404, "\"" + filename_ + "\" is not a regular file", true);
+        setPage(404, "File not found: \"" + filename_ + "\"", true);
         return;
-    };
+    }
 
-    if(!S_ISREG(fileStat.st_mode)) {
-        setPage(404, "File not found :\"" + filename_ + "\"", true);
+    if (!S_ISREG(fileStat.st_mode)) {
+        setPage(404, "\"" + filename_ + "\" is not a regular file", true);
         return;
     }
 
