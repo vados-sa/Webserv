@@ -29,7 +29,7 @@ private:
     std::string generateDefaultPage(const int code, const std::string &message, bool error);
     std::string generateAutoIndex(Response &res, LocationConfig loc);
     void handleGet(const Request &reqObj, const LocationConfig &loc);
-    void handlePost(const Request &reqObj);
+    void handlePost(const Request &reqObj, LocationConfig loc);
     void handleDelete(const Request &reqObj);
     std::string getContentType(std::string path);
     std::string writeResponseString();

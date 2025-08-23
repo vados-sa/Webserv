@@ -183,7 +183,7 @@ int ConfigParser::parsePort(const std::vector<std::string> &tokens)
         errorMessage << fileName << ":" << lineNum << "  Port number '" << tokens[1] << "' out of range";
         throw std::runtime_error(errorMessage.str());
     }
-    
+
     return (portInt);
 }
 
@@ -460,10 +460,10 @@ std::string ConfigParser::parseUploadDir(const std::vector<std::string> &tokens)
         throw std::runtime_error(errorMessage.str());
     }
 
-    if (tokens[1][0] != '/') {
-        errorMessage << fileName << ":" << lineNum << "  Missing leading slash in upload_path value in configuration file.";
-        throw std::runtime_error(errorMessage.str());
-    }
+    // if (tokens[1][0] != '/') {
+    //     errorMessage << fileName << ":" << lineNum << "  Missing leading slash in upload_path value in configuration file.";
+    //     throw std::runtime_error(errorMessage.str());
+    // }
 
     if (tokens[1] == "/") {
         errorMessage << fileName << ":" << lineNum << "  Upload path cannot be root '/'";

@@ -153,11 +153,20 @@ std::string Response::getContentType(std::string path)
     return "application/octet-stream";
 }
 
-void Response::handlePost(const Request &reqObj)
+void Response::handlePost(const Request &reqObj, LocationConfig loc)
 {
-    filename_ = "www/upload/";
-    if (reqObj.getreqPath() != "/upload/") {
-        setBody(generatePage("404", "Wrong path. Expected \"/upload/", true));
+    if (!loc.getAllowUpload())
+        return (setPage(403, "Forbidden", true));
+    else {
+        std::vector<std::string> allowed = loc.getAllowedMethods();
+        allowed.push_back("POST");
+        loc.setAllowedMethods(allowed);
+    }
+    if (loc.getAllowUpload() && loc.getUploadDir().empty())
+        throw std::runtime_error("Config error: allow_upload is enabled but no upload_path specified in location " + loc.getUri());
+
+    if (reqObj.getreqPath() != "/upload") {
+        setBody(generateDefaultPage(404, "Wrong path. Expected \"/upload", true));
         return;
     }
     if (reqObj.getBody().empty()) {
@@ -169,8 +178,19 @@ void Response::handlePost(const Request &reqObj)
         return;
     }
     parseContentType(reqObj);
-    mkdir("www/upload", 0755);
-    std::ofstream file(filename_.c_str(), std::ios::binary);
+
+    if (mkdir(loc.getUploadDir().c_str(), 0755) == -1) {
+        if (errno == EEXIST)
+            std::cout << "Directory already exists: " << loc.getUploadDir() << std::endl;
+        else {
+            std::cerr << "mkdir failed for " << loc.getUploadDir()
+                      << ": " << strerror(errno) << std::endl;
+        }
+    }
+    else {
+        std::cout << "Directory created: " << loc.getUploadDir() << std::endl;
+    }
+    std::ofstream file((loc.getUploadDir() + filename_).c_str(), std::ios::binary);
     if (file.is_open()) {
         file.write(body_.c_str(), body_.size());
         file.close();
