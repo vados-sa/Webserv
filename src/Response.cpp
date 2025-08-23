@@ -49,11 +49,6 @@ void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
 
         if (!S_ISREG(file_stat.st_mode))
             return (setPage(403, "Requested resource is not a file", true));
-    }
-
-    if (stat(fullPath_.c_str(), &file_stat) == 0) {
-        if (!S_ISREG(file_stat.st_mode))
-            return (setPage(403, "Requested resource is not a file", true));
         if (!(file_stat.st_mode & S_IROTH))
             return (setPage(403, "You do not have permission to read this file", true));
         std::ifstream file(fullPath_.c_str(), std::ios::in | std::ios::binary);
@@ -68,8 +63,7 @@ void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
         setHeader("Content-Type", getContentType(fullPath_));
         statusCode_ = "200";
         return;
-    }
-    else
+    } else
     {
         if (errno == ENOENT)
             return (setPage(404, "File does not exist", true));
