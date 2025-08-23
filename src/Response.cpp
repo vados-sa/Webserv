@@ -5,8 +5,16 @@
 #include <string>
 #include <iostream>
 #include <sstream>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <cerrno>
+#include <cstring>
 
-Response::Response() : statusCode_(""), statusMessage_(""), fullPath_("."), filename_("upload/") {}
+
+Response::Response() : statusCode_(""), statusMessage_(""), fullPath_("."), filename_("") {}
+
+Response::Response(std::map<int, std::string> error_pages) :
+    statusCode_(""), statusMessage_(""), fullPath_("."), filename_(""), error_pages_config(error_pages) {}
 
 template <typename T>
 std::string int_to_string(T value) {
@@ -284,10 +292,22 @@ void Response::setCode(const int code)
         statusMessage_ = "Unknown Status";
 }
 
-void Response::setPage(const std::string &code, const std::string &message, bool error)
+void Response::setPage(const int code, const std::string &message, bool error)
 {
     setCode(code);
-    body_ = generatePage(code, message, error);
+
+    std::string errorPagePath = error_pages_config[code];
+    if (errorPagePath.empty())
+        body_ = generateDefaultPage(code, message, error);
+    else {
+        std::ifstream file(("." + errorPagePath).c_str(), std::ios::in | std::ios::binary);
+        if (!file)
+            return (setPage(500, "Server error: unable to open file.", true));
+
+        std::ostringstream ss;
+        ss << file.rdbuf();
+        body_ = ss.str();
+    }
     setHeader("Content-Length", int_to_string(body_.size()));
     setHeader("Content-Type", "text/html");
 }
