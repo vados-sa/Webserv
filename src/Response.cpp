@@ -296,6 +296,7 @@ void Response::setCode(const int code)
         codeToMessage[403] = "Forbidden";
         codeToMessage[404] = "Not Found";
         codeToMessage[405] = "Method Not Allowed";
+        codeToMessage[414] = "URI too long";
         codeToMessage[500] = "Internal Server Error";
     }
 
@@ -338,8 +339,7 @@ std::string Response::generateDefaultPage(const int code, const std::string &mes
     return html.str();
 }
 
-void Response::setFullPath(const std::string &reqPath)
-{
+void Response::setFullPath(const std::string &reqPath) {
     fullPath_.append(reqPath);
 }
 
@@ -361,6 +361,11 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
     this->setVersion(reqObj.getVersion());
     this->setFullPath(locConfig.getRoot() + reqObj.getreqPath());
 
+    if (reqObj.getreqPath().size() > MAX_URI_LENGTH) {
+        this->setPage(414, "URI Too Long", true);
+        return (this->writeResponseString());
+    }
+
     if (!locConfig.isMethodAllowed(reqObj.getMethod()) && reqObj.getMethod() != "POST") {
         this->setPage(405, "Method not allowed", true);
         this->setHeader("Allow", "GET, POST, DELETE");
@@ -379,8 +384,7 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
     if (reqObj.findHeader("Connection"))
         this->setHeader("connection", *reqObj.findHeader("Connection"));
 
-    std::string reqStr = this->writeResponseString();
-    return reqStr;
+    return (this->writeResponseString());
 }
 
 

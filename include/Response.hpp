@@ -10,7 +10,7 @@
 #include "LocationConfig.hpp"
 #include "Config.hpp"
 
-#define ROOT "./www"
+#define MAX_URI_LENGTH 8192
 
 class Config;
 
