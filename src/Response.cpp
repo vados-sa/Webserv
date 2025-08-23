@@ -227,12 +227,10 @@ void Response::handleDelete(const Request &reqObj) {
     setPage(200, "File \"" + filename_ + "\" deleted successfully.", true);
 }
 
-void Response::parseContentType(const Request &obj)
-{
-
+void Response::parseContentType(const Request &obj) {
     // ------ GET BOUNDARY -----
 
-    std::string rawValue = *obj.findHeader("Content-Type");
+    std::string rawValue = *obj.findHeader("content-type");
     size_t pos = rawValue.find("boundary=");
     std::string boundary = "--";
     if (pos != std::string::npos)
@@ -271,12 +269,12 @@ void Response::parseContentType(const Request &obj)
     }
 
     // ---- EXTRACT CONTENT-TYPE
-    pos = headers.find("Content-Type: ");
+    pos = headers.find("content-type: ");
     if (pos != std::string::npos) {
         start = pos + 14;
         end = headers.find("\r\n", start);
         contentType_ = headers.substr(start, end - start);
-        setHeader("Content-Type", contentType_);
+        setHeader("content-type", contentType_);
     }
     body_ = fileContent;
 }
@@ -310,6 +308,7 @@ void Response::setCode(const int code)
     statusMessage_ = codeToMessage[code];
     if (statusMessage_.empty())
         statusMessage_ = "Unknown Status";
+
 }
 
 void Response::setPage(const int code, const std::string &message, bool error)
@@ -388,11 +387,12 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
     }
 
     if (reqObj.findHeader("Connection"))
-        res.setHeader("Connection", *reqObj.findHeader("Connection"));
+        this->setHeader("connection", *reqObj.findHeader("Connection"));
 
     std::string reqStr = res.writeResponseString();
     return reqStr;
 }
+
 
 void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
 {
