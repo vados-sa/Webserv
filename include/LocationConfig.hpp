@@ -22,17 +22,11 @@ private:
 public:
     LocationConfig();
 
-    void setUri(std::string set) { uri = set; };
-    void setRoot(std::string set) { root = set; };
-    void setIndex(std::vector<std::string> set) { index_files = set; };
-    void setAllowedMethods(std::vector<std::string> set) { allowed_methods = set; };
-    void setRedirection(std::pair<int, std::string> set) {
-        has_return = true; return_status = set.first; return_target = set.second;};
-    void setUploadDir(std::string set) { upload_dir = set; };
-    void setAutoindex(bool set) { autoindex = set; };
-    void setAllowUpload(bool set) { allow_upload = set; };
-	void setCgiExtension(std::string set) { cgi_extension = set; };
+    //methods
+    bool isCgiRequest(std::string &uri);
+    bool isMethodAllowed(const std::string &method) const;
 
+    //getters
     std::string getUri() const { return uri; }
     std::string getRoot() const { return root; }
     const std::vector<std::string> &getIndexFiles() const { return index_files; }
@@ -42,8 +36,19 @@ public:
     const std::string &getUploadDir() const { return upload_dir; };
     const bool &getAutoindex() const { return autoindex; };
     const bool &getAllowUpload() const { return allow_upload; };
-	const std::string &getCgiExtension() const { return cgi_extension; };
-	bool isCgiRequest(std::string &uri);
+    const std::string &getCgiExtension() const { return cgi_extension; };
+
+    //setters
+    void setUri(std::string set) { uri = set; };
+    void setRoot(std::string set) { root = set; };
+    void setIndex(std::vector<std::string> set) { index_files = set; };
+    void setAllowedMethods(std::vector<std::string> set) { allowed_methods = set; };
+    void setRedirection(std::pair<int, std::string> set) { has_return = true; return_status = set.first; return_target = set.second;};
+    void setUploadDir(std::string set) { upload_dir = set; };
+    void setAutoindex(bool set) { autoindex = set; };
+    void setAllowUpload(bool set) { allow_upload = set; };
+	void setCgiExtension(std::string set) { cgi_extension = set; };
+
 };
 
 std::ostream &operator<<(std::ostream &os, const std::vector<LocationConfig> &obj);

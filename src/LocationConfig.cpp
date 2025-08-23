@@ -1,4 +1,5 @@
 #include "LocationConfig.hpp"
+#include <algorithm>
 
 LocationConfig::LocationConfig() : has_return(false), autoindex(false), allow_upload(false)
 {
@@ -38,7 +39,13 @@ bool LocationConfig::isCgiRequest(std::string &uri) {
     size_t pos = uri.rfind('.');
     if (pos != std::string::npos) {
         std::string extension = uri.substr(pos);
-        return extension == cgi_extension;
+        return (extension == cgi_extension);
     }
-    return false;
+    return (false);
+}
+
+bool LocationConfig::isMethodAllowed(const std::string &method) const {
+    return (std::find(allowed_methods.begin(),
+                     allowed_methods.end(),
+                     method) != allowed_methods.end());
 }

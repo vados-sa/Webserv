@@ -22,19 +22,24 @@ private:
     std::string fullPath_;
     std::string filename_;
     std::string contentType_;
+    std::map<int, std::string> error_pages_config;
 
     // methods
     void parseContentType(const Request &obj);
+    std::string generateDefaultPage(const int code, const std::string &message, bool error);
+    std::string generateAutoIndex(Response &res, LocationConfig loc);
+    void handleGet(const Request &reqObj, const LocationConfig &loc);
+    void handlePost(const Request &reqObj, LocationConfig loc);
+    void handleDelete(const Request &reqObj);
+    std::string getContentType(std::string path);
+    std::string writeResponseString();
 
 public:
     Response();
+    Response(std::map<int, std::string> error_pages_config);
 
     // methods
-    void handleGet(const Request &reqObj, const LocationConfig &loc);
-    void handlePost(const Request &reqObj);
-    void handleDelete(const Request &reqObj);
-    std::string writeResponseString();
-    std::string getContentType(std::string path);
+    std::string buildResponse(const Request &reqObj, const LocationConfig &Config);
 
     // getter
     std::string getCode() const { return statusCode_; };
@@ -43,12 +48,9 @@ public:
 
     //setter
     void setFullPath(const std::string &reqPath);
-    void setCode(const std::string code);
-    void setPage(const std::string &code, const std::string &message, bool error);
+    void setCode(const int code);
+    void setPage(const  int code, const std::string &message, bool error);
 	void handleCgi(const Request &reqObj, const LocationConfig &locConfig);
 };
 
-std::string buildResponse(const Request &reqObj, const LocationConfig& Config);
-std::string generatePage(const std::string &code, const std::string &message, bool error);
-std::string generateAutoIndex(Response &res, LocationConfig loc);
 std::ostream &operator<<(std::ostream &out, const Response &obj);

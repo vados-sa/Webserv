@@ -220,8 +220,8 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx) {
 		std::string request = client.getRequest();
 		std::cout << "📥 Complete request received:\n" << request << std::endl;
 		Request reqObj = Request::parseRequest(request);
-        //ServerConfig srv = servers[pollfd_idx];
-        const LocationConfig *loc = matchLocation(reqObj.getreqPath(), servers[client.getServerIndex()]);
+        ServerConfig srv = servers[client.getServerIndex()];
+        const LocationConfig *loc = matchLocation(reqObj.getreqPath(), srv);
         if (loc)
         {
             std::string requestPath = reqObj.getreqPath(); // /cgi-bin/test.py
@@ -234,7 +234,8 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx) {
             }
             reqObj.setfullPath(reqObj.getreqPath() + loc->getUri());
         }
-        std::string response = buildResponse(reqObj, *loc);
+        Response res(srv.getErrorPagesConfig());
+        std::string response = res.buildResponse(reqObj, *loc);
 		client.setKeepAlive(reqObj.getHeaders());
 		poll_fds[pollfd_idx].events = POLLOUT;
 		client.setResponse(response);

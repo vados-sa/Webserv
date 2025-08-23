@@ -13,9 +13,11 @@ Request Request::parseRequest(const std::string &raw)
     if (!helperReqObj.parseRequestLine(temp)) {
         throw std::runtime_error("Failed to parse request line");
     }
+
     if (!helperReqObj.parseHeaders(temp)) {
         throw std::runtime_error("Failed to parse request headers");
     }
+
     if (!helperReqObj.parseBody(temp)) {
         throw std::runtime_error("Failed to parse request body");
     }
@@ -117,13 +119,13 @@ bool Request::parseBody(std::string &raw)
     std::istringstream(lengthStr) >> length;
 
     if (length < 0)
-        return false; // invalid Content-Length
+        return (false);
 
     if (raw.empty() && method_ == "POST" && length != 0)
-        return false; // POST with missing body
+        return (false);
 
     if (raw.size() < static_cast<size_t>(length))
-        return false; // incomplete body
+        return (false);
 
     body_= raw.substr(0, length);
     raw.erase(0, length);
