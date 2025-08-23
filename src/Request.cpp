@@ -35,9 +35,6 @@ bool Request::parseRequestLine(std::string &raw)
         return false;
     }
 
-    if (method != "GET" && method != "POST" && method != "DELETE")
-        return false;
-
     setMethod(method);
     std::string query;
     size_t qpos = path.find('?');
