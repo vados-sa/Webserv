@@ -373,7 +373,8 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
         this->handlePost(reqObj, locConfig);
     } else if (!reqObj.getMethod().compare("DELETE")) {
         this->handleDelete(reqObj);
-    }
+    } else
+        this->setPage(501, "Method not implemented", true);
 
     if (reqObj.findHeader("Connection"))
         this->setHeader("connection", *reqObj.findHeader("Connection"));
