@@ -10,6 +10,10 @@
 #include <cerrno>
 #include <cstring>
 
+static const char *HEADER_CONTENT_TYPE = "content-type";
+static const char *HEADER_CONTENT_LENGTH = "content-length";
+static const char *HEADER_CONNECTION = "connection";
+static const char *MIME_HTML = "text/html";
 
 Response::Response() : statusMessage_(""), fullPath_("."), filename_("") {}
 
@@ -53,8 +57,8 @@ void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
             return (setPage(403, "You do not have permission to read this file", true));
 
         readFileIntoBody(fullPath_);
-        setHeader("Content-Length", int_to_string(body_.size()));
-        setHeader("Content-Type", getContentType(fullPath_));
+        setHeader(HEADER_CONTENT_LENGTH, int_to_string(body_.size()));
+        setHeader(HEADER_CONTENT_TYPE, getContentType(fullPath_));
         statusCode_ = 200;
         return;
     } else
@@ -135,7 +139,7 @@ std::string Response::getContentType(std::string path)
         std::string ext = path.substr(dot);
 
         if (ext == ".html" || ext == ".htm")
-            return "text/html";
+            return MIME_HTML;
         if (ext == ".css")
             return "text/css";
         if (ext == ".js")
@@ -178,7 +182,7 @@ void Response::handlePost(const Request &reqObj, LocationConfig loc)
         return (setPage(400, "No body detected on request. Body necessary", true));
     }
 
-    if (!reqObj.findHeader("content-type")) {
+    if (!reqObj.findHeader(HEADER_CONTENT_TYPE)) {
         setPage(400, "Missing Content-Type header", true);
         return;
     }
@@ -239,7 +243,7 @@ void Response::handleDelete(const Request &reqObj) {
 void Response::parseMultipartBody(const Request &obj) {
     // ------ GET BOUNDARY -----
 
-    std::string rawValue = *obj.findHeader("content-type");
+    std::string rawValue = *obj.findHeader(HEADER_CONTENT_TYPE);
     size_t pos = rawValue.find("boundary=");
     std::string boundary = "--";
     if (pos != std::string::npos)
@@ -283,7 +287,7 @@ void Response::parseMultipartBody(const Request &obj) {
         start = pos + 14;
         end = headers.find("\r\n", start);
         contentType_ = headers.substr(start, end - start);
-        setHeader("content-type", contentType_);
+        setHeader(HEADER_CONTENT_TYPE, contentType_);
     }
     body_ = fileContent;
 }
@@ -330,8 +334,8 @@ void Response::setPage(const int code, const std::string &message, bool error)
         body_ = generateDefaultPage(code, message, error);
     else
         readFileIntoBody("." + errorPagePath);
-    setHeader("Content-Length", int_to_string(body_.size()));
-    setHeader("Content-Type", "text/html");
+    setHeader(HEADER_CONTENT_LENGTH, int_to_string(body_.size()));
+    setHeader(HEADER_CONTENT_TYPE, MIME_HTML);
 }
 
 std::string Response::generateDefaultPage(const int code, const std::string &message, bool error)
@@ -389,8 +393,8 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
     } else
         this->setPage(501, "Method not implemented", true);
 
-    if (reqObj.findHeader("Connection"))
-        this->setHeader("connection", *reqObj.findHeader("Connection"));
+    if (reqObj.findHeader(HEADER_CONNECTION))
+        this->setHeader(HEADER_CONNECTION, *reqObj.findHeader(HEADER_CONNECTION));
 
     return (this->writeResponseString());
 }
@@ -420,7 +424,7 @@ void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
 
     // Set the response body and headers
     body_ = output.str();
-    setHeader("Content-Length", int_to_string(body_.size()));
-    setHeader("Content-Type", "text/html");
+    setHeader(HEADER_CONTENT_LENGTH, int_to_string(body_.size()));
+    setHeader(HEADER_CONTENT_TYPE, MIME_HTML);
     setCode(200);
 }
