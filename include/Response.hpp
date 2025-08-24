@@ -33,7 +33,7 @@ private:
     std::string getContentType(const std::string &path);
 
     // methods -- "POST"
-    void handlePost(const Request &reqObj, const LocationConfig &loc);
+    void handlePost(const Request &reqObj, LocationConfig loc);
     void createUploadDir(const std::string &uploadFullPath);
     void uploadFile(const std::string &uploadFullPath);
 

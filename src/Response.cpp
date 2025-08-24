@@ -160,7 +160,7 @@ std::string Response::getContentType(const std::string &path)
     return ("application/octet-stream");
 }
 
-void Response::handlePost(const Request &reqObj, const LocationConfig &loc)
+void Response::handlePost(const Request &reqObj, LocationConfig loc)
 {
     if (!loc.getAllowUpload())
         return (setPage(403, "Forbidden", true));
