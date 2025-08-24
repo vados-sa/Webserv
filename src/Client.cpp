@@ -65,7 +65,7 @@ void Client::setPort(int p) {
 }
 
 void Client::setKeepAlive(std::map<std::string, std::string> headers_) {
-	std::map<std::string, std::string>::iterator it = headers_.find("Connection");
+	std::map<std::string, std::string>::iterator it = headers_.find("connection");
 	if (it != headers_.end() && it->second == "close") {
 		keep_alive = false;
 	} else

@@ -1,15 +1,20 @@
 #include "Response.hpp"
+#include "Request.hpp"
 #include "LocationConfig.hpp"
-#include "Config.hpp"
+
 #include <dirent.h>
-#include <string>
 #include <iostream>
 #include <sstream>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <cerrno>
 #include <cstring>
+#include <fstream>
 
+static const char *HEADER_CONTENT_TYPE = "content-type";
+static const char *HEADER_CONTENT_LENGTH = "content-length";
+static const char *HEADER_CONNECTION = "connection";
+static const char *MIME_HTML = "text/html";
 
 Response::Response() : statusMessage_(""), fullPath_("."), filename_("") {}
 
@@ -41,7 +46,7 @@ void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
                 }
             }
             if (loc.getAutoindex()) {
-                generateAutoIndex(*this, loc);
+                generateAutoIndex(loc);
                 return;
             } else
                 return (setPage(403, "Directory listing denied.", true));
@@ -51,16 +56,10 @@ void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
             return (setPage(403, "Requested resource is not a file", true));
         if (!(file_stat.st_mode & S_IROTH))
             return (setPage(403, "You do not have permission to read this file", true));
-        std::ifstream file(fullPath_.c_str(), std::ios::in | std::ios::binary);
-        if (!file)
-            return (setPage(500, "Server error: unable to open file.", true));
 
-        std::ostringstream ss;
-        ss << file.rdbuf();
-        body_ = ss.str();
-
-        setHeader("Content-Length", int_to_string(body_.size()));
-        setHeader("Content-Type", getContentType(fullPath_));
+        readFileIntoBody(fullPath_);
+        setHeader(HEADER_CONTENT_LENGTH, int_to_string(body_.size()));
+        setHeader(HEADER_CONTENT_TYPE, getContentType(fullPath_));
         statusCode_ = 200;
         return;
     } else
@@ -74,14 +73,31 @@ void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
     }
 }
 
-std::string Response::generateAutoIndex(Response &res, LocationConfig loc) {
+void Response:: readFileIntoBody(const std::string &fileName) {
+    std::ifstream file(fileName.c_str(), std::ios::in | std::ios::binary);
+    if (!file) {
+        std::ifstream test(fileName.c_str());
+        if (!test) {
+            setPage(404, "Not Found", true);
+        } else {
+            setPage(500, "Server error: unable to open file.", true);
+        }
+        return;
+    }
+
+    std::ostringstream ss;
+    ss << file.rdbuf();
+    body_ = ss.str();
+}
+
+void Response::generateAutoIndex(const LocationConfig& loc) {
     std::string uri = loc.getUri();
-    std::string path = res.getFullPath();
+    std::string path = fullPath_;
 
     DIR *dir = opendir(path.c_str());
     if (!dir){
-        res.setPage(403, "Forbidden", true);
-        return ("");
+        setPage(403, "Forbidden", true);
+        return;
     }
 
     std::ostringstream html;
@@ -110,41 +126,38 @@ std::string Response::generateAutoIndex(Response &res, LocationConfig loc) {
     }
 
     html << "</ul>\n</body>\n</html>\n";
-    res.setPage(200, "OK", false);
+    setPage(200, "OK", false);
     closedir(dir);
-    res.setBody(html.str());
-    return (html.str());
+    body_ = html.str();
+    return;
 }
 
-std::string Response::getContentType(std::string path)
+std::string Response::getContentType(const std::string &path)
 {
-    size_t dot = path.rfind('.');
-    if (dot != std::string::npos)
+    static std::map<std::string, std::string> mime;
+    if (mime.empty())
     {
-        std::string ext = path.substr(dot);
-
-        if (ext == ".html" || ext == ".htm")
-            return "text/html";
-        if (ext == ".css")
-            return "text/css";
-        if (ext == ".js")
-            return "application/javascript";
-        if (ext == ".png")
-            return "image/png";
-        if (ext == ".jpg" || ext == ".jpeg")
-            return "image/jpeg";
-        if (ext == ".gif")
-            return "image/gif";
-        if (ext == ".txt")
-            return "text/plain";
-        if (ext == ".pdf")
-            return "application/pdf";
-        if (ext == ".json")
-            return "application/json";
-        if (ext == ".svg")
-            return "image/svg+xml";
+        mime[".html"] = "text/html";
+        mime[".htm"] = "text/html";
+        mime[".css"] = "text/css";
+        mime[".js"] = "application/javascript";
+        mime[".png"] = "image/png";
+        mime[".jpg"] = "image/jpeg";
+        mime[".jpeg"] = "image/jpeg";
+        mime[".gif"] = "image/gif";
+        mime[".txt"] = "text/plain";
+        mime[".pdf"] = "application/pdf";
+        mime[".json"] = "application/json";
+        mime[".svg"] = "image/svg+xml";
     }
-    return "application/octet-stream";
+    size_t dot = path.rfind('.');
+    if (dot != std::string::npos) {
+        std::string ext = path.substr(dot);
+        std::map<std::string, std::string>::const_iterator it = mime.find(ext);
+        if (it != mime.end())
+            return (it->second);
+    }
+    return ("application/octet-stream");
 }
 
 void Response::handlePost(const Request &reqObj, LocationConfig loc)
@@ -167,50 +180,54 @@ void Response::handlePost(const Request &reqObj, LocationConfig loc)
         return (setPage(400, "No body detected on request. Body necessary", true));
     }
 
-    if (!reqObj.findHeader("content-type")) {
+    if (!reqObj.findHeader(HEADER_CONTENT_TYPE)) {
         setPage(400, "Missing Content-Type header", true);
         return;
     }
-    parseContentType(reqObj);
 
-    if (mkdir(loc.getUploadDir().c_str(), 0755) == -1) {
-        if (errno == EEXIST)
-            std::cout << "Directory already exists: " << loc.getUploadDir() << std::endl;
-        else {
-            std::cerr << "mkdir failed for " << loc.getUploadDir()
-                      << ": " << strerror(errno) << std::endl;
-        }
+    parseMultipartBody(reqObj);
+    std::string uploadFullPath = "./" + loc.getUploadDir();
+    createUploadDir(uploadFullPath);
+    uploadFile(uploadFullPath);
+}
+
+void Response::createUploadDir(const std::string &uploadFullPath) {
+    if (mkdir(uploadFullPath.c_str(), 0755) == -1) {
+        if (errno != EEXIST)
+            std::cerr << "mkdir failed for " << uploadFullPath << ": " << strerror(errno) << std::endl;
     }
-    else {
-        std::cout << "Directory created: " << loc.getUploadDir() << std::endl;
-    }
-    std::ofstream file((loc.getUploadDir() + filename_).c_str(), std::ios::binary);
+}
+
+void Response::uploadFile(const std::string &uploadFullPath)
+{
+    std::ofstream file((uploadFullPath + "/" + filename_).c_str(), std::ios::binary);
     if (file.is_open()) {
         file.write(body_.c_str(), body_.size());
         file.close();
         return (setPage(201, "File created", false));
-    } else
+    }
+    else
         return (setPage(500, "Server error: could not open file for writing.", true));
 }
 
 void Response::handleDelete(const Request &reqObj) {
-    if (reqObj.getreqPath().substr(0, 8) != "/upload/")
-    {
+    std::string prefix = "/upload/";
+
+    if (reqObj.getreqPath().compare(0, prefix.size(), prefix) != 0) {
         setPage(404, "Wrong path. Expected \"/upload/", true);
         return;
     }
-    filename_ = "www/upload/";
-    filename_ = filename_.append(reqObj.getreqPath().substr(8));
 
+    filename_ = "." + reqObj.getfullPath();
     struct stat fileStat;
 
     if (stat(filename_.c_str(), &fileStat) != 0) {
-        setPage(404, "\"" + filename_ + "\" is not a regular file", true);
+        setPage(404, "File not found: \"" + filename_ + "\"", true);
         return;
-    };
+    }
 
-    if(!S_ISREG(fileStat.st_mode)) {
-        setPage(404, "File not found :\"" + filename_ + "\"", true);
+    if (!S_ISREG(fileStat.st_mode)) {
+        setPage(404, "\"" + filename_ + "\" is not a regular file", true);
         return;
     }
 
@@ -221,14 +238,14 @@ void Response::handleDelete(const Request &reqObj) {
     setPage(200, "File \"" + filename_ + "\" deleted successfully.", true);
 }
 
-void Response::parseContentType(const Request &obj) {
+void Response::parseMultipartBody(const Request &obj) {
     // ------ GET BOUNDARY -----
 
-    std::string rawValue = *obj.findHeader("content-type");
+    std::string rawValue = *obj.findHeader(HEADER_CONTENT_TYPE);
     size_t pos = rawValue.find("boundary=");
     std::string boundary = "--";
     if (pos != std::string::npos)
-        boundary.append(rawValue.substr(pos + 9));    //should i check if it comes wrapped in quotes?
+        boundary.append(rawValue.substr(pos + 9));
 
     // ----- EXTRACT BOUNDARY FROM BODY
 
@@ -258,8 +275,8 @@ void Response::parseContentType(const Request &obj) {
     if (pos != std::string::npos) {
         size_t start = pos + 10;
         size_t end = headers.find("\"", start);
-        filename_ = filename_.append(headers.substr(start, end - start));
-        std::cout << filename_ << std::endl; // pode apagar dps
+        filename_ = headers.substr(start, end - start);
+        std::cout << filename_ << std::endl;
     }
 
     // ---- EXTRACT CONTENT-TYPE
@@ -268,12 +285,12 @@ void Response::parseContentType(const Request &obj) {
         start = pos + 14;
         end = headers.find("\r\n", start);
         contentType_ = headers.substr(start, end - start);
-        setHeader("content-type", contentType_);
+        setHeader(HEADER_CONTENT_TYPE, contentType_);
     }
     body_ = fileContent;
 }
 
-std::string Response::writeResponseString()
+std::string Response::writeResponseString() const
 {
     std::ostringstream res;
     res << version_ << " " << statusCode_ << " " << statusMessage_ << "\r\n"
@@ -313,20 +330,13 @@ void Response::setPage(const int code, const std::string &message, bool error)
     std::string errorPagePath = error_pages_config[code];
     if (errorPagePath.empty())
         body_ = generateDefaultPage(code, message, error);
-    else {
-        std::ifstream file(("." + errorPagePath).c_str(), std::ios::in | std::ios::binary);
-        if (!file)
-            return (setPage(500, "Server error: unable to open file.", true));
-
-        std::ostringstream ss;
-        ss << file.rdbuf();
-        body_ = ss.str();
-    }
-    setHeader("Content-Length", int_to_string(body_.size()));
-    setHeader("Content-Type", "text/html");
+    else
+        readFileIntoBody("." + errorPagePath);
+    setHeader(HEADER_CONTENT_LENGTH, int_to_string(body_.size()));
+    setHeader(HEADER_CONTENT_TYPE, MIME_HTML);
 }
 
-std::string Response::generateDefaultPage(const int code, const std::string &message, bool error)
+std::string Response::generateDefaultPage(const int code, const std::string &message, bool error) const
 {
     std::ostringstream html;
     html << "<!DOCTYPE html>\n<html><head><title>" << code << " " << message << "</title></head>"
@@ -381,12 +391,11 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
     } else
         this->setPage(501, "Method not implemented", true);
 
-    if (reqObj.findHeader("Connection"))
-        this->setHeader("connection", *reqObj.findHeader("Connection"));
+    if (reqObj.findHeader(HEADER_CONNECTION))
+        this->setHeader(HEADER_CONNECTION, *reqObj.findHeader(HEADER_CONNECTION));
 
     return (this->writeResponseString());
 }
-
 
 void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
 {
@@ -413,7 +422,7 @@ void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
 
     // Set the response body and headers
     body_ = output.str();
-    setHeader("Content-Length", int_to_string(body_.size()));
-    setHeader("Content-Type", "text/html");
+    setHeader(HEADER_CONTENT_LENGTH, int_to_string(body_.size()));
+    setHeader(HEADER_CONTENT_TYPE, MIME_HTML);
     setCode(200);
 }
