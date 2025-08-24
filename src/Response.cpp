@@ -132,7 +132,7 @@ void Response::generateAutoIndex(const LocationConfig& loc) {
     return;
 }
 
-std::string Response::getContentType(std::string path)
+std::string Response::getContentType(const std::string &path)
 {
     static std::map<std::string, std::string> mime;
     if (mime.empty())
@@ -160,7 +160,7 @@ std::string Response::getContentType(std::string path)
     return ("application/octet-stream");
 }
 
-void Response::handlePost(const Request &reqObj, LocationConfig loc)
+void Response::handlePost(const Request &reqObj, const LocationConfig &loc)
 {
     if (!loc.getAllowUpload())
         return (setPage(403, "Forbidden", true));
@@ -290,7 +290,7 @@ void Response::parseMultipartBody(const Request &obj) {
     body_ = fileContent;
 }
 
-std::string Response::writeResponseString()
+std::string Response::writeResponseString() const
 {
     std::ostringstream res;
     res << version_ << " " << statusCode_ << " " << statusMessage_ << "\r\n"
@@ -336,7 +336,7 @@ void Response::setPage(const int code, const std::string &message, bool error)
     setHeader(HEADER_CONTENT_TYPE, MIME_HTML);
 }
 
-std::string Response::generateDefaultPage(const int code, const std::string &message, bool error)
+std::string Response::generateDefaultPage(const int code, const std::string &message, bool error) const
 {
     std::ostringstream html;
     html << "<!DOCTYPE html>\n<html><head><title>" << code << " " << message << "</title></head>"
