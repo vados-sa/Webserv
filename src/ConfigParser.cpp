@@ -73,13 +73,13 @@ ServerConfig ConfigParser::parseServerBlock(std::vector<std::string> lines) {
         std::string line = trimLine(lines[i]);
         lineNum ++;
         tokens = tokenize(line);
-        if (!tokens.empty() && tokens[0] == "host")
+        if (!tokens.empty() && tokens[0] == "host" && servConfig.getHost().empty())
             servConfig.setHost(parseHost(tokens));
-        else if (!tokens.empty() && tokens[0] == "listen")
+        else if (!tokens.empty() && tokens[0] == "listen" && servConfig.getPort() == -1)
             servConfig.setPort(parsePort(tokens));
         else if (!tokens.empty() && tokens[0] == "error_page")
             servConfig.setErrorPagesConfig(parseErrorPageLine(tokens));
-        else if (!tokens.empty() && tokens[0] == "client_max_body_size")
+        else if (!tokens.empty() && tokens[0] == "client_max_body_size" && servConfig.getMaxBodySize() == -1)
             servConfig.setMaxBodySize(parseMaxBodySize(tokens));
         else if (!tokens.empty() && tokens[0] == "location")
         {
