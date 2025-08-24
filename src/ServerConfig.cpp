@@ -1,6 +1,8 @@
 #include "ServerConfig.hpp"
 
-ServerConfig::ServerConfig() {};
+ServerConfig::ServerConfig() : listen_port(-1), host(""), error_pages_config(),
+                                client_max_body_size(-1), locations()
+{};
 
 const std::string &ServerConfig::getErrorPage(int code) const {
     std::map<int, std::string>::const_iterator it = error_pages_config.find(code);

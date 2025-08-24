@@ -66,6 +66,7 @@ std::vector<std::string> ConfigParser::collectBlock(std::vector<std::string> lin
 
 ServerConfig ConfigParser::parseServerBlock(std::vector<std::string> lines) {
     ServerConfig servConfig;
+
     std::vector<std::string> tokens;
 
     for (size_t i = 1; i < lines.size(); i++) {
@@ -95,8 +96,13 @@ ServerConfig ConfigParser::parseServerBlock(std::vector<std::string> lines) {
             throw std::runtime_error(errorMessage.str());
         }
     }
+
     if (servConfig.getHost().empty())
         servConfig.setHost("0.0.0.0");
+    if (servConfig.getPort() == -1) {
+        errorMessage << "Missing port value in configuration file.\n";
+        throw std::runtime_error(errorMessage.str());
+    } 
 
     return (servConfig);
 }
@@ -159,7 +165,7 @@ std::string ConfigParser::parseHost(const std::vector<std::string> &tokens)
 int ConfigParser::parsePort(const std::vector<std::string> &tokens)
 {
     if (tokens.size() < 2) {
-        errorMessage << fileName + ":" << lineNum << "  Missing port value in configuration line.";
+        errorMessage << fileName + ":" << lineNum << "  Missing port value in configuration file.";
 		throw std::runtime_error(errorMessage.str());
     }
 
