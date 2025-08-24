@@ -26,7 +26,7 @@ private:
 
     // methods
     void parseContentType(const Request &obj);
-    std::string generateAutoIndex(Response &res, LocationConfig loc);
+    void generateAutoIndex(const LocationConfig &loc);
     void handleGet(const Request &reqObj, const LocationConfig &loc);
     void handleDelete(const Request &reqObj);
     std::string getContentType(std::string path);

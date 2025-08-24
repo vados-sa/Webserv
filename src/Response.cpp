@@ -41,7 +41,7 @@ void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
                 }
             }
             if (loc.getAutoindex()) {
-                generateAutoIndex(*this, loc);
+                generateAutoIndex(loc);
                 return;
             } else
                 return (setPage(403, "Directory listing denied.", true));
@@ -85,14 +85,14 @@ void Response:: fileToBody(const std::string &fileName) {
     body_ = ss.str();
 }
 
-std::string Response::generateAutoIndex(Response &res, LocationConfig loc) {
+void Response::generateAutoIndex(const LocationConfig& loc) {
     std::string uri = loc.getUri();
-    std::string path = res.getFullPath();
+    std::string path = fullPath_;
 
     DIR *dir = opendir(path.c_str());
     if (!dir){
-        res.setPage(403, "Forbidden", true);
-        return ("");
+        setPage(403, "Forbidden", true);
+        return;
     }
 
     std::ostringstream html;
@@ -121,10 +121,10 @@ std::string Response::generateAutoIndex(Response &res, LocationConfig loc) {
     }
 
     html << "</ul>\n</body>\n</html>\n";
-    res.setPage(200, "OK", false);
+    setPage(200, "OK", false);
     closedir(dir);
-    res.setBody(html.str());
-    return (html.str());
+    body_ = html.str();
+    return;
 }
 
 std::string Response::getContentType(std::string path)
