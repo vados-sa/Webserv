@@ -25,7 +25,7 @@ private:
     std::map<int, std::string> error_pages_config;
 
     // methods
-    void parseContentType(const Request &obj);
+    void parseMultipartBody(const Request &obj);
     void generateAutoIndex(const LocationConfig &loc);
     void handleGet(const Request &reqObj, const LocationConfig &loc);
     void handleDelete(const Request &reqObj);
@@ -40,7 +40,7 @@ private:
     std::string writeResponseString();
 
     // methods --- utils
-    void fileToBody(const std::string &fileName);
+    void readFileIntoBody(const std::string &fileName);
     std::string generateDefaultPage(const int code, const std::string &message, bool error);
 
 public:

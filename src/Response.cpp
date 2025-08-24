@@ -52,7 +52,7 @@ void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
         if (!(file_stat.st_mode & S_IROTH))
             return (setPage(403, "You do not have permission to read this file", true));
 
-        fileToBody(fullPath_);
+        readFileIntoBody(fullPath_);
         setHeader("Content-Length", int_to_string(body_.size()));
         setHeader("Content-Type", getContentType(fullPath_));
         statusCode_ = 200;
@@ -68,7 +68,7 @@ void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
     }
 }
 
-void Response:: fileToBody(const std::string &fileName) {
+void Response:: readFileIntoBody(const std::string &fileName) {
     std::ifstream file(fileName.c_str(), std::ios::in | std::ios::binary);
     if (!file) {
         std::ifstream test(fileName.c_str());
@@ -183,7 +183,7 @@ void Response::handlePost(const Request &reqObj, LocationConfig loc)
         return;
     }
 
-    parseContentType(reqObj);
+    parseMultipartBody(reqObj);
     std::string uploadFullPath = "./" + loc.getUploadDir();
     createUploadDir(uploadFullPath);
     uploadFile(uploadFullPath);
@@ -236,7 +236,7 @@ void Response::handleDelete(const Request &reqObj) {
     setPage(200, "File \"" + filename_ + "\" deleted successfully.", true);
 }
 
-void Response::parseContentType(const Request &obj) {
+void Response::parseMultipartBody(const Request &obj) {
     // ------ GET BOUNDARY -----
 
     std::string rawValue = *obj.findHeader("content-type");
@@ -329,7 +329,7 @@ void Response::setPage(const int code, const std::string &message, bool error)
     if (errorPagePath.empty())
         body_ = generateDefaultPage(code, message, error);
     else
-        fileToBody("." + errorPagePath);
+        readFileIntoBody("." + errorPagePath);
     setHeader("Content-Length", int_to_string(body_.size()));
     setHeader("Content-Type", "text/html");
 }
