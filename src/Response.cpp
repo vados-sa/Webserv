@@ -133,33 +133,30 @@ void Response::generateAutoIndex(const LocationConfig& loc) {
 
 std::string Response::getContentType(std::string path)
 {
-    size_t dot = path.rfind('.');
-    if (dot != std::string::npos)
+    static std::map<std::string, std::string> mime;
+    if (mime.empty())
     {
-        std::string ext = path.substr(dot);
-
-        if (ext == ".html" || ext == ".htm")
-            return MIME_HTML;
-        if (ext == ".css")
-            return "text/css";
-        if (ext == ".js")
-            return "application/javascript";
-        if (ext == ".png")
-            return "image/png";
-        if (ext == ".jpg" || ext == ".jpeg")
-            return "image/jpeg";
-        if (ext == ".gif")
-            return "image/gif";
-        if (ext == ".txt")
-            return "text/plain";
-        if (ext == ".pdf")
-            return "application/pdf";
-        if (ext == ".json")
-            return "application/json";
-        if (ext == ".svg")
-            return "image/svg+xml";
+        mime[".html"] = "text/html";
+        mime[".htm"] = "text/html";
+        mime[".css"] = "text/css";
+        mime[".js"] = "application/javascript";
+        mime[".png"] = "image/png";
+        mime[".jpg"] = "image/jpeg";
+        mime[".jpeg"] = "image/jpeg";
+        mime[".gif"] = "image/gif";
+        mime[".txt"] = "text/plain";
+        mime[".pdf"] = "application/pdf";
+        mime[".json"] = "application/json";
+        mime[".svg"] = "image/svg+xml";
     }
-    return "application/octet-stream";
+    size_t dot = path.rfind('.');
+    if (dot != std::string::npos) {
+        std::string ext = path.substr(dot);
+        std::map<std::string, std::string>::const_iterator it = mime.find(ext);
+        if (it != mime.end())
+            return (it->second);
+    }
+    return ("application/octet-stream");
 }
 
 void Response::handlePost(const Request &reqObj, LocationConfig loc)
