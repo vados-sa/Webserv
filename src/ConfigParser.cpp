@@ -95,6 +95,9 @@ ServerConfig ConfigParser::parseServerBlock(std::vector<std::string> lines) {
             throw std::runtime_error(errorMessage.str());
         }
     }
+    if (servConfig.getHost().empty())
+        servConfig.setHost("0.0.0.0");
+
     return (servConfig);
 }
 
@@ -102,7 +105,7 @@ std::string ConfigParser::parseHost(const std::vector<std::string> &tokens)
 {
     std::vector<std::string> octets;
     if (tokens.size() < 2) {
-        errorMessage << fileName << ":" << lineNum << "  Missing host value in configuration line.\n";
+        errorMessage << fileName << ":" << lineNum << "  Missing host value in configuration file.\n";
         throw std::runtime_error(errorMessage.str());
     }
 
