@@ -243,7 +243,7 @@ void Response::parseContentType(const Request &obj) {
     size_t pos = rawValue.find("boundary=");
     std::string boundary = "--";
     if (pos != std::string::npos)
-        boundary.append(rawValue.substr(pos + 9));    //should i check if it comes wrapped in quotes?
+        boundary.append(rawValue.substr(pos + 9));
 
     // ----- EXTRACT BOUNDARY FROM BODY
 
@@ -273,8 +273,8 @@ void Response::parseContentType(const Request &obj) {
     if (pos != std::string::npos) {
         size_t start = pos + 10;
         size_t end = headers.find("\"", start);
-        filename_ = filename_.append(headers.substr(start, end - start));
-        std::cout << filename_ << std::endl; // pode apagar dps
+        filename_ = headers.substr(start, end - start);
+        std::cout << filename_ << std::endl;
     }
 
     // ---- EXTRACT CONTENT-TYPE
