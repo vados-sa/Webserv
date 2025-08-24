@@ -1,18 +1,13 @@
 #pragma once
 
 #include <string>
-#include <fstream>
-#include <sys/stat.h>
-#include <sstream>
-#include <dirent.h>
 #include "HttpMessage.hpp"
-#include "Request.hpp"
-#include "LocationConfig.hpp"
-#include "Config.hpp"
 
 #define MAX_URI_LENGTH 8192
 
 class Config;
+class Request;
+class LocationConfig;
 
 class Response : public HttpMessage
 {

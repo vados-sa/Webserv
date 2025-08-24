@@ -1,14 +1,15 @@
 #include "Response.hpp"
+#include "Request.hpp"
 #include "LocationConfig.hpp"
-#include "Config.hpp"
+
 #include <dirent.h>
-#include <string>
 #include <iostream>
 #include <sstream>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <cerrno>
 #include <cstring>
+#include <fstream>
 
 static const char *HEADER_CONTENT_TYPE = "content-type";
 static const char *HEADER_CONTENT_LENGTH = "content-length";
