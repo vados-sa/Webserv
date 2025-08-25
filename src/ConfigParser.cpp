@@ -296,7 +296,7 @@ LocationConfig ConfigParser::parseLocationBlock(std::vector<std::string> lines)
             locConfig.setIndex(parseIndex(tokens));
         else if (!tokens.empty() && tokens[0] == "allowed_methods")
             locConfig.setAllowedMethods(parseAllowedMethods(tokens));
-        else if (tokens[0] == "return")
+        else if (!tokens.empty() && tokens[0] == "return")
             locConfig.setRedirection(parseRedirection(tokens));
         else if (!tokens.empty() && tokens[0] == "upload_path")
             locConfig.setUploadDir(parseUploadDir(tokens));
@@ -304,7 +304,7 @@ LocationConfig ConfigParser::parseLocationBlock(std::vector<std::string> lines)
             locConfig.setAutoindex(parseAutoindex(tokens));
         else if (!tokens.empty() && tokens[0] == "allow_upload")
             locConfig.setAllowUpload(parseAllowUpload(tokens));
-        else if (tokens[0] == "cgi_extension")
+        else if (!tokens.empty() && tokens[0] == "cgi_extension")
         	locConfig.setCgiExtension(parseCgiExtension(tokens));
         else if (!tokens.empty() && tokens[0] != "}") {
             errorMessage << fileName << ":" << lineNum << "   \"" << tokens[0] << "\" directive is not allowed here\n";
@@ -317,7 +317,7 @@ LocationConfig ConfigParser::parseLocationBlock(std::vector<std::string> lines)
 std::string ConfigParser::parsePath(const std::vector<std::string> &tokens)
 {
     if (tokens.size() < 2) {
-        errorMessage << fileName << ":" << lineNum << "  Missing path value in configuration line.";
+        errorMessage << fileName << ":" << lineNum << "  Missing path value in configuration file.";
         throw std::runtime_error(errorMessage.str());
     }
 
@@ -346,7 +346,7 @@ std::string ConfigParser::parsePath(const std::vector<std::string> &tokens)
 std::string ConfigParser::parseRoot(const std::vector<std::string> &tokens)
 {
     if (tokens.size() < 2) {
-		errorMessage << fileName << ":" << lineNum << "  Missing root value in configuration line.";
+		errorMessage << fileName << ":" << lineNum << "  Missing root value in configuration file.";
         throw std::runtime_error(errorMessage.str());
     }
 
@@ -371,7 +371,7 @@ std::string ConfigParser::parseRoot(const std::vector<std::string> &tokens)
 std::vector<std::string> ConfigParser::parseIndex(const std::vector<std::string> &tokens)
 {
     if (tokens.size() < 2) {
-        errorMessage << fileName << ":" << lineNum << "  Missing index value in configuration line.";
+        errorMessage << fileName << ":" << lineNum << "  Missing index value in configuration file.";
         throw std::runtime_error(errorMessage.str());
     }
 
@@ -398,7 +398,7 @@ std::vector<std::string> ConfigParser::parseAllowedMethods(const std::vector<std
     std::vector<std::string> ret;
 
     if (tokens.size() < 2){
-        errorMessage << fileName << ":" << lineNum << "  Missing allowed_methods value in configuration line.";
+        errorMessage << fileName << ":" << lineNum << "  Missing allowed_methods value in configuration file.";
         throw std::runtime_error(errorMessage.str());
     }
 
@@ -465,7 +465,7 @@ std::pair<int, std::string> ConfigParser::parseRedirection(const std::vector<std
 std::string ConfigParser::parseUploadDir(const std::vector<std::string> &tokens)
 {
     if (tokens.size() < 2) {
-        errorMessage << fileName << ":" << lineNum << "  Missing upload_path value in configuration line.";
+        errorMessage << fileName << ":" << lineNum << "  Missing upload_path value in configuration file.";
         throw std::runtime_error(errorMessage.str());
     }
 
@@ -485,7 +485,7 @@ std::string ConfigParser::parseUploadDir(const std::vector<std::string> &tokens)
 bool ConfigParser::parseAutoindex(const std::vector<std::string> &tokens)
 {
     if (tokens.size() < 2) {
-        errorMessage << fileName << ":" << lineNum << "  Missing autoindex value in configuration line.";
+        errorMessage << fileName << ":" << lineNum << "  Missing autoindex value in configuration file.";
         throw std::runtime_error(errorMessage.str());
     }
 
@@ -505,7 +505,7 @@ bool ConfigParser::parseAutoindex(const std::vector<std::string> &tokens)
 
 bool ConfigParser::parseAllowUpload(const std::vector<std::string> &tokens) {
     if (tokens.size() < 2) {
-        errorMessage << fileName << ":" << lineNum << "  Missing allow_upload value in configuration line.";
+        errorMessage << fileName << ":" << lineNum << "  Missing allow_upload value in configuration file.";
         throw std::runtime_error(errorMessage.str());
 
     }
@@ -527,7 +527,7 @@ bool ConfigParser::parseAllowUpload(const std::vector<std::string> &tokens) {
 std::string ConfigParser::parseCgiExtension(const std::vector<std::string> &tokens)
 {
 	if (tokens.size() != 2) {
-		throw std::runtime_error("Error: Exactly one CGI extension must be specified in the configuration line.");
+		throw std::runtime_error("Error: Exactly one CGI extension must be specified in the configuration file.");
 	}
 
 	const std::string &extension = tokens[1];
