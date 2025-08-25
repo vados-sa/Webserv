@@ -135,7 +135,7 @@ bool Config::pollLoop(int server_count) {
 
 			const int client_idx = i - server_count;
 			if (clients[client_idx].isTimedOut(60))
-            	handleIdleClient(client_idx, i);
+            	handleIdleClient(client_idx, i); // handle http error !!
 			else if (poll_fds[i].revents & POLLIN)
             	handleClientRequest(i, client_idx);
 			else if (poll_fds[i].revents & POLLOUT)
@@ -216,6 +216,8 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx) {
 
 	client.appendRequestData(buffer, bytes);
 	if(client.isRequestComplete()) {
+		//if (client.body_too_big == true)
+		//	disconnectClient();
 		client.setState(Client::WAITING_RESPONSE);
 		std::string request = client.getRequest();
 		std::cout << "📥 Complete request received:\n" << request << std::endl;

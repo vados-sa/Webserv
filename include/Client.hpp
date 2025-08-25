@@ -12,6 +12,8 @@
 #include <sstream>
 #include <map>
 
+//#include "Response.hpp"
+
 class Client {
 	public:
 		enum State {
@@ -31,6 +33,7 @@ class Client {
 		size_t bytes_sent;
 		int port;
 		bool keep_alive;
+		// talvez Response response;
 
 	public:
 		Client(int fd);
