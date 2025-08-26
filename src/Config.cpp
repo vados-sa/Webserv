@@ -240,7 +240,7 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx) {
             std::string root = loc->getRoot();
 
             std::string remainingPath = reqPath.substr(locUri.size());
-            reqObj.setfullPath(root + remainingPath);
+            reqObj.setfullPath(root + "/" + remainingPath);
         }
         Response res(srv.getErrorPagesConfig());
         std::string response = res.buildResponse(reqObj, *loc);
