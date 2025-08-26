@@ -415,68 +415,6 @@ std::ostream &operator<<(std::ostream &os, const Config &obj) {
     return os;
 }
 
-/* bool Config::run() {
-    const int server_count = serverSockets.size();
-    for (int i = 0; i < server_count; i++) {
-	    pollfd server_pollfd = {serverSockets[i].getFd(), POLLIN, 0};
-	    poll_fds.push_back(server_pollfd);
-    }
-
-	while (true) {
-		int ready = poll(poll_fds.data(), poll_fds.size(), 5000);
-		if (ready < 0) {
-			cleanup();
-			if (errno == EINTR) {
-                std::cout << "📡 Signal received, gracefully shutting down..." << std::endl;
-                break ;
-            }
-            perror("poll failed");
-            return false;
-        }
-
-		for (int i = poll_fds.size() - 1; i >= 0; --i) {
-
-            if ((i < server_count)) {
-                if (poll_fds[i].revents & POLLIN) {
-                    handleNewConnection(poll_fds[i].fd);
-                }
-                continue ;
-			} else {
-                const int client_idx = i - server_count;
-
-                if (clients[client_idx].isTimedOut(60)) {
-                    std::cout << "⏰ 505: Gateway Timeout\n Client fd("
-                    << poll_fds[i].fd << ")/port(" << clients[client_idx].getPort()
-                    << ")" << "\n" << std::endl;
-
-                    close(poll_fds[i].fd);
-                    poll_fds.erase(poll_fds.begin() + i);
-                    clients.erase(clients.begin() + client_idx);
-
-                } else if (poll_fds[i].revents & POLLIN) {
-                    handleClientRequest(i, client_idx);
-
-                } else if (poll_fds[i].revents & POLLOUT) {
-                    if (sendResponse(i, client_idx) == true) {
-                        if (clients[client_idx].getKeepAlive() == false) {
-
-							std::cout << "❌ Client disconnected:\nfd - " << poll_fds[i].fd
-							<< "\nport - " << clients[client_idx].getPort() << "\n" << std::endl;
-
-                            close(poll_fds[i].fd);
-                            poll_fds.erase(poll_fds.begin() + i);
-                            clients.erase(clients.begin() + client_idx);
-
-                        } else
-                            poll_fds[i].events = POLLIN;
-                    }
-                }
-            }
-		}
-	}
-	return true;
-} */
-
 const LocationConfig *matchLocation(const std::string &reqPath, ServerConfig &srv)
 {
 	const LocationConfig *bestMatch = NULL;
