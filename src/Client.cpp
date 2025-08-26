@@ -16,7 +16,7 @@ void Client::appendRequestData(char* buffer, int bytes) {
 		- Transfer-Encoding: chunked
 		400 Bad Request -> I think http parser handles it
 		- 411 error: length required */
-bool Client::isRequestComplete() const {
+/* bool Client::isRequestComplete() const {
 	size_t headers_end = request_buffer.find("\r\n\r\n");
 	if (headers_end != std::string::npos) {
 		size_t pos = request_buffer.find("Content-Length:");
@@ -43,7 +43,7 @@ bool Client::isRequestComplete() const {
 		}
 	}
 	return false;
-}
+} */
 
 bool Client::isTimedOut(int timeout_seconds) const {
 	return (time(NULL) - state_start_time) >= timeout_seconds;

@@ -184,7 +184,7 @@ void Config::handleNewConnection(int server_fd, int server_idx)
 
 void Config::handleIdleClient(int client_idx, int pollfd_idx) {
 
-	std::cout << "⏰ 505: Gateway Timeout\n Client fd("
+	std::cout << "⏰ 408: Request Timeout\n Client fd("
 			  << poll_fds[pollfd_idx].fd << ")/port(" << clients[client_idx].getPort()
 			  << ")" << "\n" << std::endl;
 
@@ -192,6 +192,108 @@ void Config::handleIdleClient(int client_idx, int pollfd_idx) {
 	poll_fds.erase(poll_fds.begin() + pollfd_idx);
 	clients.erase(clients.begin() + client_idx);
 }
+
+/* Returns: 0 = not enough data yet
+        >0 = number of bytes that form exactly one complete HTTP request
+        -1 = malformed (e.g., bad chunk framing) -> you should send 400 */
+static long extract_one_http_request(const std::string &buf) {
+    // 1) headers?
+    std::string::size_type hdr_end = buf.find("\r\n\r\n");
+    if (hdr_end == std::string::npos) return 0;
+    const std::string headers = buf.substr(0, hdr_end + 4);
+
+    // Minimal header parse: case-insensitive key map
+    // (Reuse your Request::parseHeaders normalization by copying parts of it if you like)
+    std::map<std::string, std::string> hmap;
+    {
+        std::istringstream iss(headers);
+        std::string line;
+
+        // first line is the request line; skip storing it here
+        if (!std::getline(iss, line)) return -1;
+
+        while (std::getline(iss, line)) {
+            if (!line.empty() && line[line.size()-1] == '\r') line.erase(line.size()-1);
+            if (line.empty()) break;
+            std::string::size_type pos = line.find(':');
+            if (pos == std::string::npos) return -1;
+            std::string k = line.substr(0, pos);
+            std::string v = line.substr(pos + 1);
+            // trim
+            while (!k.empty() && (k[0]==' '||k[0]=='\t')) k.erase(0,1);
+            while (!k.empty() && (k[k.size()-1]==' '||k[k.size()-1]=='\t')) k.erase(k.size()-1);
+            while (!v.empty() && (v[0]==' '||v[0]=='\t')) v.erase(0,1);
+            while (!v.empty() && (v[v.size()-1]==' '||v[v.size()-1]=='\t')) v.erase(v.size()-1);
+            // lowercase key
+            for (size_t i=0;i<k.size();++i) k[i] = (char)std::tolower(k[i]);
+            hmap[k] = v;
+        }
+    }
+
+    const size_t body_start = hdr_end + 4;
+
+    // 2) Transfer-Encoding: chunked?
+    {
+        std::map<std::string,std::string>::const_iterator it = hmap.find("transfer-encoding");
+        if (it != hmap.end()) {
+            // very simple check: if contains "chunked"
+            if (it->second.find("chunked") != std::string::npos) {
+                // parse chunks
+                size_t p = body_start;
+                while (true) {
+                    // find size line
+                    std::string::size_type crlf = buf.find("\r\n", p);
+                    if (crlf == std::string::npos) return 0; // need more bytes
+                    // hex size may have extensions like ";foo=bar"
+                    std::string size_line = buf.substr(p, crlf - p);
+                    std::string::size_type sc = size_line.find(';');
+                    if (sc != std::string::npos) size_line.erase(sc);
+                    // trim
+                    while (!size_line.empty() && isspace(size_line[0])) size_line.erase(0,1);
+                    while (!size_line.empty() && isspace(size_line[size_line.size()-1])) size_line.erase(size_line.size()-1);
+                    // parse hex
+                    long chunk_size = 0;
+                    std::istringstream hexin(size_line);
+                    hexin >> std::hex >> chunk_size;
+                    if (!hexin || chunk_size < 0) return -1; // malformed size
+                    p = crlf + 2;
+                    // need chunk data + CRLF
+                    if (buf.size() < p + (size_t)chunk_size + 2) return 0; // need more
+                    p += (size_t)chunk_size;
+                    if (buf.compare(p, 2, "\r\n") != 0) return -1; // malformed
+                    p += 2;
+
+                    if (chunk_size == 0) {
+                        // trailers until CRLFCRLF (or none)
+                        std::string::size_type tend = buf.find("\r\n\r\n", p);
+                        if (tend == std::string::npos) return 0; // need more
+                        return (long)(tend + 4); // consumed bytes for full message
+                    }
+                }
+            }
+        }
+    }
+
+    // 3) Content-Length?
+    size_t need = 0;
+    {
+        std::map<std::string,std::string>::const_iterator it = hmap.find("content-length");
+        if (it != hmap.end()) {
+            long n = -1;
+            std::istringstream iss(it->second);
+            iss >> n;
+            if (!iss || n < 0) return -1; // malformed CL
+            need = (size_t)n;
+        } else {
+            need = 0; // requests without TE/CL => no body
+        }
+    }
+
+    const size_t have = buf.size() - body_start;
+    if (have < need) return 0; // need more body bytes
+    return (long)(body_start + need); // full message consumed
+}
+
 
 void Config::handleClientRequest(int pollfd_idx, int client_idx) {
 	Client& client = clients[client_idx];
@@ -215,38 +317,50 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx) {
     }
 
 	client.appendRequestData(buffer, bytes);
-	if(client.isRequestComplete()) {
-		//if (client.body_too_big == true)
-		//	disconnectClient();
-		client.setState(Client::WAITING_RESPONSE);
-		std::string request = client.getRequest();
-		std::cout << "📥 Complete request received:\n" << request << std::endl;
-		Request reqObj = Request::parseRequest(request);
-        ServerConfig srv = servers[client.getServerIndex()];
-        const LocationConfig *loc = matchLocation(reqObj.getreqPath(), srv);
-        if (loc)
-        {
-            std::string requestPath = reqObj.getreqPath(); // /cgi-bin/test.py
-            if (!loc->getCgiExtension().empty()) {
-                std::string ext = loc->getCgiExtension();
-                if (requestPath.size() >= ext.size() &&
-                    requestPath.substr(requestPath.size() - ext.size()) == ext) {
-                    reqObj.setIsCgi(true);
-                }
-            }
+	while (true) {
+		long consumed = extract_one_http_request(client.getRequest());
+		if (consumed == 0)
+			break ;
+		if (consumed < 0) {
+			Response res(servers[client.getServerIndex()].getErrorPagesConfig());
+			Request bad; bad.setVersion("HTTP/1.1");
+			res.setPage(400, "Bad Request", true);
+			client.setResponse(res.writeResponseString());
+			client.setKeepAlive(false);
+    		poll_fds[pollfd_idx].events = POLLIN | POLLOUT;
+			return ;
+		}
 
-            std::string reqPath = reqObj.getreqPath();
-            std::string locUri = loc->getUri();
-            std::string root = loc->getRoot();
-
-            std::string remainingPath = reqPath.substr(locUri.size());
-            reqObj.setfullPath(root + remainingPath);
-        }
-        Response res(srv.getErrorPagesConfig());
-        std::string response = res.buildResponse(reqObj, *loc);
-		client.setKeepAlive(reqObj.getHeaders());
-		poll_fds[pollfd_idx].events = POLLOUT;
+		std::string raw = client.getRequest().substr(0, (size_t)consumed);
+		client.consumeRequestBytes((size_t)consumed);
+		Request reqObj = Request::parseRequest(raw);
+		ServerConfig srv = servers[client.getServerIndex()];
+		const LocationConfig *loc = matchLocation(reqObj.getreqPath(), srv);
+		if (loc)
+		{
+			std::string requestPath = reqObj.getreqPath(); // /cgi-bin/test.py
+			if (!loc->getCgiExtension().empty()) {
+				std::string ext = loc->getCgiExtension();
+				if (requestPath.size() >= ext.size() &&
+					requestPath.substr(requestPath.size() - ext.size()) == ext) {
+					reqObj.setIsCgi(true);
+				}
+			}
+	
+			std::string reqPath = reqObj.getreqPath();
+			std::string locUri = loc->getUri();
+			std::string root = loc->getRoot();
+	
+			std::string remainingPath = reqPath.substr(locUri.size());
+			reqObj.setfullPath(root + remainingPath);
+		}
+		Response res(srv.getErrorPagesConfig());
+		std::string response = res.buildResponse(reqObj, *loc);
+		client.setKeepAlive(reqObj.getHeaders()); // revise keep-alive connection
+		poll_fds[pollfd_idx].events = POLLIN | POLLOUT;
 		client.setResponse(response);
+
+		break ;
 	}
 }
 
