@@ -23,11 +23,7 @@ private:
 
 public:
     Request();
-    Request(const std::string &raw);
-
-    //---methods
-    // static Request parseRequest(const std::string &raw);
-    //..
+    explicit Request(const std::string &raw);
 
     //---getters
     std::string getMethod() const { return method_; }
