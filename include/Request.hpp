@@ -19,12 +19,14 @@ private:
     bool parseRequestLine(std::string &raw);
     bool parseHeaders(std::string &raw);
     bool parseBody(std::string &raw);
+    void parseRequest(const std::string &raw);
+
 public:
     Request();
-    Request(const Request &obj);
+    Request(const std::string &raw);
 
     //---methods
-    static Request parseRequest(const std::string &raw);
+    // static Request parseRequest(const std::string &raw);
     //..
 
     //---getters

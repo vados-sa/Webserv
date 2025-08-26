@@ -3,26 +3,26 @@
 Request::Request() : method_(""), reqPath_(""), fullpath_(""), is_cgi(false) {
 };
 
-Request::Request(const Request &obj) : method_(obj.method_), reqPath_(obj.reqPath_) {}
+Request::Request(const std::string &raw) : method_(""), reqPath_(""), fullpath_(""), is_cgi(false) {
+    this->parseRequest(raw);
+};
 
-Request Request::parseRequest(const std::string &raw)
-{
-    Request helperReqObj;
+//Request::Request(const Request &obj) : method_(obj.method_), reqPath_(obj.reqPath_) {}
+
+void Request::parseRequest(const std::string &raw) {
     std::string temp = raw;
 
-    if (!helperReqObj.parseRequestLine(temp)) {
+    if (!this->parseRequestLine(temp)) {
         throw std::runtime_error("Failed to parse request line");
     }
 
-    if (!helperReqObj.parseHeaders(temp)) {
+    if (!this->parseHeaders(temp)) {
         throw std::runtime_error("Failed to parse request headers");
     }
 
-    if (!helperReqObj.parseBody(temp)) {
+    if (!this->parseBody(temp)) {
         throw std::runtime_error("Failed to parse request body");
     }
-
-    return (helperReqObj);
 }
 
 bool Request::parseRequestLine(std::string &raw)

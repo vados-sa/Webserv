@@ -218,8 +218,10 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx) {
 	if(client.isRequestComplete()) {
 		client.setState(Client::WAITING_RESPONSE);
 		std::string request = client.getRequest();
+
 		std::cout << "📥 Complete request received:\n" << request << std::endl;
-		Request reqObj = Request::parseRequest(request);
+
+		Request reqObj(request);
         ServerConfig srv = servers[client.getServerIndex()];
         const LocationConfig *loc = matchLocation(reqObj.getreqPath(), srv);
         if (loc)
