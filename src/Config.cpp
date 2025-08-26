@@ -223,10 +223,10 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx) {
 
 		Request reqObj(request);
         ServerConfig srv = servers[client.getServerIndex()];
-        const LocationConfig *loc = matchLocation(reqObj.getreqPath(), srv);
+        const LocationConfig *loc = matchLocation(reqObj.getReqPath(), srv);
         if (loc)
         {
-            std::string requestPath = reqObj.getreqPath(); // /cgi-bin/test.py
+            std::string requestPath = reqObj.getReqPath(); // /cgi-bin/test.py
             if (!loc->getCgiExtension().empty()) {
                 std::string ext = loc->getCgiExtension();
                 if (requestPath.size() >= ext.size() &&
@@ -235,12 +235,12 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx) {
                 }
             }
 
-            std::string reqPath = reqObj.getreqPath();
+            std::string reqPath = reqObj.getReqPath();
             std::string locUri = loc->getUri();
             std::string root = loc->getRoot();
 
             std::string remainingPath = reqPath.substr(locUri.size());
-            reqObj.setfullPath(root + "/" + remainingPath);
+            reqObj.setFullPath(root + "/" + remainingPath);
         }
         Response res(srv.getErrorPagesConfig());
         std::string response = res.buildResponse(reqObj, *loc);

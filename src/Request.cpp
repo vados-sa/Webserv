@@ -1,9 +1,10 @@
 #include "Request.hpp"
+#include <sstream>
 
-Request::Request() : method_(""), reqPath_(""), fullpath_(""), is_cgi(false) {
+Request::Request() : method_(""), reqPath_(""), fullPath_(""), isCgi_(false) {
 };
 
-Request::Request(const std::string &raw) : method_(""), reqPath_(""), fullpath_(""), is_cgi(false) {
+Request::Request(const std::string &raw) : method_(""), reqPath_(""), fullPath_(""), isCgi_(false) {
     this->parseRequest(raw);
 };
 
@@ -48,7 +49,7 @@ bool Request::parseRequestLine(std::string &raw)
     if (cleanPath.empty())
         return false;
 
-    setreqPath(cleanPath);
+    setReqPath(cleanPath);
     setQueryString(query);
     setVersion(version);
 
@@ -131,8 +132,8 @@ bool Request::parseBody(std::string &raw)
 
 std::ostream &operator<<(std::ostream &out, const Request &obj) {
     out << "Method: " << obj.getMethod() << std::endl
-        << "Request path: " << obj.getreqPath() << std::endl
-        << "Full path: " << obj.getfullPath() << std::endl
+        << "Request path: " << obj.getReqPath() << std::endl
+        << "Full path: " << obj.getFullPath() << std::endl
         << "Version: " << obj.getVersion() << std::endl
         << " ----- " << std::endl
         << "Headers: " << std::endl

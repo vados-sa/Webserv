@@ -3,7 +3,6 @@
 #include <string>
 #include <map>
 #include <iostream>
-#include <sstream>
 
 #include "HttpMessage.hpp"
 
@@ -12,9 +11,9 @@ class Request : public HttpMessage
 private:
     std::string method_;
     std::string reqPath_;
-    std::string fullpath_;
-    std::string query_string;
-    bool is_cgi;
+    std::string fullPath_;
+    std::string queryString_;
+    bool isCgi_;
 
     bool parseRequestLine(std::string &raw);
     bool parseHeaders(std::string &raw);
@@ -27,19 +26,18 @@ public:
 
     //---getters
     std::string getMethod() const { return method_; }
-    std::string getreqPath() const { return reqPath_; }
-    std::string getfullPath() const { return fullpath_; }
+    std::string getReqPath() const { return reqPath_; }
+    std::string getFullPath() const { return fullPath_; }
     std::string getVersion() const { return version_; }
-    std::string getQueryString() const { return query_string; }
-    bool getIsCgi() const { return is_cgi; }
+    std::string getQueryString() const { return queryString_; }
+    bool isCgi() const { return isCgi_; }
 
     //---setters
-    void setMethod(const std::string &methodToSet) { method_ = methodToSet; }
-    void setreqPath(const std::string &pathToSet) { reqPath_ = pathToSet; }
-    void setfullPath(const std::string &pathToSet) { fullpath_ = pathToSet; }
-    void setQueryString(const std::string &set) { query_string = set;}
-    void setIsCgi(const bool &set) { is_cgi = set; }
-	//std::string parseQueryString() const;
+    void setMethod(const std::string &m) { method_ = m; }
+    void setReqPath(const std::string &p) { reqPath_ = p; }
+    void setFullPath(const std::string &p) { fullPath_ = p; }
+    void setQueryString(const std::string &q) { queryString_ = q; }
+    void setIsCgi(bool cgi) { isCgi_ = cgi; }
 };
 
 std::ostream &operator<<(std::ostream &out, const Request &obj);
