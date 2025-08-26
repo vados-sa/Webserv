@@ -1,14 +1,11 @@
 #include "Request.hpp"
 #include <sstream>
 
-Request::Request() : method_(""), reqPath_(""), fullPath_(""), isCgi_(false) {
-};
+Request::Request() : isCgi_(false) {};
 
-Request::Request(const std::string &raw) : method_(""), reqPath_(""), fullPath_(""), isCgi_(false) {
+Request::Request(const std::string &raw) : isCgi_(false) {
     this->parseRequest(raw);
 };
-
-//Request::Request(const Request &obj) : method_(obj.method_), reqPath_(obj.reqPath_) {}
 
 void Request::parseRequest(const std::string &raw) {
     std::string temp = raw;
@@ -158,8 +155,10 @@ std::string normalizePath(const std::string &rawPath) {
     while (std::getline(iss, token, '/')) {
         if (token.empty() || token == ".")
             continue ;
-        else if (token == "..")
-            parts.pop_back();
+        else if (token == "..") {
+            if (!parts.empty())
+                parts.pop_back();
+        }
         else
             parts.push_back(token);
     }
