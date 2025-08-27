@@ -335,28 +335,8 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx) {
 		client.consumeRequestBytes((size_t)consumed);
 		Request reqObj(raw);
 		ServerConfig srv = servers[client.getServerIndex()];
-		const LocationConfig *loc = matchLocation(reqObj.getReqPath(), srv);
-		if (loc)
-		{
-			std::string requestPath = reqObj.getReqPath();
-			if (!loc->getCgiExtension().empty()) {
-				std::string ext = loc->getCgiExtension();
-				if (requestPath.size() >= ext.size() &&
-					requestPath.substr(requestPath.size() - ext.size()) == ext) {
-					reqObj.setIsCgi(true);
-				}
-			}
-
-			std::string reqPath = reqObj.getReqPath();
-			std::string locUri = loc->getUri();
-			std::string root = loc->getRoot();
-
-			std::string remainingPath = reqPath.substr(locUri.size());
-			reqObj.setFullPath(root + remainingPath);
-		}
-		Response res(srv.getErrorPagesConfig());
-		std::string response = res.buildResponse(reqObj, *loc);
-		client.setKeepAlive(reqObj.getHeaders());
+        std::string response = buildRequestAndResponse(raw, srv, reqObj);
+        client.setKeepAlive(reqObj.getHeaders());
 		poll_fds[pollfd_idx].events = POLLIN | POLLOUT;
 		client.setResponse(response);
 
@@ -477,8 +457,7 @@ std::ostream &operator<<(std::ostream &os, const Config &obj) {
 	return true;
 } */
 
-const LocationConfig *matchLocation(const std::string &reqPath, ServerConfig &srv)
-{
+const LocationConfig *matchLocation(const std::string &reqPath, const ServerConfig &srv) {
 	const LocationConfig *bestMatch = NULL;
 	size_t longest = 0;
 
@@ -496,3 +475,28 @@ const LocationConfig *matchLocation(const std::string &reqPath, ServerConfig &sr
 	return (bestMatch);
 }
 
+std::string buildRequestAndResponse(const std::string &raw, const ServerConfig &srv, Request &outReq)
+{
+    Request reqObj(raw);
+    const LocationConfig *loc = matchLocation(reqObj.getReqPath(), srv);
+    if (loc)
+        applyLocationConfig(reqObj, *loc);
+    outReq = reqObj;
+
+    Response res(srv.getErrorPagesConfig());
+    return (res.buildResponse(reqObj, *loc));
+}
+
+void applyLocationConfig(Request &reqObj, const LocationConfig &loc)
+{
+    std::string requestPath = reqObj.getReqPath();
+
+    const std::string &ext = loc.getCgiExtension();
+    if (!ext.empty() && requestPath.size() >= ext.size() &&
+        requestPath.compare(requestPath.size() - ext.size(), ext.size(), ext) == 0) {
+        reqObj.setIsCgi(true);
+    }
+
+    std::string remainingPath = requestPath.substr(loc.getUri().size());
+    reqObj.setFullPath(loc.getRoot() + remainingPath);
+}
