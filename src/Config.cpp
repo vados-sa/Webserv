@@ -333,12 +333,12 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx) {
 
 		std::string raw = client.getRequest().substr(0, (size_t)consumed);
 		client.consumeRequestBytes((size_t)consumed);
-		Request reqObj = Request::parseRequest(raw);
+		Request reqObj(raw);
 		ServerConfig srv = servers[client.getServerIndex()];
-		const LocationConfig *loc = matchLocation(reqObj.getreqPath(), srv);
+		const LocationConfig *loc = matchLocation(reqObj.getReqPath(), srv);
 		if (loc)
 		{
-			std::string requestPath = reqObj.getreqPath(); // /cgi-bin/test.py
+			std::string requestPath = reqObj.getReqPath();
 			if (!loc->getCgiExtension().empty()) {
 				std::string ext = loc->getCgiExtension();
 				if (requestPath.size() >= ext.size() &&
@@ -346,17 +346,17 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx) {
 					reqObj.setIsCgi(true);
 				}
 			}
-	
-			std::string reqPath = reqObj.getreqPath();
+
+			std::string reqPath = reqObj.getReqPath();
 			std::string locUri = loc->getUri();
 			std::string root = loc->getRoot();
-	
+
 			std::string remainingPath = reqPath.substr(locUri.size());
-			reqObj.setfullPath(root + remainingPath);
+			reqObj.setFullPath(root + remainingPath);
 		}
 		Response res(srv.getErrorPagesConfig());
 		std::string response = res.buildResponse(reqObj, *loc);
-		client.setKeepAlive(reqObj.getHeaders()); // revise keep-alive connection
+		client.setKeepAlive(reqObj.getHeaders());
 		poll_fds[pollfd_idx].events = POLLIN | POLLOUT;
 		client.setResponse(response);
 
