@@ -1,7 +1,8 @@
 #include "Response.hpp"
 #include "Request.hpp"
 #include "LocationConfig.hpp"
-
+#include "CgiHandler.hpp"
+#include "Config.hpp"
 #include <dirent.h>
 #include <iostream>
 #include <sstream>
@@ -401,28 +402,81 @@ void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
 {
     std::string cgiScriptPath = "." + locConfig.getRoot() + reqObj.getReqPath();
 
-    // Set up environment variables for the CGI script
-    setenv("REQUEST_METHOD", reqObj.getMethod().c_str(), 1);
-    setenv("SCRIPT_FILENAME", cgiScriptPath.c_str(), 1);
-    setenv("queryString_", reqObj.getQueryString().c_str(), 1);
-
-    // Execute the CGI script and capture its output
-    FILE *pipe = popen(cgiScriptPath.c_str(), "r");
-    if (!pipe) {
-        setPage(500, "Failed to execute CGI script.", true);
+	std::cout << "Processing CGI Request: " << reqObj.getMethod() << " " << cgiScriptPath << std::endl;
+    CgiHandler cgiHandler(reqObj, locConfig);
+	// setenv("SERVER_NAME", "localhost", 1); // Replace with actual server name if available
+	// setenv("SERVER_PORT", "8080", 1);     // Replace with actual server port if available
+	
+	// Check if the CGI script was found
+    if (!cgiHandler.getStatus() && cgiHandler.getError() == CgiHandler::SCRIPT_NOT_FOUND) {
+        setPage(404, "The requested CGI script was not found: " + reqObj.getReqPath(), true);
+        setHeader("Content-Type", "text/html");
         return;
     }
-
-    std::ostringstream output;
-    char buffer[1024];
-    while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
-        output << buffer;
+    // Run the CGI script and capture its output
+    std::string cgiOutput = cgiHandler.run();
+    if (cgiHandler.getStatus()) {
+        // CGI execution was successful
+        std::cout << "CGI execution successful: " << reqObj.getReqPath() << std::endl;
+        setCode(200);
+		std::cout << "Raw CGI output:\n" << cgiOutput << "\nEND OF CGI OUTPUT\n";
+        parseCgiResponse(cgiOutput);
+    } else {
+		switch (cgiHandler.getError()) {
+			case CgiHandler::PIPE_FAILED:
+				setPage(500, "CGI execution failed: pipe creation failed", true);
+				setHeader("Content-Type", "text/plain");
+				break;
+			case CgiHandler::FORK_FAILED:
+				setPage(500, "CGI execution failed: fork failed", true);
+				setHeader("Content-Type", "text/plain");
+				break;
+			case CgiHandler::EXECVE_FAILED:
+				setPage(500, "CGI execution failed: execve failed", true);
+				setHeader("Content-Type", "text/plain");
+				break;
+			case CgiHandler::TIMEOUT:
+				setPage(504, "CGI execution failed: script timed out", true);
+				setHeader("Content-Type", "text/plain");
+				break;
+			case CgiHandler::CGI_SCRIPT_FAILED:
+				setPage(500, "CGI execution failed: script error", true);
+				setHeader("Content-Type", "text/plain");
+				break;
+			default:
+				setPage(500, "CGI execution failed: unknown error", true);
+				setHeader("Content-Type", "text/plain");
+		}
     }
-    pclose(pipe);
+}
 
-    // Set the response body and headers
-    body_ = output.str();
-    setHeader(HEADER_CONTENT_LENGTH, int_to_string(body_.size()));
-    setHeader(HEADER_CONTENT_TYPE, MIME_HTML);
-    setCode(200);
+void Response::parseCgiResponse(const std::string &cgiOutput) {
+    std::istringstream stream(cgiOutput);
+    std::string line;
+    bool headersDone = false;
+    std::ostringstream body;
+    while (std::getline(stream, line)) {
+        // Remove trailing \r if present
+        if (!line.empty() && line[line.size() - 1] == '\r')
+            line.erase(line.size() - 1);
+
+        if (!headersDone) {
+            if (line.empty()) {
+                headersDone = true;
+                continue;
+            }
+            size_t colon = line.find(":");
+            if (colon != std::string::npos) {
+                std::string key = line.substr(0, colon);
+                std::string value = line.substr(colon + 1);
+                value.erase(0, value.find_first_not_of(" \t"));
+                setHeader(key, value);
+            }
+        } else {
+            body << line << "\n";
+        }
+    }
+    std::string b = body.str();
+    if (!b.empty() && b[b.size()-1] == '\n') b.erase(b.size()-1);
+    setBody(b);
 }
