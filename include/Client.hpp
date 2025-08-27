@@ -12,6 +12,8 @@
 #include <sstream>
 #include <map>
 
+//#include "Response.hpp"
+
 class Client {
 	public:
 		enum State {
@@ -31,21 +33,23 @@ class Client {
 		size_t bytes_sent;
 		int port;
 		bool keep_alive;
+		// talvez Response response;
 
 	public:
-		Client(int fd);
-    Client(int fd, int server_index);
-    ~Client();
+		Client(int fd); // check necessity
+    	Client(int fd, int server_index);
+    	~Client();
 
 
 		int getFd() const { return client_fd;}
 		void appendRequestData(char* buffer, int bytes);
-		bool isRequestComplete() const;
+		//bool isRequestComplete() const;
+		void consumeRequestBytes(size_t n) {request_buffer.erase(0, n);};
 		bool isTimedOut(int timeout_seconds) const;
 
 		std::string getRequest() const {return request_buffer;}
-    int getServerIndex() const { return server_idx; }
-    std::string getResponse() const {return response_buffer;}
+    	int getServerIndex() const { return server_idx; }
+    	std::string getResponse() const {return response_buffer;}
 
 		size_t getBytesSent() const {return bytes_sent;}
 		State getState() const { return Client::current_state; }
@@ -56,6 +60,7 @@ class Client {
 		void setResponse(std::string response);
 		void setBytesSent(size_t bytes);
 		void setPort(int p);
+		void setKeepAlive(bool set) {keep_alive = set;};
 		void setKeepAlive(std::map<std::string, std::string> headers_);
 
 

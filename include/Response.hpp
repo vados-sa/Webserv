@@ -38,17 +38,17 @@ private:
     void uploadFile(const std::string &uploadFullPath);
 
     // methods -- general
-    std::string writeResponseString() const;
-
+    
     // methods --- utils
     void readFileIntoBody(const std::string &fileName);
     std::string generateDefaultPage(const int code, const std::string &message, bool error) const;
-
-public:
+    
+    public:
     Response();
     Response(std::map<int, std::string> error_pages_config);
-
+    
     // methods
+    std::string writeResponseString() const;
     std::string buildResponse(const Request &reqObj, const LocationConfig &Config);
 
     // getter

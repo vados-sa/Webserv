@@ -14,8 +14,9 @@ void Client::appendRequestData(char* buffer, int bytes) {
 	missing handling of:
 		- Case variations: content-length, CONTENT-LENGTH
 		- Transfer-Encoding: chunked
-		400 Bad Request -> I think http parser handles it */
-bool Client::isRequestComplete() const {
+		400 Bad Request -> I think http parser handles it
+		- 411 error: length required */
+/* bool Client::isRequestComplete() const {
 	size_t headers_end = request_buffer.find("\r\n\r\n");
 	if (headers_end != std::string::npos) {
 		size_t pos = request_buffer.find("Content-Length:");
@@ -26,6 +27,7 @@ bool Client::isRequestComplete() const {
 				std::string length_str = request_buffer.substr(pos, end_pos - pos);
 				std::istringstream iss(length_str);
 				size_t content_length;
+				// comparar com client_max_body_size e reclamar -> bool body_too_big = true/false
 				if (iss >> content_length) {
 					size_t body_start = headers_end + 4;  // Start of body
 					size_t body_length = request_buffer.length() - body_start;
@@ -41,7 +43,7 @@ bool Client::isRequestComplete() const {
 		}
 	}
 	return false;
-}
+} */
 
 bool Client::isTimedOut(int timeout_seconds) const {
 	return (time(NULL) - state_start_time) >= timeout_seconds;
