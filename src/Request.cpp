@@ -1,28 +1,26 @@
 #include "Request.hpp"
+#include <sstream>
 
-Request::Request() : method_(""), reqPath_(""), fullpath_(""), is_cgi(false) {
+Request::Request() : isCgi_(false) {};
+
+Request::Request(const std::string &raw) : isCgi_(false) {
+    this->parseRequest(raw);
 };
 
-Request::Request(const Request &obj) : method_(obj.method_), reqPath_(obj.reqPath_) {}
-
-Request Request::parseRequest(const std::string &raw)
-{
-    Request helperReqObj;
+void Request::parseRequest(const std::string &raw) {
     std::string temp = raw;
 
-    if (!helperReqObj.parseRequestLine(temp)) {
+    if (!this->parseRequestLine(temp)) {
         throw std::runtime_error("Failed to parse request line");
     }
 
-    if (!helperReqObj.parseHeaders(temp)) {
+    if (!this->parseHeaders(temp)) {
         throw std::runtime_error("Failed to parse request headers");
     }
 
-    if (!helperReqObj.parseBody(temp)) {
+    if (!this->parseBody(temp)) {
         throw std::runtime_error("Failed to parse request body");
     }
-
-    return (helperReqObj);
 }
 
 bool Request::parseRequestLine(std::string &raw)
@@ -48,7 +46,7 @@ bool Request::parseRequestLine(std::string &raw)
     if (cleanPath.empty())
         return false;
 
-    setreqPath(cleanPath);
+    setReqPath(cleanPath);
     setQueryString(query);
     setVersion(version);
 
@@ -131,8 +129,8 @@ bool Request::parseBody(std::string &raw)
 
 std::ostream &operator<<(std::ostream &out, const Request &obj) {
     out << "Method: " << obj.getMethod() << std::endl
-        << "Request path: " << obj.getreqPath() << std::endl
-        << "Full path: " << obj.getfullPath() << std::endl
+        << "Request path: " << obj.getReqPath() << std::endl
+        << "Full path: " << obj.getFullPath() << std::endl
         << "Version: " << obj.getVersion() << std::endl
         << " ----- " << std::endl
         << "Headers: " << std::endl
@@ -157,8 +155,10 @@ std::string normalizePath(const std::string &rawPath) {
     while (std::getline(iss, token, '/')) {
         if (token.empty() || token == ".")
             continue ;
-        else if (token == "..")
-            parts.pop_back();
+        else if (token == "..") {
+            if (!parts.empty())
+                parts.pop_back();
+        }
         else
             parts.push_back(token);
     }

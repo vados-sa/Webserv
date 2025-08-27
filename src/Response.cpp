@@ -172,7 +172,7 @@ void Response::handlePost(const Request &reqObj, LocationConfig loc)
     if (loc.getAllowUpload() && loc.getUploadDir().empty())
         throw std::runtime_error("Config error: allow_upload is enabled but no upload_path specified in location " + loc.getUri());
 
-    if (reqObj.getreqPath() != "/upload") {
+    if (reqObj.getReqPath() != "/upload") {
         setBody(generateDefaultPage(404, "Wrong path. Expected \"/upload", true));
         return;
     }
@@ -213,12 +213,12 @@ void Response::uploadFile(const std::string &uploadFullPath)
 void Response::handleDelete(const Request &reqObj) {
     std::string prefix = "/upload/";
 
-    if (reqObj.getreqPath().compare(0, prefix.size(), prefix) != 0) {
+    if (reqObj.getReqPath().compare(0, prefix.size(), prefix) != 0) {
         setPage(404, "Wrong path. Expected \"/upload/", true);
         return;
     }
 
-    filename_ = "." + reqObj.getfullPath();
+    filename_ = "." + reqObj.getFullPath();
     struct stat fileStat;
 
     if (stat(filename_.c_str(), &fileStat) != 0) {
@@ -369,9 +369,9 @@ std::ostream &operator<<(std::ostream &out, const Response &obj)
 std::string Response::buildResponse(const Request &reqObj, const LocationConfig &locConfig)
 {
     this->setVersion(reqObj.getVersion());
-    this->setFullPath(reqObj.getfullPath());
+    this->setFullPath(reqObj.getFullPath());
 
-    if (reqObj.getreqPath().size() > MAX_URI_LENGTH) {
+    if (reqObj.getReqPath().size() > MAX_URI_LENGTH) {
         this->setPage(414, "URI Too Long", true);
         return (this->writeResponseString());
     }
@@ -380,7 +380,7 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
         this->setPage(405, "Method not allowed", true);
         this->setHeader("Allow", "GET, POST, DELETE");
     }
-    else if (reqObj.getIsCgi()) {
+    else if (reqObj.isCgi()) {
         this->handleCgi(reqObj, locConfig);
     } else if (!reqObj.getMethod().compare("GET")) {
         this->handleGet(reqObj, locConfig);
@@ -399,12 +399,12 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
 
 void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
 {
-    std::string cgiScriptPath = "." + locConfig.getRoot() + reqObj.getreqPath();
+    std::string cgiScriptPath = "." + locConfig.getRoot() + reqObj.getReqPath();
 
     // Set up environment variables for the CGI script
     setenv("REQUEST_METHOD", reqObj.getMethod().c_str(), 1);
     setenv("SCRIPT_FILENAME", cgiScriptPath.c_str(), 1);
-    setenv("QUERY_STRING", reqObj.getQueryString().c_str(), 1);
+    setenv("queryString_", reqObj.getQueryString().c_str(), 1);
 
     // Execute the CGI script and capture its output
     FILE *pipe = popen(cgiScriptPath.c_str(), "r");

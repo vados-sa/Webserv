@@ -66,4 +66,6 @@ class Config
 };
 
 std::ostream &operator<<(std::ostream &os, const Config &obj);
-const LocationConfig *matchLocation(const std::string &path, ServerConfig &obj);
+const LocationConfig *matchLocation(const std::string &path, const ServerConfig &obj);
+std::string buildRequestAndResponse(const std::string& raw, const ServerConfig& srv, Request& outReq);
+void applyLocationConfig(Request& reqObj, const LocationConfig& loc);
