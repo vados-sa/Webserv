@@ -13,6 +13,7 @@
 #include <map>
 
 #include "Response.hpp"
+#include "Request.hpp"
 
 class Client {
 	public:
@@ -54,13 +55,13 @@ class Client {
 		State getState() const { return Client::current_state; }
 		int getPort() const {return port;}
 		bool getKeepAlive() const {return keep_alive;}
-    Response *getResponseObj() { return res; }
+    	Response *getResponseObj() { return res; }
 
-    void setState(State new_state);
+    	void setState(State new_state);
 		void setResponseBuffer(std::string response);
 		void setBytesSent(size_t bytes);
 		void setPort(int p);
 		void setKeepAlive(bool set) {keep_alive = set;};
-		void setKeepAlive(std::map<std::string, std::string> headers_);
+		void setKeepAlive(const Request &req);
         void setResponseObj(Response *r) { res = r; }
 };
