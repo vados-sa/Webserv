@@ -302,34 +302,30 @@ std::string CgiHandler::run() {
             }
         } while (result == 0);
 
-		if (WIFEXITED(timeout_status) && WEXITSTATUS(timeout_status) == 0) {
-			char buffer[4096];
-			ssize_t bytesRead;
-			std::stringstream cgiOutput;
-			std::stringstream cgiError;
+        // Read stdout and stderr
+        std::stringstream cgiOutput;
+        char buffer[4096];
+        ssize_t bytesRead;
+
+        while ((bytesRead = read(outPipe[0], buffer, sizeof(buffer))) > 0) {
+            cgiOutput.write(buffer, bytesRead);
+        }
+        close(outPipe[0]);
+
+        std::stringstream cgiError;
+        while ((bytesRead = read(errPipe[0], buffer, sizeof(buffer))) > 0) {
+            cgiError.write(buffer, bytesRead);
+        }
+        close(errPipe[0]);
+
+        // Check the exit status of the child process
+        if (WIFEXITED(timeout_status) && WEXITSTATUS(timeout_status) == 0) {
             status_cgi = true;
-			std::cout << "CGI script executed successfully" << std::endl;
-
-			while ((bytesRead = read(outPipe[0], buffer, sizeof(buffer))) > 0) {
-				cgiOutput.write(buffer, bytesRead);
-			}
-			close(outPipe[0]);
-
-			while ((bytesRead = read(errPipe[0], buffer, sizeof(buffer))) > 0) {
-				cgiError.write(buffer, bytesRead);
-			}
-			close(errPipe[0]);
+            std::cout << "CGI script executed successfully" << std::endl;
             return cgiOutput.str();
         } else {
-			std::stringstream cgiError;
-			char buffer[4096];
-			ssize_t bytesRead;
             error = CGI_SCRIPT_FAILED;
             std::cerr << "CGI script failed: " << cgiError.str() << std::endl;
-			while ((bytesRead = read(errPipe[0], buffer, sizeof(buffer))) > 0) {
-				cgiError.write(buffer, bytesRead);
-			}
-			close(errPipe[0]);
             return "";
         }
     }

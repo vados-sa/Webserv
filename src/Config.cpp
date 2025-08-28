@@ -158,7 +158,7 @@ bool Config::pollLoop(int server_count)
             }
 
             const int client_idx = i - server_count;
-            if (clients[client_idx].isTimedOut(6000000) && clients[client_idx].getState() != Client::IDLE)
+            if (clients[client_idx].isTimedOut(60) && clients[client_idx].getState() != Client::IDLE)
                 handleIdleClient(client_idx, i); // handle http error !!
             else if (poll_fds[i].revents & POLLIN)
                 handleClientRequest(i, client_idx);
@@ -211,6 +211,7 @@ void Config::handleNewConnection(int server_fd, int server_idx)
               << std::endl;
 }
 
+
 void Config::handleIdleClient(int client_idx, int pollfd_idx)
 {
     Client &client = clients[client_idx];
@@ -223,7 +224,7 @@ void Config::handleIdleClient(int client_idx, int pollfd_idx)
 
     Response *res = new Response(srv.getErrorPagesConfig(), 408, errorMessage, true);
     std::string res_string = res->writeResponseString();
-
+  
     client.setResponseObj(res);
     client.setResponseBuffer(res_string);
 
@@ -241,7 +242,6 @@ static bool parse_headers_block(const std::string &headers,
 
     // First line is the request line; we skip storing it here.
     if (!std::getline(iss, line))
-
         return false;
 
     while (std::getline(iss, line))
@@ -386,6 +386,7 @@ static long extract_one_http_request(const std::string &buf)
     const size_t have = (buf.size() >= body_start) ? (buf.size() - body_start) : 0;
     if (have < need)
         return 0;
+
     return (long)(body_start + need); // headers + body bytes
 }
 

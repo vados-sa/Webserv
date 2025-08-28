@@ -59,6 +59,7 @@ class Client {
         void setState(State new_state);
         void setResponseBuffer(std::string response);
         void setBytesSent(size_t bytes);
+
 		void setPort(int p);
 		void setKeepAlive(bool set) {keep_alive = set;};
 		void setKeepAlive(std::map<std::string, std::string> headers_);

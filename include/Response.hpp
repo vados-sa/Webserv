@@ -43,7 +43,7 @@ private:
     void readFileIntoBody(const std::string &fileName);
     std::string generateDefaultPage(const int code, const std::string &message, bool error) const;
 
-    public:
+public:
     Response();
     Response(std::map<int, std::string> error_pages_config);
     Response(std::map<int, std::string> error_pages_config, int code, const std::string &message, bool error);
