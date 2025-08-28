@@ -211,6 +211,7 @@ static bool parse_headers_block(const std::string &headers,
 
     // First line is the request line; we skip storing it here.
     if (!std::getline(iss, line))
+
         return false;
 
     while (std::getline(iss, line))
@@ -355,7 +356,6 @@ static long extract_one_http_request(const std::string &buf)
     const size_t have = (buf.size() >= body_start) ? (buf.size() - body_start) : 0;
     if (have < need)
         return 0;
-
     return (long)(body_start + need); // headers + body bytes
 }
 
