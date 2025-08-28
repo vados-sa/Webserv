@@ -16,10 +16,15 @@ static const char *HEADER_CONTENT_LENGTH = "content-length";
 static const char *HEADER_CONNECTION = "connection";
 static const char *MIME_HTML = "text/html";
 
-Response::Response() : statusMessage_(""), fullPath_("."), filename_("") {}
+Response::Response() : fullPath_(".") {}
 
 Response::Response(std::map<int, std::string> error_pages) :
-    statusMessage_(""), fullPath_("."), filename_(""), error_pages_config(error_pages) {}
+    fullPath_("."), error_pages_config(error_pages) {}
+
+Response::Response(std::map<int, std::string> error_pages, int code, const std::string &message, bool error)
+    : fullPath_("."), error_pages_config(error_pages) {
+        setPage(code, message, error);
+}
 
 template <typename T>
 std::string int_to_string(T value) {

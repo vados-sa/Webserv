@@ -134,8 +134,8 @@ bool Config::pollLoop(int server_count) {
 			}
 
 			const int client_idx = i - server_count;
-			if (clients[client_idx].isTimedOut(60))
-            	handleIdleClient(client_idx, i); // handle http error !!
+            if (clients[client_idx].isTimedOut(60) && clients[client_idx].getState() != Client::IDLE)
+                handleIdleClient(client_idx, i); // handle http error !!
 			else if (poll_fds[i].revents & POLLIN)
             	handleClientRequest(i, client_idx);
 			else if (poll_fds[i].revents & POLLOUT)
@@ -183,14 +183,22 @@ void Config::handleNewConnection(int server_fd, int server_idx)
 }
 
 void Config::handleIdleClient(int client_idx, int pollfd_idx) {
+    Client &client = clients[client_idx];
+    ServerConfig srv = servers[client.getServerIndex()];
 
-	std::cout << "⏰ 408: Request Timeout\n Client fd("
-			  << poll_fds[pollfd_idx].fd << ")/port(" << clients[client_idx].getPort()
-			  << ")" << "\n" << std::endl;
+    std::ostringstream oss;
+    oss << "Request Timeout\nClient fd(" << poll_fds[pollfd_idx].fd
+        << ")/port(" << clients[client_idx].getPort() << ")";
+    std::string errorMessage = oss.str();
 
-	close(poll_fds[pollfd_idx].fd);
-	poll_fds.erase(poll_fds.begin() + pollfd_idx);
-	clients.erase(clients.begin() + client_idx);
+    Response *res = new Response(srv.getErrorPagesConfig(), 408, errorMessage, true);
+    std::string res_string = res->writeResponseString();
+
+    client.setResponseObj(res);
+    client.setResponseBuffer(res_string);
+
+    poll_fds[pollfd_idx].events = POLLOUT;
+    client.setState(Client::IDLE);
 }
 
 // Parse the header block (up to and incl. the CRLFCRLF) into a lowercased key map.
@@ -203,32 +211,36 @@ static bool parse_headers_block(const std::string &headers,
 
     // First line is the request line; we skip storing it here.
     if (!std::getline(iss, line))
-		return false;
 
-    while (std::getline(iss, line)) {
-        if (!line.empty() && line[line.size()-1] == '\r') 
-			line.erase(line.size()-1);
-        if (line.empty()) 
-			break; // blank line before body
+        return false;
+
+    while (std::getline(iss, line))
+    {
+        if (!line.empty() && line[line.size() - 1] == '\r')
+            line.erase(line.size() - 1);
+        if (line.empty())
+            break; // blank line before body
 
         std::string::size_type pos = line.find(':');
-        if (pos == std::string::npos) 
-			return false;
+        if (pos == std::string::npos)
+            return false;
 
         std::string k = line.substr(0, pos);
         std::string v = line.substr(pos + 1);
 
         // trim spaces/tabs
-        while (!k.empty() && (k[0]==' '||k[0]=='\t')) 
-			k.erase(0,1);
-        while (!k.empty() && (k[k.size()-1]==' '||k[k.size()-1]=='\t')) 
-			k.erase(k.size()-1);
-        while (!v.empty() && (v[0]==' '||v[0]=='\t')) v.erase(0,1);
-        while (!v.empty() && (v[v.size()-1]==' '||v[v.size()-1]=='\t')) 
-			v.erase(v.size()-1);
+        while (!k.empty() && (k[0] == ' ' || k[0] == '\t'))
+            k.erase(0, 1);
+        while (!k.empty() && (k[k.size() - 1] == ' ' || k[k.size() - 1] == '\t'))
+            k.erase(k.size() - 1);
+        while (!v.empty() && (v[0] == ' ' || v[0] == '\t'))
+            v.erase(0, 1);
+        while (!v.empty() && (v[v.size() - 1] == ' ' || v[v.size() - 1] == '\t'))
+            v.erase(v.size() - 1);
 
         // lowercase key
-        for (size_t i=0;i<k.size();++i) k[i] = (char)std::tolower(k[i]);
+        for (size_t i = 0; i < k.size(); ++i)
+            k[i] = (char)std::tolower(k[i]);
 
         out_hmap[k] = v;
     }
@@ -241,66 +253,69 @@ static long parse_chunked_body_consumed(const std::string &buf, size_t body_star
 {
     size_t p = body_start;
 
-    while (true) {
+    while (true)
+    {
         // find "<hex-size>\r\n"
         std::string::size_type crlf = buf.find("\r\n", p);
         if (crlf == std::string::npos)
-			return 0; // need more size line
+            return 0; // need more size line
 
         std::string size_line = buf.substr(p, crlf - p);
         // strip any chunk extensions after ';'
         std::string::size_type sc = size_line.find(';');
-        if (sc != std::string::npos) size_line.erase(sc);
+        if (sc != std::string::npos)
+            size_line.erase(sc);
         // trim
         while (!size_line.empty() && std::isspace((unsigned char)size_line[0]))
-			size_line.erase(0,1);
-        while (!size_line.empty() && std::isspace((unsigned char)size_line[size_line.size()-1]))
-			size_line.erase(size_line.size()-1);
+            size_line.erase(0, 1);
+        while (!size_line.empty() && std::isspace((unsigned char)size_line[size_line.size() - 1]))
+            size_line.erase(size_line.size() - 1);
 
         long chunk_size = -1;
         {
             std::istringstream hexin(size_line);
             hexin >> std::hex >> chunk_size;
             if (!hexin || chunk_size < 0)
-				return -1; // invalid size
+                return -1; // invalid size
         }
 
         p = crlf + 2; // after the size line CRLF
 
         // need chunk_size bytes + CRLF
         if (buf.size() < p + (size_t)chunk_size + 2)
-			return 0; // incomplete
+            return 0; // incomplete
         p += (size_t)chunk_size;
         if (buf.compare(p, 2, "\r\n") != 0)
-			return -1; // missing CRLF after data
+            return -1; // missing CRLF after data
         p += 2;
 
-        if (chunk_size == 0) {
+        if (chunk_size == 0)
+        {
             std::string::size_type tend = buf.find("\r\n\r\n", p); // Trailers (optional): end with CRLFCRLF
             if (tend == std::string::npos)
-				return 0; // need more trailers or final CRLFCRLF
+                return 0;            // need more trailers or final CRLFCRLF
             return (long)(tend + 4); // everything up to end of trailers
         } // else: loop for next chunk
-        
     }
 }
 
 // Parse Content-Length value safely into 'out_len'.
 // Returns false if missing/invalid/negative.
-static bool parse_content_length(const std::map<std::string,std::string> &hmap, size_t &out_len)
+static bool parse_content_length(const std::map<std::string, std::string> &hmap, size_t &out_len)
 {
-    std::map<std::string,std::string>::const_iterator it = hmap.find("content-length");
-    if (it == hmap.end()) {
-		out_len = 0;
-		return true;
-	} // no body by default
+    std::map<std::string, std::string>::const_iterator it = hmap.find("content-length");
+    if (it == hmap.end())
+    {
+        out_len = 0;
+        return true;
+    } // no body by default
 
     // Accept only plain decimal; reject negatives or junk.
     long n = -1;
     std::istringstream iss(it->second);
     iss >> n;
     if (!iss || n < 0)
-		return false;
+        return false;
     out_len = (size_t)n;
     return true;
 }
@@ -310,23 +325,24 @@ static long extract_one_http_request(const std::string &buf)
     // 1) Need end of headers
     std::string::size_type hdr_end = buf.find("\r\n\r\n");
     if (hdr_end == std::string::npos)
-		return 0;
+        return 0;
     const size_t body_start = hdr_end + 4;
     const std::string headers = buf.substr(0, body_start);
 
     // 2) Parse headers
     std::map<std::string, std::string> hmap;
     if (!parse_headers_block(headers, hmap))
-		return -1;
+        return -1;
 
     // 3) Transfer-Encoding: chunked ? (case-insensitive check on value)
     {
-        std::map<std::string,std::string>::const_iterator it = hmap.find("transfer-encoding");
-        if (it != hmap.end()) {
+        std::map<std::string, std::string>::const_iterator it = hmap.find("transfer-encoding");
+        if (it != hmap.end())
+        {
             // Lowercase a copy of the value for robust "chunked" detection.
             std::string te = it->second;
-            for (size_t i = 0; i < te.size(); ++i)	
-				te[i] = (char)std::tolower(te[i]);
+            for (size_t i = 0; i < te.size(); ++i)
+                te[i] = (char)std::tolower(te[i]);
             if (te.find("chunked") != std::string::npos)
                 return parse_chunked_body_consumed(buf, body_start);
         }
@@ -335,12 +351,11 @@ static long extract_one_http_request(const std::string &buf)
     // 4) Else: Content-Length?
     size_t need = 0;
     if (!parse_content_length(hmap, need))
-		return -1; // malformed CL
+        return -1; // malformed CL
 
     const size_t have = (buf.size() >= body_start) ? (buf.size() - body_start) : 0;
     if (have < need)
-		return 0;
-
+        return 0;
     return (long)(body_start + need); // headers + body bytes
 }
 
@@ -374,7 +389,7 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx) {
 			Response res(servers[client.getServerIndex()].getErrorPagesConfig());
 			Request bad; bad.setVersion("HTTP/1.1");
 			res.setPage(400, "Bad Request", true);
-			client.setResponse(res.writeResponseString());
+			client.setResponseBuffer(res.writeResponseString());
 			client.setKeepAlive(false);
     		poll_fds[pollfd_idx].events = POLLIN | POLLOUT;
 			return ;
@@ -387,23 +402,51 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx) {
         std::string response = buildRequestAndResponse(raw, srv, reqObj);
         client.setKeepAlive(reqObj.getHeaders());
 		poll_fds[pollfd_idx].events = POLLIN | POLLOUT;
-		client.setResponse(response);
+		client.setResponseBuffer(response);
 
 		break ;
 	}
 }
 
-void Config::handleResponse(int client_idx, int pollfd_idx) {
-	if (sendResponse(pollfd_idx, client_idx) == true) {
-		if (clients[client_idx].getKeepAlive() == false) {
-			std::cout << "❌ Client disconnected:\nfd - " << poll_fds[pollfd_idx].fd
-			<< "\nport - " << clients[client_idx].getPort() << "\n" << std::endl;
+void Config::handleResponse(int client_idx, int pollfd_idx)
+{
+    Client &client = clients[client_idx];
 
-			close(poll_fds[pollfd_idx].fd);
-			poll_fds.erase(poll_fds.begin() + pollfd_idx);
-			clients.erase(clients.begin() + client_idx);
-		} else
+    int client_fd = client.getFd();
+    std::string responseStr = client.getResponse();
+    size_t alreadySent = client.getBytesSent();
+    size_t remaining = responseStr.size() - alreadySent;
+
+
+    if (remaining > 0)
+    {
+        ssize_t bytes = send(client_fd, responseStr.c_str() + alreadySent, remaining, 0);
+        if (bytes < 0)
+        {
+            perror("send failed");
+            return;
+        }
+        client.setBytesSent(alreadySent + bytes);
+    }
+
+    // If all bytes sent
+    if (client.getBytesSent() >= responseStr.size())
+    {
+        client.setBytesSent(0);
+        alreadySent = 0;
+        //delete client.getResponseObj(); // delete heap Response
+        client.setResponseObj(NULL);
+
+        if (!client.getKeepAlive() || (client.getState() == Client::IDLE))
+        {
+            close(client_fd);
+            poll_fds.erase(poll_fds.begin() + pollfd_idx);
+            clients.erase(clients.begin() + client_idx);
+        }
+        else
+        {
             poll_fds[pollfd_idx].events = POLLIN;
+        }
     }
 }
 
