@@ -398,8 +398,24 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
     } else
         this->setPage(501, "Method not implemented", true);
 
-    if (reqObj.findHeader(HEADER_CONNECTION))
-        this->setHeader(HEADER_CONNECTION, *reqObj.findHeader(HEADER_CONNECTION));
+    //if (reqObj.findHeader(HEADER_CONNECTION))
+    //    this->setHeader(HEADER_CONNECTION, *reqObj.findHeader(HEADER_CONNECTION));
+
+    const std::string version = reqObj.getVersion();
+    std::string connection;
+    if (reqObj.findHeader(HEADER_CONNECTION)) {
+        connection = *reqObj.findHeader(HEADER_CONNECTION);
+        for (size_t i = 0; i < connection.size(); ++i)
+            connection[i] = (char)std::tolower(connection[i]);
+    }
+
+    bool want_close;
+    if (version == "HTTP/1.1")
+        want_close = (connection == "close"); // default is keep-alive
+    else // HTTP/1.0
+        want_close = (connection != "keep-alive"); // default is close
+
+    this->setHeader("connection", want_close ? "close" : "keep-alive");
 
     return (this->writeResponseString());
 }
