@@ -211,8 +211,7 @@ void Config::handleNewConnection(int server_fd, int server_idx)
               << std::endl;
 }
 
-
-void Config::handleIdleClient(int client_idx, int pollfd_idx)
+void Config::handleIdleClient(int client_idx, int pollfd_idx) 
 {
     Client &client = clients[client_idx];
     ServerConfig srv = servers[client.getServerIndex()];
@@ -224,7 +223,7 @@ void Config::handleIdleClient(int client_idx, int pollfd_idx)
 
     Response *res = new Response(srv.getErrorPagesConfig(), 408, errorMessage, true);
     std::string res_string = res->writeResponseString();
-  
+
     client.setResponseObj(res);
     client.setResponseBuffer(res_string);
 
@@ -474,7 +473,6 @@ void Config::handleResponse(int client_idx, int pollfd_idx)
         alreadySent = 0;
         // delete client.getResponseObj(); // delete heap Response
         //client.setResponseObj(NULL);
-
         if (!client.getKeepAlive() || (client.getState() == Client::IDLE))
         {
             close(client_fd);

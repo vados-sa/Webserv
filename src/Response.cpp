@@ -19,7 +19,6 @@ static const char *MIME_HTML = "text/html";
 
 Response::Response() : fullPath_(".") {}
 
-
 Response::Response(std::map<int, std::string> error_pages) :
     fullPath_("."), error_pages_config(error_pages) {}
 
@@ -27,7 +26,6 @@ Response::Response(std::map<int, std::string> error_pages, int code, const std::
     : fullPath_("."), error_pages_config(error_pages)
 {
     setPage(code, message, error);
-
 }
 
 template <typename T>
