@@ -193,11 +193,129 @@ void Config::handleIdleClient(int client_idx, int pollfd_idx) {
 	clients.erase(clients.begin() + client_idx);
 }
 
+<<<<<<< Updated upstream
 /* Returns: 0 = not enough data yet
         >0 = number of bytes that form exactly one complete HTTP request
         -1 = malformed (e.g., bad chunk framing) -> you should send 400 */
 static long extract_one_http_request(const std::string &buf) {
     // 1) headers?
+=======
+// Parse the header block (up to and incl. the CRLFCRLF) into a lowercased key map.
+// Returns false on malformed headers (e.g., missing colon).
+static bool parse_headers_block(const std::string &headers,
+                                std::map<std::string, std::string> &out_hmap)
+{
+    std::istringstream iss(headers);
+    std::string line;
+
+    // First line is the request line; we skip storing it here.
+    if (!std::getline(iss, line))
+		return false;
+
+    while (std::getline(iss, line)) {
+        if (!line.empty() && line[line.size()-1] == '\r')
+			line.erase(line.size()-1);
+        if (line.empty())
+			break; // blank line before body
+
+        std::string::size_type pos = line.find(':');
+        if (pos == std::string::npos)
+			return false;
+
+        std::string k = line.substr(0, pos);
+        std::string v = line.substr(pos + 1);
+
+        // trim spaces/tabs
+        while (!k.empty() && (k[0]==' '||k[0]=='\t'))
+			k.erase(0,1);
+        while (!k.empty() && (k[k.size()-1]==' '||k[k.size()-1]=='\t'))
+			k.erase(k.size()-1);
+        while (!v.empty() && (v[0]==' '||v[0]=='\t')) v.erase(0,1);
+        while (!v.empty() && (v[v.size()-1]==' '||v[v.size()-1]=='\t'))
+			v.erase(v.size()-1);
+
+        // lowercase key
+        for (size_t i=0;i<k.size();++i) k[i] = (char)std::tolower(k[i]);
+
+        out_hmap[k] = v;
+    }
+    return true;
+}
+
+// If TE: chunked is present, parse chunk framing starting at body_start.
+// Returns: 0 (need more), >0 (total bytes consumed for this request), -1 (malformed).
+static long parse_chunked_body_consumed(const std::string &buf, size_t body_start)
+{
+    size_t p = body_start;
+
+    while (true) {
+        // find "<hex-size>\r\n"
+        std::string::size_type crlf = buf.find("\r\n", p);
+        if (crlf == std::string::npos)
+			return 0; // need more size line
+
+        std::string size_line = buf.substr(p, crlf - p);
+        // strip any chunk extensions after ';'
+        std::string::size_type sc = size_line.find(';');
+        if (sc != std::string::npos) size_line.erase(sc);
+        // trim
+        while (!size_line.empty() && std::isspace((unsigned char)size_line[0]))
+			size_line.erase(0,1);
+        while (!size_line.empty() && std::isspace((unsigned char)size_line[size_line.size()-1]))
+			size_line.erase(size_line.size()-1);
+
+        long chunk_size = -1;
+        {
+            std::istringstream hexin(size_line);
+            hexin >> std::hex >> chunk_size;
+            if (!hexin || chunk_size < 0)
+				return -1; // invalid size
+        }
+
+        p = crlf + 2; // after the size line CRLF
+
+        // need chunk_size bytes + CRLF
+        if (buf.size() < p + (size_t)chunk_size + 2)
+			return 0; // incomplete
+        p += (size_t)chunk_size;
+        if (buf.compare(p, 2, "\r\n") != 0)
+			return -1; // missing CRLF after data
+        p += 2;
+
+        if (chunk_size == 0) {
+            std::string::size_type tend = buf.find("\r\n\r\n", p); // Trailers (optional): end with CRLFCRLF
+            if (tend == std::string::npos)
+				return 0; // need more trailers or final CRLFCRLF
+            return (long)(tend + 4); // everything up to end of trailers
+        } // else: loop for next chunk
+
+    }
+}
+
+// Parse Content-Length value safely into 'out_len'.
+// Returns false if missing/invalid/negative.
+static bool parse_content_length(const std::map<std::string,std::string> &hmap, size_t &out_len)
+{
+    std::map<std::string,std::string>::const_iterator it = hmap.find("content-length");
+    if (it == hmap.end()) {
+		out_len = 0;
+		return true;
+	} // no body by default
+
+    // Accept only plain decimal; reject negatives or junk.
+    long n = -1;
+    std::istringstream iss(it->second);
+    iss >> n;
+    if (!iss || n < 0)
+		return false;
+    out_len = (size_t)n;
+    return true;
+}
+
+static long extract_one_http_request(const std::string &buf)
+{
+    // 1) Need end of headers
+>>>>>>> Stashed changes
     std::string::size_type hdr_end = buf.find("\r\n\r\n");
     if (hdr_end == std::string::npos) return 0;
     const std::string headers = buf.substr(0, hdr_end + 4);
@@ -236,6 +354,7 @@ static long extract_one_http_request(const std::string &buf) {
     {
         std::map<std::string,std::string>::const_iterator it = hmap.find("transfer-encoding");
         if (it != hmap.end()) {
+<<<<<<< Updated upstream
             // very simple check: if contains "chunked"
             if (it->second.find("chunked") != std::string::npos) {
                 // parse chunks
@@ -271,6 +390,14 @@ static long extract_one_http_request(const std::string &buf) {
                     }
                 }
             }
+=======
+            // Lowercase a copy of the value for robust "chunked" detection.
+            std::string te = it->second;
+            for (size_t i = 0; i < te.size(); ++i)
+				te[i] = (char)std::tolower(te[i]);
+            if (te.find("chunked") != std::string::npos)
+                return parse_chunked_body_consumed(buf, body_start);
+>>>>>>> Stashed changes
         }
     }
 
