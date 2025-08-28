@@ -1,8 +1,13 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
+
 import os
-print("Content-Type: text/html\n")
+import sys
+
+print("Content-Type: text/html")
+print()
+
 print("<html><body>")
-print("<h1>CGI Test</h1>")
-print(f"<p>Query String: {os.environ.get('QUERY_STRING')}</p>")
-print(f"<p>Request Method: {os.environ.get('REQUEST_METHOD')}</p>")
+print("<h1>Hello from CGI!</h1>")
+print("<p>Request method: {}</p>".format(os.environ.get("REQUEST_METHOD", "N/A")))
+print("<p>Path Info: {}</p>".format(os.environ.get("SCRIPT_FILENAME", "N/A")))
 print("</body></html>")

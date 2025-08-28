@@ -38,15 +38,16 @@ private:
     void uploadFile(const std::string &uploadFullPath);
 
     // methods -- general
-    
+
     // methods --- utils
     void readFileIntoBody(const std::string &fileName);
     std::string generateDefaultPage(const int code, const std::string &message, bool error) const;
-    
+
     public:
     Response();
     Response(std::map<int, std::string> error_pages_config);
-    
+    Response(std::map<int, std::string> error_pages_config, int code, const std::string &message, bool error);
+
     // methods
     std::string writeResponseString() const;
     std::string buildResponse(const Request &reqObj, const LocationConfig &Config);
@@ -61,6 +62,7 @@ private:
     void setCode(const int code);
     void setPage(const  int code, const std::string &message, bool error);
 	void handleCgi(const Request &reqObj, const LocationConfig &locConfig);
+	void parseCgiResponse(const std::string &cgiOutput);
 };
 
 std::ostream &operator<<(std::ostream &out, const Response &obj);
