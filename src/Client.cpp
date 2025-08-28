@@ -2,7 +2,7 @@
 
 Client::Client(int fd, int server_index) : client_fd(fd), server_idx(server_index),
                                            current_state(CONNECTED), state_start_time(time(NULL)),
-                                           bytes_sent(0), port(-1), keep_alive(true) {};
+                                           bytes_sent(0), port(-1), keep_alive(true), res(NULL) {};
 Client::~Client() {};
 
 void Client::appendRequestData(char* buffer, int bytes) {
@@ -54,12 +54,12 @@ void Client::setState(State new_state) {
 	state_start_time = time(NULL);  // Reset timer on every state change
 }
 
-void Client::setResponse(std::string response) {
+void Client::setResponseBuffer(std::string response) {
 	response_buffer = response;
 }
 
 void Client::setBytesSent(size_t bytes) {
-	bytes_sent += bytes;
+	bytes_sent = bytes;
 }
 
 void Client::setPort(int p) {
