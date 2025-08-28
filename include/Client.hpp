@@ -54,9 +54,9 @@ class Client {
 		State getState() const { return Client::current_state; }
 		int getPort() const {return port;}
 		bool getKeepAlive() const {return keep_alive;}
-        Response *getResponseObj() { return res; }
+    Response *getResponseObj() { return res; }
 
-        void setState(State new_state);
+    void setState(State new_state);
 		void setResponseBuffer(std::string response);
 		void setBytesSent(size_t bytes);
 		void setPort(int p);

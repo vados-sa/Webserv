@@ -62,6 +62,7 @@ public:
     void setCode(const int code);
     void setPage(const  int code, const std::string &message, bool error);
 	void handleCgi(const Request &reqObj, const LocationConfig &locConfig);
+	void parseCgiResponse(const std::string &cgiOutput);
 };
 
 std::ostream &operator<<(std::ostream &out, const Response &obj);

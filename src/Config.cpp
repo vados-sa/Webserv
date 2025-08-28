@@ -1,7 +1,8 @@
 #include "Config.hpp"
 #include "ConfigParser.hpp"
 
-Config::Config(const std::string &filepath) : client_count(0) {
+Config::Config(const std::string &filepath) : client_count(0)
+{
     loadFromFile(filepath);
 }
 
@@ -14,24 +15,29 @@ Config &Config::operator=(const Config &other)
     return *this;
 }
 
-void Config::addServer(ServerConfig &server) {
+void Config::addServer(ServerConfig &server)
+{
     servers.push_back(server);
 }
 
-void Config::loadFromFile(const std::string &filepath) {
+void Config::loadFromFile(const std::string &filepath)
+{
     ConfigParser parser;
 
     *this = parser.parseConfigFile(filepath);
 }
 
-bool Config::setupServer() {
-	std::string errorMsg;
-	if (validateBindings(errorMsg) == false) {
-		std::cerr << errorMsg << std::endl;
-		return false;
-	}
+bool Config::setupServer()
+{
+    std::string errorMsg;
+    if (validateBindings(errorMsg) == false)
+    {
+        std::cerr << errorMsg << std::endl;
+        return false;
+    }
 
-	for (size_t i = 0; i < servers.size(); i++) {
+    for (size_t i = 0; i < servers.size(); i++)
+    {
         ServerSocket socketObj;
         if (!socketObj.setupServerSocket(servers[i].getPort(), servers[i].getHost()))
             return false;
@@ -40,27 +46,32 @@ bool Config::setupServer() {
     return true;
 }
 
-bool Config::validateBindings(std::string &errorMsg) const {
-	std::map<int, PortState> ports;
+bool Config::validateBindings(std::string &errorMsg) const
+{
+    std::map<int, PortState> ports;
 
-	for (size_t i = 0; i < servers.size(); i++) {
-		const ServerConfig &s = servers[i];
-		const int port = s.getPort();
-		const std::string &host = s.getHost();
+    for (size_t i = 0; i < servers.size(); i++)
+    {
+        const ServerConfig &s = servers[i];
+        const int port = s.getPort();
+        const std::string &host = s.getHost();
 
-		PortState &ps = ports[port];
+        PortState &ps = ports[port];
 
-		if (host == "0.0.0.0") {
-			if (ps.anyTaken) {
-				std::ostringstream oss;
+        if (host == "0.0.0.0")
+        {
+            if (ps.anyTaken)
+            {
+                std::ostringstream oss;
                 oss << "Duplicate binding: 0.0.0.0:" << port
                     << " already used by server#" << ps.anyServerIdx
                     << " (also requested by server#" << i << ")";
                 errorMsg = oss.str();
                 return false;
-			}
-			if (!ps.ipToServerIdx.empty()) {
-                std::map<std::string,int>::const_iterator it = ps.ipToServerIdx.begin();
+            }
+            if (!ps.ipToServerIdx.empty())
+            {
+                std::map<std::string, int>::const_iterator it = ps.ipToServerIdx.begin();
                 std::ostringstream oss;
                 oss << "Conflict: 0.0.0.0:" << port
                     << " requested by server #" << i
@@ -69,11 +80,13 @@ bool Config::validateBindings(std::string &errorMsg) const {
                 errorMsg = oss.str();
                 return false;
             }
-			ps.anyTaken = true;
-			ps.anyServerIdx = static_cast<int>(i);
-		}
-		else {
-			if (ps.anyTaken) {
+            ps.anyTaken = true;
+            ps.anyServerIdx = static_cast<int>(i);
+        }
+        else
+        {
+            if (ps.anyTaken)
+            {
                 std::ostringstream oss;
                 oss << "Conflict: " << host << ":" << port
                     << " requested by server #" << i
@@ -82,8 +95,9 @@ bool Config::validateBindings(std::string &errorMsg) const {
                 errorMsg = oss.str();
                 return false;
             }
-			std::map<std::string,int>::const_iterator it = ps.ipToServerIdx.find(host);
-            if (it != ps.ipToServerIdx.end()) {
+            std::map<std::string, int>::const_iterator it = ps.ipToServerIdx.find(host);
+            if (it != ps.ipToServerIdx.end())
+            {
                 std::ostringstream oss;
                 oss << "Duplicate binding: " << host << ":" << port
                     << " already used by server #" << it->second
@@ -92,97 +106,113 @@ bool Config::validateBindings(std::string &errorMsg) const {
                 return false;
             }
             ps.ipToServerIdx[host] = static_cast<int>(i);
-		}
-	}
+        }
+    }
 
-	return true;
+    return true;
 }
 
-bool Config::run() {
-	const int server_count = serverSockets.size();
-	setupPollfdSet(server_count);
-	return pollLoop(server_count);
+bool Config::run()
+{
+    const int server_count = serverSockets.size();
+    setupPollfdSet(server_count);
+    return pollLoop(server_count);
 }
 
-void Config::setupPollfdSet(int server_count) {
-    for (int i = 0; i < server_count; i++) {
-	    pollfd server_pollfd = {serverSockets[i].getFd(), POLLIN, 0};
-	    poll_fds.push_back(server_pollfd);
+void Config::setupPollfdSet(int server_count)
+{
+    for (int i = 0; i < server_count; i++)
+    {
+        pollfd server_pollfd = {serverSockets[i].getFd(), POLLIN, 0};
+        poll_fds.push_back(server_pollfd);
     }
 }
 
-bool Config::pollLoop(int server_count) {
-	while (true) {
-		int ready = poll(poll_fds.data(), poll_fds.size(), 5000);
-		if (ready < 0) {
-			cleanup();
-			if (errno == EINTR) {
-				std::cout << "📡 Signal received, gracefully shutting down..." << std::endl;
-				return true ;
-			}
-			perror("poll failed");
-			return false;
-		}
+bool Config::pollLoop(int server_count)
+{
+    while (true)
+    {
+        int ready = poll(poll_fds.data(), poll_fds.size(), 5000);
+        if (ready < 0)
+        {
+            cleanup();
+            if (errno == EINTR)
+            {
+                std::cout << "📡 Signal received, gracefully shutting down..." << std::endl;
+                return true;
+            }
+            perror("poll failed");
+            return false;
+        }
 
-		for (int i = poll_fds.size() - 1; i >= 0; --i) {
+        for (int i = poll_fds.size() - 1; i >= 0; --i)
+        {
 
-			if ((i < server_count)) {
-                if (poll_fds[i].revents & POLLIN) {
+            if ((i < server_count))
+            {
+                if (poll_fds[i].revents & POLLIN)
+                {
                     handleNewConnection(poll_fds[i].fd, i);
                 }
-                continue ;
-			}
+                continue;
+            }
 
-			const int client_idx = i - server_count;
+            const int client_idx = i - server_count;
             if (clients[client_idx].isTimedOut(60) && clients[client_idx].getState() != Client::IDLE)
                 handleIdleClient(client_idx, i); // handle http error !!
-			else if (poll_fds[i].revents & POLLIN)
-            	handleClientRequest(i, client_idx);
-			else if (poll_fds[i].revents & POLLOUT)
-            	handleResponse(client_idx, i);
-		}
-	}
+            else if (poll_fds[i].revents & POLLIN)
+                handleClientRequest(i, client_idx);
+            else if (poll_fds[i].revents & POLLOUT)
+                handleResponse(client_idx, i);
+        }
+    }
 
-	return true;
+    return true;
 }
 
 void Config::handleNewConnection(int server_fd, int server_idx)
 {
-  struct sockaddr_in client_addr;
-	socklen_t client_len = sizeof(client_addr);
-	int client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &client_len);
+    struct sockaddr_in client_addr;
+    socklen_t client_len = sizeof(client_addr);
+    int client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_len);
 
-	client_count++;
-	if (client_count > MAX_CLIENT) {
-		std::cerr << "Refusing client, max reached\n";
-		close(client_fd);
-		return ;
-	}
+    client_count++;
+    if (client_count > MAX_CLIENT)
+    {
+        std::cerr << "Refusing client, max reached\n";
+        close(client_fd);
+        return;
+    }
 
-	if (client_fd < 0) {
-		if (errno != EAGAIN && errno != EWOULDBLOCK) {
-			perror("accept failed");
-		}
-		return ;
-	}
+    if (client_fd < 0)
+    {
+        if (errno != EAGAIN && errno != EWOULDBLOCK)
+        {
+            perror("accept failed");
+        }
+        return;
+    }
 
-	if (fcntl(client_fd, F_SETFL, O_NONBLOCK) < 0) {
-		perror("fcntl failed for client");
-		close(client_fd);
-		return ;
-	}
+    if (fcntl(client_fd, F_SETFL, O_NONBLOCK) < 0)
+    {
+        perror("fcntl failed for client");
+        close(client_fd);
+        return;
+    }
 
     clients.push_back(Client(client_fd, server_idx));
     pollfd client_pollfd = {client_fd, POLLIN, 0};
-	poll_fds.push_back(client_pollfd);
+    poll_fds.push_back(client_pollfd);
 
-	int port = ntohs(client_addr.sin_port);
-	clients.back().setPort(port);
-	std::cout << "🔌 New client (fd " << client_fd << ") connected on port: "
-				<< port << "\n" << std::endl;
+    int port = ntohs(client_addr.sin_port);
+    clients.back().setPort(port);
+    std::cout << "🔌 New client (fd " << client_fd << ") connected on port: "
+              << port << "\n"
+              << std::endl;
 }
 
-void Config::handleIdleClient(int client_idx, int pollfd_idx) {
+void Config::handleIdleClient(int client_idx, int pollfd_idx) 
+{
     Client &client = clients[client_idx];
     ServerConfig srv = servers[client.getServerIndex()];
 
@@ -211,7 +241,6 @@ static bool parse_headers_block(const std::string &headers,
 
     // First line is the request line; we skip storing it here.
     if (!std::getline(iss, line))
-
         return false;
 
     while (std::getline(iss, line))
@@ -356,56 +385,65 @@ static long extract_one_http_request(const std::string &buf)
     const size_t have = (buf.size() >= body_start) ? (buf.size() - body_start) : 0;
     if (have < need)
         return 0;
+
     return (long)(body_start + need); // headers + body bytes
 }
 
-void Config::handleClientRequest(int pollfd_idx, int client_idx) {
-	Client& client = clients[client_idx];
-	const int client_fd = poll_fds[pollfd_idx].fd;
+void Config::handleClientRequest(int pollfd_idx, int client_idx)
+{
+    Client &client = clients[client_idx];
+    const int client_fd = poll_fds[pollfd_idx].fd;
 
-	if (client.getState() == Client::CONNECTED)
-	client.setState(Client::SENDING_REQUEST);
+    if (client.getState() == Client::CONNECTED)
+        client.setState(Client::SENDING_REQUEST);
 
-	char buffer[4096];
-	int bytes = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
-	if (bytes < 0) {
-            return ; // check with valgrind if client_fd has to be closed
+    char buffer[4096];
+    int bytes = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
+    if (bytes < 0)
+    {
+        return; // check with valgrind if client_fd has to be closed
     }
-	if (bytes == 0) {
-        std::cout << "❌ Client disconnected: " << "\n" << "fd - " << client_fd << "\n"
-								<< "port - " << client.getPort() << "\n" << std::endl;
-		close(client_fd);
-		poll_fds.erase(poll_fds.begin() + pollfd_idx);
-		clients.erase(clients.begin() + (client_idx));
-		return ;
+    if (bytes == 0)
+    {
+        std::cout << "❌ Client disconnected: " << "\n"
+                  << "fd - " << client_fd << "\n"
+                  << "port - " << client.getPort() << "\n"
+                  << std::endl;
+        close(client_fd);
+        poll_fds.erase(poll_fds.begin() + pollfd_idx);
+        clients.erase(clients.begin() + (client_idx));
+        return;
     }
 
-	client.appendRequestData(buffer, bytes);
-	while (true) {
-		long consumed = extract_one_http_request(client.getRequest());
-		if (consumed == 0)
-			break ;
-		if (consumed < 0) {
-			Response res(servers[client.getServerIndex()].getErrorPagesConfig());
-			Request bad; bad.setVersion("HTTP/1.1");
-			res.setPage(400, "Bad Request", true);
-			client.setResponseBuffer(res.writeResponseString());
-			client.setKeepAlive(false);
-    		poll_fds[pollfd_idx].events = POLLIN | POLLOUT;
-			return ;
-		}
+    client.appendRequestData(buffer, bytes);
+    while (true)
+    {
+        long consumed = extract_one_http_request(client.getRequest());
+        if (consumed == 0)
+            break;
+        if (consumed < 0)
+        {
+            Response res(servers[client.getServerIndex()].getErrorPagesConfig());
+            Request bad;
+            bad.setVersion("HTTP/1.1");
+            res.setPage(400, "Bad Request", true);
+            client.setResponseBuffer(res.writeResponseString());
+            client.setKeepAlive(false);
+            poll_fds[pollfd_idx].events = POLLIN | POLLOUT;
+            return;
+        }
 
-		std::string raw = client.getRequest().substr(0, (size_t)consumed);
-		client.consumeRequestBytes((size_t)consumed);
-		Request reqObj(raw);
-		ServerConfig srv = servers[client.getServerIndex()];
+        std::string raw = client.getRequest().substr(0, (size_t)consumed);
+        client.consumeRequestBytes((size_t)consumed);
+        Request reqObj(raw);
+        ServerConfig srv = servers[client.getServerIndex()];
         std::string response = buildRequestAndResponse(raw, srv, reqObj);
         client.setKeepAlive(reqObj.getHeaders());
-		poll_fds[pollfd_idx].events = POLLIN | POLLOUT;
-		client.setResponseBuffer(response);
+        poll_fds[pollfd_idx].events = POLLIN | POLLOUT;
+        client.setResponseBuffer(response);
 
-		break ;
-	}
+        break;
+    }
 }
 
 void Config::handleResponse(int client_idx, int pollfd_idx)
@@ -416,7 +454,6 @@ void Config::handleResponse(int client_idx, int pollfd_idx)
     std::string responseStr = client.getResponse();
     size_t alreadySent = client.getBytesSent();
     size_t remaining = responseStr.size() - alreadySent;
-
 
     if (remaining > 0)
     {
@@ -434,9 +471,8 @@ void Config::handleResponse(int client_idx, int pollfd_idx)
     {
         client.setBytesSent(0);
         alreadySent = 0;
-        //delete client.getResponseObj(); // delete heap Response
-        client.setResponseObj(NULL);
-
+        // delete client.getResponseObj(); // delete heap Response
+        //client.setResponseObj(NULL);
         if (!client.getKeepAlive() || (client.getState() == Client::IDLE))
         {
             close(client_fd);
@@ -450,59 +486,88 @@ void Config::handleResponse(int client_idx, int pollfd_idx)
     }
 }
 
-bool Config::sendResponse(int pollfd_idx, int client_idx) {
-	Client& client = clients[client_idx];
-	int client_fd = poll_fds[pollfd_idx].fd;
-	std::string response = client.getResponse();
-	size_t already_sent= client.getBytesSent();
-	size_t remaining = response.size() - already_sent;
+bool Config::sendResponse(int pollfd_idx, int client_idx)
+{
+    Client &client = clients[client_idx];
+    int client_fd = poll_fds[pollfd_idx].fd;
+    const std::string &response = client.getResponse();
+    size_t already_sent = client.getBytesSent(); // assume returns reference
 
-	if (remaining == 0) return true;
+    while (already_sent < response.size())
+    {
+        ssize_t bytes_sent = send(client_fd,
+                                  response.c_str() + already_sent,
+                                  response.size() - already_sent,
+                                  0);
+        if (bytes_sent > 0)
+        {
+            already_sent += bytes_sent; // accumulate sent bytes
+        }
+        else if (bytes_sent == 0)
+        {
+            // Connection closed by client
+            return false;
+        }
+        else
+        {
+            if (errno == EAGAIN || errno == EWOULDBLOCK)
+            {
+                // Socket temporarily not writable; try again later
+                return false;
+            }
+            else
+            {
+                perror("send failed");
+                return false;
+            }
+        }
+    }
 
-	size_t bytes_sent = send(client_fd, response.c_str() + already_sent, remaining, 0);
-	if (bytes_sent < 0) {
-		perror("send failed");
-		return false;
-	}
-	client.setBytesSent(bytes_sent);
-	return client.getBytesSent() == response.size();
-
-	return false;
+    // Fully sent
+    return true;
 }
 
-void Config::cleanup() {
-	for (size_t i = 1; i < poll_fds.size(); ++i) {
-		close(poll_fds[i].fd);
-	}
-	clients.clear();
-	poll_fds.clear();
+void Config::cleanup()
+{
+    for (size_t i = 1; i < poll_fds.size(); ++i)
+    {
+        close(poll_fds[i].fd);
+    }
+    clients.clear();
+    poll_fds.clear();
 }
 
-std::ostream &operator<<(std::ostream &os, const Config &obj) {
+std::ostream &operator<<(std::ostream &os, const Config &obj)
+{
     std::vector<ServerConfig> serversVector = obj.getServers();
 
-    for (size_t i = 0; i < serversVector.size(); i ++) {
+    for (size_t i = 0; i < serversVector.size(); i++)
+    {
         os << serversVector[i] << std::endl;
     }
     return os;
 }
 
-const LocationConfig *matchLocation(const std::string &reqPath, const ServerConfig &srv) {
-	const LocationConfig *bestMatch = NULL;
-	size_t longest = 0;
+const LocationConfig *matchLocation(const std::string &reqPath, const ServerConfig &srv)
+{
+    const LocationConfig *bestMatch = NULL;
+    size_t longest = 0;
 
-	const std::vector<LocationConfig> &locations = srv.getLocations();
+    const std::vector<LocationConfig> &locations = srv.getLocations();
 
-	for (size_t i = 0; i < locations.size(); ++i) {
-		const std::string &prefix = locations[i].getUri();
-		if (reqPath.compare(0, prefix.size(), prefix) == 0) {
-			if (prefix.size() > longest) {
-				longest = prefix.size();
-				bestMatch = &locations[i];
-			}
-		}
-	}
-	return (bestMatch);
+    for (size_t i = 0; i < locations.size(); ++i)
+    {
+        const std::string &prefix = locations[i].getUri();
+        if (reqPath.compare(0, prefix.size(), prefix) == 0)
+        {
+            if (prefix.size() > longest)
+            {
+                longest = prefix.size();
+                bestMatch = &locations[i];
+            }
+        }
+    }
+    return (bestMatch);
 }
 
 std::string buildRequestAndResponse(const std::string &raw, const ServerConfig &srv, Request &outReq)
@@ -523,7 +588,8 @@ void applyLocationConfig(Request &reqObj, const LocationConfig &loc)
 
     const std::string &ext = loc.getCgiExtension();
     if (!ext.empty() && requestPath.size() >= ext.size() &&
-        requestPath.compare(requestPath.size() - ext.size(), ext.size(), ext) == 0) {
+        requestPath.compare(requestPath.size() - ext.size(), ext.size(), ext) == 0)
+    {
         reqObj.setIsCgi(true);
     }
 
