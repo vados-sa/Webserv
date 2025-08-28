@@ -438,7 +438,7 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx)
         Request reqObj(raw);
         ServerConfig srv = servers[client.getServerIndex()];
         std::string response = buildRequestAndResponse(raw, srv, reqObj);
-        client.setKeepAlive(reqObj.getHeaders());
+        client.setKeepAlive(reqObj);
         poll_fds[pollfd_idx].events = POLLIN | POLLOUT;
         client.setResponseBuffer(response);
 
@@ -475,6 +475,10 @@ void Config::handleResponse(int client_idx, int pollfd_idx)
         //client.setResponseObj(NULL);
         if (!client.getKeepAlive() || (client.getState() == Client::IDLE))
         {
+            std::cout << "❌ Disconnecting client: " << "\n"
+                  << "fd - " << client_fd << "\n"
+                  << "port - " << client.getPort() << "\n"
+                  << std::endl;
             close(client_fd);
             poll_fds.erase(poll_fds.begin() + pollfd_idx);
             clients.erase(clients.begin() + client_idx);

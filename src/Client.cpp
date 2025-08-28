@@ -66,10 +66,29 @@ void Client::setPort(int p) {
 	port = p;
 }
 
-void Client::setKeepAlive(std::map<std::string, std::string> headers_) {
+/* void Client::setKeepAlive(std::map<std::string, std::string> headers_) {
 	std::map<std::string, std::string>::iterator it = headers_.find("connection");
 	if (it != headers_.end() && it->second == "close") {
 		keep_alive = false;
 	} else
 		keep_alive = true;
+} */
+
+void Client::setKeepAlive(const Request &req)
+{
+	const std::string version = req.getVersion();
+    std::string connection = "";
+    if (req.findHeader("connection")) {
+        connection = *req.findHeader("connection");
+        for (size_t i = 0; i < connection.size(); ++i)
+            connection[i] = (char)std::tolower(connection[i]);
+    }
+
+    bool want_close;
+    if (version == "HTTP/1.1")
+        want_close = (connection == "close"); // default is keep-alive
+    else // HTTP/1.0
+        want_close = (connection != "keep-alive"); // default is close
+
+	keep_alive = !want_close;
 }
