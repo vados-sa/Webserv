@@ -294,8 +294,8 @@ std::string CgiHandler::run() {
             if (result == 0) { // Child is still running
                 if (time(NULL) - startTime >= timeout) {
                     kill(pid, SIGKILL); // Terminate the child process
-                    std::cerr << "CGI script timed out" << std::endl;
                     error = TIMEOUT;
+                    std::cerr << "CGI script timed out" << std::endl;
                     return "";
                 }
                 usleep(100000); // Sleep for 100ms before checking again

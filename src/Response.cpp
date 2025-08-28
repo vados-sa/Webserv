@@ -19,12 +19,15 @@ static const char *MIME_HTML = "text/html";
 
 Response::Response() : fullPath_(".") {}
 
+
 Response::Response(std::map<int, std::string> error_pages) :
     fullPath_("."), error_pages_config(error_pages) {}
 
 Response::Response(std::map<int, std::string> error_pages, int code, const std::string &message, bool error)
-    : fullPath_("."), error_pages_config(error_pages) {
-        setPage(code, message, error);
+    : fullPath_("."), error_pages_config(error_pages)
+{
+    setPage(code, message, error);
+
 }
 
 template <typename T>
@@ -411,7 +414,7 @@ void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
     CgiHandler cgiHandler(reqObj, locConfig);
 	// setenv("SERVER_NAME", "localhost", 1); // Replace with actual server name if available
 	// setenv("SERVER_PORT", "8080", 1);     // Replace with actual server port if available
-	
+
 	// Check if the CGI script was found
     if (!cgiHandler.getStatus() && cgiHandler.getError() == CgiHandler::SCRIPT_NOT_FOUND) {
         setPage(404, "The requested CGI script was not found: " + reqObj.getReqPath(), true);
