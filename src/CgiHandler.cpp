@@ -68,164 +68,158 @@ CgiHandler::CgiHandler(const Request &reqObj, const LocationConfig &locConfig) :
 	if (reqObj.getMethod() == "GET") {
 		env["QUERY_STRING"] = reqObj.getQueryString().empty() ? "" : reqObj.getQueryString();
 	}
-	// for (std::map<std::string, std::string>::const_iterator it = env.begin(); it != env.end(); ++it) {
-	// 	setenv(it->first.c_str(), it->second.c_str(), 1);
-	// }
-
 }
-
-void CgiHandler::handleFileUpload(const std::string &body, const std::string &uploadDir) {
-    std::string contentType = env["CONTENT_TYPE"];
-    std::string boundary;
-    if (contentType.find("boundary=") != std::string::npos) {
-        boundary = "--" + contentType.substr(contentType.find("boundary=") + 9);
-    } else {
-        std::cerr << "Boundary not found in Content-Type header" << std::endl;
-        return;
-    }
-
-    std::string::size_type start = 0, stop;
-    while ((stop = body.find(boundary, start)) != std::string::npos) {
-        std::string part = body.substr(start, stop - start);
-        start = stop + boundary.length();
-        if (part.empty() || part == "--") {
-            continue;
-        }
-        std::size_t headerStop = part.find("\r\n\r\n");
-        if (headerStop == std::string::npos) {
-            std::cerr << "Wrong format of multipart/form-data" << std::endl;
-            continue;
-        }
-        std::string headers = part.substr(0, headerStop);
-        std::string fileContent = part.substr(headerStop + 4); // 4 because of "\r\n\r\n"
-
-        std::string fileName;
-        std::size_t fileNamePos = headers.find("filename=\"");
-        if (fileNamePos != std::string::npos) {
-            fileNamePos += 10;
-            std::size_t endPos = headers.find("\"", fileNamePos);
-            if (endPos != std::string::npos) {
-                fileName = headers.substr(fileNamePos, endPos - fileNamePos);
-            } else {
-                std::cerr << "Wrong format of Content-Disposition header" << std::endl;
-                continue;
-            }
-        } else {
-            std::cerr << "Filename not found in Content-Disposition header" << std::endl;
-            continue;
-        }
-
-        std::string filePath = uploadDir + "/" + fileName;
-        std::ofstream outFile(filePath.c_str(), std::ios::binary); // Use .c_str() for C++98 compatibility
-        if (!outFile) {
-            std::cerr << "Failed to open file: " + filePath << std::endl;
-            continue;
-        }
-        outFile.write(fileContent.c_str(), fileContent.size());
-        outFile.close();
-
-        std::cout << "Success to upload file: " + filePath << std::endl;
-    }
-}
-
-//substituicao da funcao handleFileUpload
 
 // void CgiHandler::handleFileUpload(const std::string &body, const std::string &uploadDir) {
-//     // Extract the boundary
-//     std::string boundary = extractBoundary(env["CONTENT_TYPE"]);
-//     if (boundary.empty()) {
+//     std::string contentType = env["CONTENT_TYPE"];
+//     std::string boundary;
+//     if (contentType.find("boundary=") != std::string::npos) {
+//         boundary = "--" + contentType.substr(contentType.find("boundary=") + 9);
+//     } else {
 //         std::cerr << "Boundary not found in Content-Type header" << std::endl;
 //         return;
 //     }
 
-//     // Process each part of the body
 //     std::string::size_type start = 0, stop;
 //     while ((stop = body.find(boundary, start)) != std::string::npos) {
 //         std::string part = body.substr(start, stop - start);
 //         start = stop + boundary.length();
-
-//         // Skip empty parts or the final boundary marker
 //         if (part.empty() || part == "--") {
 //             continue;
 //         }
-
-//         // Parse the part and save the file
-//         if (!processPart(part, uploadDir)) {
-//             std::cerr << "Failed to process part" << std::endl;
+//         std::size_t headerStop = part.find("\r\n\r\n");
+//         if (headerStop == std::string::npos) {
+//             std::cerr << "Wrong format of multipart/form-data" << std::endl;
+//             continue;
 //         }
-//     }
-// }
+//         std::string headers = part.substr(0, headerStop);
+//         std::string fileContent = part.substr(headerStop + 4); // 4 because of "\r\n\r\n"
 
-// // Helper function to extract the boundary from the Content-Type header
-// std::string CgiHandler::extractBoundary(const std::string &contentType) {
-//     std::size_t boundaryPos = contentType.find("boundary=");
-//     if (boundaryPos != std::string::npos) {
-//         return "--" + contentType.substr(boundaryPos + 9); // "boundary=" is 9 characters
-//     }
-//     return "";
-// }
-
-// // Helper function to process a single part of the multipart body
-// bool CgiHandler::processPart(const std::string &part, const std::string &uploadDir) {
-//     // Extract headers and content
-//     std::size_t headerStop = part.find("\r\n\r\n");
-//     if (headerStop == std::string::npos) {
-//         std::cerr << "Malformed multipart/form-data part" << std::endl;
-//         return false;
-//     }
-
-//     std::string headers = part.substr(0, headerStop);
-//     std::string fileContent = part.substr(headerStop + 4); // Skip "\r\n\r\n"
-
-//     // Extract the filename
-//     std::string fileName = extractFileName(headers);
-//     if (fileName.empty()) {
-//         std::cerr << "Filename not found in Content-Disposition header" << std::endl;
-//         return false;
-//     }
-
-//     // Sanitize the filename
-//     fileName = sanitizeFileName(fileName);
-
-//     // Save the file
-//     std::string filePath = uploadDir + "/" + fileName;
-//     return saveFile(filePath, fileContent);
-// }
-
-// // Helper function to extract the filename from the headers
-// std::string CgiHandler::extractFileName(const std::string &headers) {
-//     std::size_t fileNamePos = headers.find("filename=\"");
-//     if (fileNamePos != std::string::npos) {
-//         fileNamePos += 10; // Move past "filename=\""
-//         std::size_t endPos = headers.find("\"", fileNamePos);
-//         if (endPos != std::string::npos) {
-//             return headers.substr(fileNamePos, endPos - fileNamePos);
+//         std::string fileName;
+//         std::size_t fileNamePos = headers.find("filename=\"");
+//         if (fileNamePos != std::string::npos) {
+//             fileNamePos += 10;
+//             std::size_t endPos = headers.find("\"", fileNamePos);
+//             if (endPos != std::string::npos) {
+//                 fileName = headers.substr(fileNamePos, endPos - fileNamePos);
+//             } else {
+//                 std::cerr << "Wrong format of Content-Disposition header" << std::endl;
+//                 continue;
+//             }
+//         } else {
+//             std::cerr << "Filename not found in Content-Disposition header" << std::endl;
+//             continue;
 //         }
+
+//         std::string filePath = uploadDir + "/" + fileName;
+//         std::ofstream outFile(filePath.c_str(), std::ios::binary); // Use .c_str() for C++98 compatibility
+//         if (!outFile) {
+//             std::cerr << "Failed to open file: " + filePath << std::endl;
+//             continue;
+//         }
+//         outFile.write(fileContent.c_str(), fileContent.size());
+//         outFile.close();
+
+//         std::cout << "Success to upload file: " + filePath << std::endl;
 //     }
-//     return "";
 // }
 
-// // Helper function to sanitize the filename
-// std::string CgiHandler::sanitizeFileName(const std::string &fileName) {
-//     std::string sanitized = fileName;
-//     // Replace any invalid characters (e.g., "../") to prevent directory traversal
-//     std::replace(sanitized.begin(), sanitized.end(), '/', '_');
-//     std::replace(sanitized.begin(), sanitized.end(), '\\', '_');
-//     return sanitized;
-// }
+void CgiHandler::handleFileUpload(const std::string &body, const std::string &uploadDir) {
+    // Extract the boundary
+    std::string boundary = extractBoundary(env["CONTENT_TYPE"]);
+    if (boundary.empty()) {
+        std::cerr << "Boundary not found in Content-Type header" << std::endl;
+        return;
+    }
 
-// // Helper function to save the file to disk
-// bool CgiHandler::saveFile(const std::string &filePath, const std::string &fileContent) {
-//     std::ofstream outFile(filePath.c_str(), std::ios::binary); // Use .c_str() for C++98 compatibility
-//     if (!outFile) {
-//         std::cerr << "Failed to open file: " + filePath << std::endl;
-//         return false;
-//     }
-//     outFile.write(fileContent.c_str(), fileContent.size());
-//     outFile.close();
-//     std::cout << "File uploaded successfully: " + filePath << std::endl;
-//     return true;
-// }
+    // Process each part of the body
+    std::string::size_type start = 0, stop;
+    while ((stop = body.find(boundary, start)) != std::string::npos) {
+        std::string part = body.substr(start, stop - start);
+        start = stop + boundary.length();
+
+        // Skip empty parts or the final boundary marker
+        if (part.empty() || part == "--") {
+            continue;
+        }
+
+        // Parse the part and save the file
+        if (!processPart(part, uploadDir)) {
+            std::cerr << "Failed to process part" << std::endl;
+        }
+    }
+}
+
+// Helper function to extract the boundary from the Content-Type header
+std::string CgiHandler::extractBoundary(const std::string &contentType) {
+    std::size_t boundaryPos = contentType.find("boundary=");
+    if (boundaryPos != std::string::npos) {
+        return "--" + contentType.substr(boundaryPos + 9); // "boundary=" is 9 characters
+    }
+    return "";
+}
+
+// Helper function to process a single part of the multipart body
+bool CgiHandler::processPart(const std::string &part, const std::string &uploadDir) {
+    // Extract headers and content
+    std::size_t headerStop = part.find("\r\n\r\n");
+    if (headerStop == std::string::npos) {
+        std::cerr << "Malformed multipart/form-data part" << std::endl;
+        return false;
+    }
+
+    std::string headers = part.substr(0, headerStop);
+    std::string fileContent = part.substr(headerStop + 4); // Skip "\r\n\r\n"
+
+    // Extract the filename
+    std::string fileName = extractFileName(headers);
+    if (fileName.empty()) {
+        std::cerr << "Filename not found in Content-Disposition header" << std::endl;
+        return false;
+    }
+
+    // Sanitize the filename
+    fileName = sanitizeFileName(fileName);
+
+    // Save the file
+    std::string filePath = uploadDir + "/" + fileName;
+    return saveFile(filePath, fileContent);
+}
+
+// Helper function to extract the filename from the headers
+std::string CgiHandler::extractFileName(const std::string &headers) {
+    std::size_t fileNamePos = headers.find("filename=\"");
+    if (fileNamePos != std::string::npos) {
+        fileNamePos += 10; // Move past "filename=\""
+        std::size_t endPos = headers.find("\"", fileNamePos);
+        if (endPos != std::string::npos) {
+            return headers.substr(fileNamePos, endPos - fileNamePos);
+        }
+    }
+    return "";
+}
+
+// Helper function to sanitize the filename
+std::string CgiHandler::sanitizeFileName(const std::string &fileName) {
+    std::string sanitized = fileName;
+    // Replace any invalid characters (e.g., "../") to prevent directory traversal
+    std::replace(sanitized.begin(), sanitized.end(), '/', '_');
+    std::replace(sanitized.begin(), sanitized.end(), '\\', '_');
+    return sanitized;
+}
+
+// Helper function to save the file to disk
+bool CgiHandler::saveFile(const std::string &filePath, const std::string &fileContent) {
+    std::ofstream outFile(filePath.c_str(), std::ios::binary); // Use .c_str() for C++98 compatibility
+    if (!outFile) {
+        std::cerr << "Failed to open file: " + filePath << std::endl;
+        return false;
+    }
+    outFile.write(fileContent.c_str(), fileContent.size());
+    outFile.close();
+    std::cout << "File uploaded successfully: " + filePath << std::endl;
+    return true;
+}
 
 
 std::string CgiHandler::run() {
@@ -293,7 +287,8 @@ std::string CgiHandler::run() {
             result = waitpid(pid, &timeout_status, WNOHANG);
             if (result == 0) { // Child is still running
                 if (time(NULL) - startTime >= timeout) {
-                    kill(pid, SIGKILL); // Terminate the child process
+                    kill(pid, SIGKILL);
+					waitpid(pid, &timeout_status, 0);
                     error = TIMEOUT;
                     std::cerr << "CGI script timed out" << std::endl;
                     return "";
@@ -399,31 +394,3 @@ std::string getInterpreterPath(const std::string &cgiExtension) {
     }
     return path;
 }
-
-// void Response::parseCgiResponse(const std::string &cgiOutput) {
-// 	std::istringstream stream(cgiOutput);
-// 	std::string line;
-// 	bool headersDone = false;
-// 	std::ostringstream body;
-// 	while (std::getline(stream, line)) {
-// 		if (!headersDone) {
-// 			if (line == "\r" || line == "" || line == "\n") {
-// 				headersDone = true;
-// 				continue;
-// 			}
-// 			size_t colon = line.find(":");
-// 			if (colon != std::string::npos) {
-// 				std::string key = line.substr(0, colon);
-// 				std::string value = line.substr(colon + 1);
-// 				value.erase(0, value.find_first_not_of(" \t"));
-// 				setHeader(key, value);
-// 			}
-// 		} else {
-// 			body << line << "\n";
-// 		}
-// 	}
-// 	std::string b = body.str();
-// 	if (!b.empty() && b[b.size()-1] == '\n') b.erase(b.size()-1);
-// 	setBody(b);
-// }
-
