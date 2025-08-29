@@ -252,8 +252,7 @@ std::string CgiHandler::run() {
         std::vector<char *> envp;
         for (std::map<std::string, std::string>::const_iterator it = env.begin(); it != env.end(); ++it) {
             std::string entry = it->first + "=" + it->second;
-            char *env_entry = strdup(entry.c_str());
-            envp.push_back(env_entry);
+            envp.push_back(strdup(entry.c_str()));
         }
         envp.push_back(NULL);
 
@@ -279,23 +278,17 @@ std::string CgiHandler::run() {
 
         // Timeout mechanism
         int timeout_status;
-        int timeout = 5;
-        pid_t result;
         time_t startTime = time(NULL);
-
-        do {
-            result = waitpid(pid, &timeout_status, WNOHANG);
-            if (result == 0) { // Child is still running
-                if (time(NULL) - startTime >= timeout) {
-                    kill(pid, SIGKILL);
-					waitpid(pid, &timeout_status, 0);
-                    error = TIMEOUT;
-                    std::cerr << "CGI script timed out" << std::endl;
-                    return "";
-                }
-                usleep(100000); // Sleep for 100ms before checking again
+        while (waitpid(pid, &timeout_status, WNOHANG) == 0) {
+            if (time(NULL) - startTime > 5) {
+                kill(pid, SIGKILL);
+                waitpid(pid, &timeout_status, 0);
+                error = TIMEOUT;
+                std::cerr << "CGI script timed out" << std::endl;
+                return "";
             }
-        } while (result == 0);
+            usleep(100000);
+        }
 
         // Read stdout and stderr
         std::stringstream cgiOutput;
