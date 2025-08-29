@@ -501,4 +501,8 @@ void Response::parseCgiResponse(const std::string &cgiOutput) {
     std::string b = body.str();
     if (!b.empty() && b[b.size()-1] == '\n') b.erase(b.size()-1);
     setBody(b);
+
+    if (!findHeader("Content-Length")) {
+        setHeader("Content-Length", int_to_string(b.size()));
+    }
 }
