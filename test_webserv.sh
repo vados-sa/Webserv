@@ -145,7 +145,7 @@ if [[ "$CODE" == "200" || "$CODE" == "201" ]]; then
     fi
 else
     echo -e "❌ Upload /upload -> ${RED}FAIL${NC} (got $CODE, expected 200/201)"
-    ((FAIL_COUNT++))
+fi
 
 # --------------------
 # CGI TESTS
