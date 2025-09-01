@@ -1,7 +1,7 @@
 #!/bin/bash
 # Webserver Test Script (compatible with bash 3.x)
 # Usage: ./test_webserv.sh [host] [port]
-# Example: ./test_webserv.sh 127.0.0.1 8080
+# Example: ./test_webserv.sh 127.0.0.1 9080
 
 HOST=${1:-127.0.0.1}
 PORT=${2:-9080}
@@ -20,8 +20,8 @@ FAIL_COUNT=0
 get_allowed_methods() {
     local location="$1"
     case "$location" in
-        "/") echo "GET" ;;
-        "/upload") echo "GET POST" ;;       # DELETE not allowed
+        "/") echo "GET DELETE" ;;
+        "/upload") echo "GET POST DELETE" ;;       # DELETE not allowed
         "/images") echo "GET POST DELETE" ;;
         "/redirect-me") echo "GET" ;;
         "/cgi-bin") echo "GET POST" ;;
@@ -100,7 +100,7 @@ fi
 # DELETE /upload/file
 CODE=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE $BASE_URL/upload/upload_test.txt)
 EXPECTED=$(get_expected /upload DELETE)
-print_result $CODE $EXPECTED "DELETE /upload/upload_test.txt"
+print_result $CODE 204 "DELETE /upload/upload_test.txt"
 
 # --------------------
 # UNKNOWN method
@@ -125,6 +125,27 @@ EXPECTED=$(get_expected /redirect-me GET)
 print_result $CODE $EXPECTED "GET /redirect-me (redirect)"
 
 # --------------------
+
+# DELETE non-existing file
+CODE=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE $BASE_URL/upload/doesnotexist.txt)
+print_result $CODE 404 "DELETE /upload/doesnotexist.txt (non-existing file)"
+
+# --------------------
+# Upload & GET file (content match)
+echo "hello upload world" > upload_check.txt
+CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST $BASE_URL/upload -F "file=@upload_check.txt")
+if [[ "$CODE" == "200" || "$CODE" == "201" ]]; then
+    curl -s $BASE_URL/upload/upload_check.txt -o download_check.txt
+    if diff upload_check.txt download_check.txt > /dev/null; then
+        echo -e "✅ Upload & GET file -> ${GREEN}PASS${NC}"
+        ((PASS_COUNT++))
+    else
+        echo -e "❌ Upload & GET file -> ${RED}FAIL${NC} (content mismatch)"
+        ((FAIL_COUNT++))
+    fi
+else
+    echo -e "❌ Upload /upload -> ${RED}FAIL${NC} (got $CODE, expected 200/201)"
+    ((FAIL_COUNT++))
 
 # --------------------
 # CGI TESTS
