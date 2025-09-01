@@ -1,16 +1,16 @@
 #include "Response.hpp"
 #include "LocationConfig.hpp"
 #include "CgiHandler.hpp"
-#include <cstdlib>
-#include <stdexcept>
-#include <sstream>
-#include <iostream>
-#include <sys/stat.h>
-#include <fstream>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <signal.h>
+#include <cstdlib>               // strdup()
+#include <iostream>              // std::cout, std::cerr, std::endl
+#include <sstream>               // std::istringstream, std::ostringstream, std::stringstream
+#include <fstream>               // std::ofstream (for file uploads)
+#include <sys/stat.h>            // struct stat, stat()
+#include <unistd.h>              // fork(), pipe(), dup2(), execve(), chdir(), read(), write(), close(), usleep()
+#include <sys/types.h>           // pid_t, ssize_t
+#include <sys/wait.h>            // waitpid(), WIFEXITED(), WEXITSTATUS(), WNOHANG
+#include <signal.h>              // kill(), SIGKILL
+#include <errno.h>               // errno, perror()
 
 CgiHandler::CgiHandler(const Request &reqObj, const LocationConfig &locConfig) : status_cgi(false) {
 
@@ -256,11 +256,20 @@ std::string CgiHandler::run() {
         }
         envp.push_back(NULL);
 
+        // Change to script's directory for relative path file access
+        std::string scriptDir = cgiScriptPath.substr(0, cgiScriptPath.find_last_of('/'));
+        if (chdir(scriptDir.c_str()) != 0) {
+            perror("chdir failed");
+            _exit(EXIT_FAILURE);
+        }
+
         // Prepare arguments
-        char *argv[] = {const_cast<char *>(interpreterPath.c_str()), const_cast<char *>(cgiScriptPath.c_str()), NULL};
+        // After chdir, we need just the script filename, not the full path
+        std::string scriptName = cgiScriptPath.substr(cgiScriptPath.find_last_of('/') + 1);
+        char *argv_fixed[] = {const_cast<char *>(interpreterPath.c_str()), const_cast<char *>(scriptName.c_str()), NULL};
 
         // Execute the CGI script
-        if (execve(interpreterPath.c_str(), argv, &envp[0]) == -1) {
+        if (execve(interpreterPath.c_str(), argv_fixed, &envp[0]) == -1) {
 			error = EXECVE_FAILED;
             std::cerr << "CGI execve failed: " << strerror(errno) << std::endl;
             _exit(EXIT_FAILURE);
@@ -313,7 +322,7 @@ std::string CgiHandler::run() {
             return cgiOutput.str();
         } else {
             error = CGI_SCRIPT_FAILED;
-            std::cerr << "CGI script failed: " << cgiError.str() << std::endl;
+            std::cerr << "CGI script failed" << std::endl;
             return "";
         }
     }
@@ -352,6 +361,42 @@ std::string decodeChunkedBody(std::istringstream &rawStream) {
 
     return decodedBody;
 }
+
+//check this version of decodeChunkedBody
+// std::string decodeChunkedBody(std::istream &rawStream) {
+//     std::string decodedBody;
+//     std::string line;
+
+//     while (std::getline(rawStream, line)) {
+//         // Remove trailing \r (C++98-compatible way)
+//         if (!line.empty() && line[line.size() - 1] == '\r') {
+//             line.erase(line.size() - 1);
+//         }
+
+//         // Parse the chunk size (C++98-compatible way using std::stringstream)
+//         std::istringstream chunkSizeStream(line);
+//         size_t chunkSize;
+//         chunkSizeStream >> std::hex >> chunkSize;
+
+//         if (chunkSize == 0) {
+//             break; // End of chunks
+//         }
+
+// 		std::string chunkData(chunkSize, '\0');
+// 		rawStream.read(&chunkData[0], chunkSize);
+// 		decodedBody += chunkData;
+
+// 		char cr, lf;
+// 		rawStream.get(cr);
+// 		rawStream.get(lf);
+// 		if (cr != '\r' || lf != '\n') {
+// 			std::cerr << "Malformed chunked encoding" << std::endl;
+// 			break;
+// 		}
+//     }
+
+//     return decodedBody;
+// }
 
 std::string getInterpreterPath(const std::string &cgiExtension) {
     std::string interpreter;

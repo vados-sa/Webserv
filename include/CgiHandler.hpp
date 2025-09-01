@@ -40,3 +40,4 @@ class CgiHandler {
 
 std::string getInterpreterPath(const std::string &cgiExtension);
 std::string decodeChunkedBody(std::istringstream &rawStream);
+//std::string decodeChunkedBody(std::istream &rawStream);
