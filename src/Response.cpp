@@ -169,33 +169,33 @@ std::string Response::getContentType(const std::string &path)
 
 void Response::handlePost(const Request &reqObj, LocationConfig loc)
 {
-    if (!loc.getAllowUpload())
-        return (setPage(403, "Forbidden", true));
-    else {
-        std::vector<std::string> allowed = loc.getAllowedMethods();
-        allowed.push_back("POST");
-        loc.setAllowedMethods(allowed);
-    }
-    if (loc.getAllowUpload() && loc.getUploadDir().empty())
+    // if (!loc.getAllowUpload())
+    //     return (setPage(403, "Forbidden", true));
+
+    if (loc.getUploadDir().empty())
         throw std::runtime_error("Config error: allow_upload is enabled but no upload_path specified in location " + loc.getUri());
 
-    if (reqObj.getReqPath() != "/upload") {
-        setBody(generateDefaultPage(404, "Wrong path. Expected \"/upload", true));
+    std::string reqPath = reqObj.getReqPath();
+    if (reqPath != "/upload" && reqPath.find("/upload/") != 0){
+        setPage(405, "Method Not Allowed", true); // POST not allowed here
         return;
     }
+
     if (reqObj.getBody().empty()) {
-        return (setPage(400, "No body detected on request. Body necessary", true));
+        return (setPage(400, "No body detected in request", true));
     }
+
+    parseMultipartBody(reqObj); //insert some check here
 
     if (!reqObj.findHeader(HEADER_CONTENT_TYPE)) {
         setPage(400, "Missing Content-Type header", true);
         return;
     }
 
-    parseMultipartBody(reqObj);
     std::string uploadFullPath = "./" + loc.getUploadDir();
     createUploadDir(uploadFullPath);
     uploadFile(uploadFullPath);
+    setPage(201, "File uploaded successfully", true);
 }
 
 void Response::createUploadDir(const std::string &uploadFullPath) {
