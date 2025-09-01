@@ -242,7 +242,7 @@ void Response::handleDelete(const Request &reqObj) {
         setPage(500, "Failed to delete file: \"" + filename_ + "\"", true);
         return;
     }
-    setPage(200, "File \"" + filename_ + "\" deleted successfully.", true);
+    setPage(204, "No content. File \"" + filename_ + "\" deleted successfully.", true);
 }
 
 void Response::parseMultipartBody(const Request &obj) {
