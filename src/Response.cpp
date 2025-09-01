@@ -316,6 +316,11 @@ void Response::setCode(const int code)
         codeToMessage[200] = "OK";
         codeToMessage[201] = "Created";
         codeToMessage[204] = "No Content";
+        codeToMessage[301] = "Moved Permanently";
+        codeToMessage[302] = "Found";
+        codeToMessage[303] = "See Other";
+        codeToMessage[307] = "Temporary Redirect";
+        codeToMessage[308] = "Permanent Redirect";
         codeToMessage[400] = "Bad Request";
         codeToMessage[403] = "Forbidden";
         codeToMessage[404] = "Not Found";
