@@ -383,10 +383,20 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
         return (this->writeResponseString());
     }
 
-    if (!locConfig.isMethodAllowed(reqObj.getMethod()) && reqObj.getMethod() != "POST") {
+    if (!locConfig.isMethodAllowed(reqObj.getMethod())) {
         this->setPage(405, "Method not allowed", true);
-        this->setHeader("Allow", "GET, POST, DELETE");
+        std::vector<std::string> allowed = locConfig.getAllowedMethods();
+        std::string allowHeader;
+        for (size_t i = 0; i < allowed.size(); i++)
+        {
+            allowHeader += allowed[i];
+            if (i != allowed.size() - 1)
+                allowHeader += ", ";
+        }
+        this->setHeader("Allow", allowHeader);
+        return (this->writeResponseString());
     }
+
     else if (reqObj.isCgi()) {
         this->handleCgi(reqObj, locConfig);
     } else if (!reqObj.getMethod().compare("GET")) {
