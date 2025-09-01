@@ -30,6 +30,11 @@ class CgiHandler {
 		bool getStatus() const { return status_cgi; };
 		CgiErrorType getError() const { return error; };
 		std::string run();
+		std::string extractBoundary(const std::string &contentType);
+		bool processPart(const std::string &part, const std::string &uploadDir);
+		std::string extractFileName(const std::string &headers);
+		std::string sanitizeFileName(const std::string &fileName);
+		bool saveFile(const std::string &filePath, const std::string &fileContent);
 
 };
 

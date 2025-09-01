@@ -146,6 +146,45 @@ if [[ "$CODE" == "200" || "$CODE" == "201" ]]; then
 else
     echo -e "❌ Upload /upload -> ${RED}FAIL${NC} (got $CODE, expected 200/201)"
     ((FAIL_COUNT++))
+
+# --------------------
+# CGI TESTS
+
+CGI_DIR="cgi-bin"
+CGI_SCRIPT="test_cgi.py"
+CGI_ERROR_SCRIPT="cgi_error.py"
+CGI_LOOP_SCRIPT="cgi_infinite.py"
+
+# --- CGI GET ---
+CODE=$(curl -s -o /dev/null -w "%{http_code}" $BASE_URL/$CGI_DIR/$CGI_SCRIPT)
+print_result $CODE 200 "CGI GET $CGI_SCRIPT"
+
+# --- CGI POST ---
+CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST -d "foo=bar&baz=qux" $BASE_URL/$CGI_DIR/$CGI_SCRIPT)
+print_result $CODE 200 "CGI POST $CGI_SCRIPT"
+
+# --- CGI relative path test (script should print CWD or access a relative file) ---
+CODE=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/$CGI_DIR/$CGI_SCRIPT?file=relative.txt")
+print_result $CODE 200 "CGI relative path $CGI_SCRIPT"
+
+# --- CGI error script ---
+CODE=$(curl -s -o /dev/null -w "%{http_code}" $BASE_URL/$CGI_DIR/$CGI_ERROR_SCRIPT)
+if [[ "$CODE" == "500" || "$CODE" == "502" || "$CODE" == "504" ]]; then
+    echo -e "✅ CGI error script -> ${GREEN}PASS${NC} (got $CODE)"
+    ((PASS_COUNT++))
+else
+    echo -e "❌ CGI error script -> ${RED}FAIL${NC} (got $CODE, expected 500/502/504)"
+    ((FAIL_COUNT++))
+fi
+
+# --- CGI infinite loop (should timeout, not crash server) ---
+CODE=$(curl -s -o /dev/null -w "%{http_code}" $BASE_URL/$CGI_DIR/$CGI_LOOP_SCRIPT)
+if [[ "$CODE" == "504" ]]; then
+    echo -e "✅ CGI infinite loop timeout -> ${GREEN}PASS${NC} (got $CODE)"
+    ((PASS_COUNT++))
+else
+    echo -e "❌ CGI infinite loop timeout -> ${RED}FAIL${NC} (got $CODE, expected 504)"
+    ((FAIL_COUNT++))
 fi
 
 # Summary
