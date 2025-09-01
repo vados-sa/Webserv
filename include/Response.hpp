@@ -31,6 +31,7 @@ private:
     void handleGet(const Request &reqObj, const LocationConfig &loc);
     void handleDelete(const Request &reqObj);
     std::string getContentType(const std::string &path);
+    void handleRedirect(const LocationConfig &locConfig);
 
     // methods -- "POST"
     void handlePost(const Request &reqObj, LocationConfig loc);

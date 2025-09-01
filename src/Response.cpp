@@ -316,6 +316,11 @@ void Response::setCode(const int code)
         codeToMessage[200] = "OK";
         codeToMessage[201] = "Created";
         codeToMessage[204] = "No Content";
+        codeToMessage[301] = "Moved Permanently";
+        codeToMessage[302] = "Found";
+        codeToMessage[303] = "See Other";
+        codeToMessage[307] = "Temporary Redirect";
+        codeToMessage[308] = "Permanent Redirect";
         codeToMessage[400] = "Bad Request";
         codeToMessage[403] = "Forbidden";
         codeToMessage[404] = "Not Found";
@@ -397,16 +402,18 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
         return (this->writeResponseString());
     }
 
-    else if (reqObj.isCgi()) {
-        this->handleCgi(reqObj, locConfig);
+    if (!locConfig.getReturnTarget().empty()) {
+        handleRedirect(locConfig);
+    } else if (reqObj.isCgi()) {
+        handleCgi(reqObj, locConfig);
     } else if (!reqObj.getMethod().compare("GET")) {
-        this->handleGet(reqObj, locConfig);
+        handleGet(reqObj, locConfig);
     } else if (!reqObj.getMethod().compare("POST")) {
-        this->handlePost(reqObj, locConfig);
+        handlePost(reqObj, locConfig);
     } else if (!reqObj.getMethod().compare("DELETE")) {
-        this->handleDelete(reqObj);
+        handleDelete(reqObj);
     } else
-        this->setPage(501, "Method not implemented", true);
+        setPage(501, "Method not implemented", true);
 
     //if (reqObj.findHeader(HEADER_CONNECTION))
     //    this->setHeader(HEADER_CONNECTION, *reqObj.findHeader(HEADER_CONNECTION));
@@ -425,9 +432,9 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
     else // HTTP/1.0
         want_close = (connection != "keep-alive"); // default is close
 
-    this->setHeader("connection", want_close ? "close" : "keep-alive");
+    setHeader("connection", want_close ? "close" : "keep-alive");
 
-    return (this->writeResponseString());
+    return (writeResponseString());
 }
 
 void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
@@ -515,4 +522,20 @@ void Response::parseCgiResponse(const std::string &cgiOutput) {
     if (!findHeader("Content-Length")) {
         setHeader("Content-Length", int_to_string(b.size()));
     }
+}
+
+void Response::handleRedirect(const LocationConfig &locConfig)
+{
+    int statusCode = locConfig.getReturnStatus();
+    statusCode_ = statusCode;
+    std::string newLocation = locConfig.getReturnTarget();
+    setCode(statusCode);
+    setHeader("Location", newLocation);
+
+    body_ =
+        "<html><head><title>" + std::to_string(statusCode) + " " + statusMessage_ + "</title></head>"
+        "<body style='font-family:sans-serif;text-align:center;margin-top:100px;'>"
+        "<h1>" + std::to_string(statusCode) + " " + statusMessage_ + "</h1>"
+        "<p>Resource has moved to <a href=\"" +
+        newLocation + "\">" + newLocation + "</a>.</p></body></html>";
 }
