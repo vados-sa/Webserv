@@ -1,7 +1,7 @@
 #include "LocationConfig.hpp"
 #include <algorithm>
 
-LocationConfig::LocationConfig() : has_return(false), autoindex(false), allow_upload(false)
+LocationConfig::LocationConfig() : has_return(false), autoindex(false)
 {
     allowed_methods.push_back("GET");
     allowed_methods.push_back("POST");
@@ -16,7 +16,7 @@ std::ostream &operator<<(std::ostream &os, const std::vector<LocationConfig>& ob
         os << " -- Index: " << obj[i].getIndexFiles() << "\n";
         os << " -- Allowed methods: " << obj[i].getAllowedMethods() << "\n";
         os << " -- Redirection: " << obj[i].getReturnStatus() << " " << obj[i].getReturnTarget() << "\n";
-        os << " -- Allow upload: " << obj[i].getAllowUpload() << "\n";
+        //os << " -- Allow upload: " << obj[i].getAllowUpload() << "\n";
         os << " -- Upload dir: " << obj[i].getUploadDir() << "\n";
         os << " -- Autoindex: " << obj[i].getAutoindex() << "\n";
 		os << " -- CGI extension: " << obj[i].getCgiExtension() << "\n";

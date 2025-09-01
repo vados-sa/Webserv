@@ -102,7 +102,7 @@ ServerConfig ConfigParser::parseServerBlock(std::vector<std::string> lines) {
     if (servConfig.getPort() == -1) {
         errorMessage << "Missing port value in configuration file.\n";
         throw std::runtime_error(errorMessage.str());
-    } 
+    }
 
     return (servConfig);
 }
@@ -302,8 +302,6 @@ LocationConfig ConfigParser::parseLocationBlock(std::vector<std::string> lines)
             locConfig.setUploadDir(parseUploadDir(tokens));
         else if (!tokens.empty() && tokens[0] == "autoindex")
             locConfig.setAutoindex(parseAutoindex(tokens));
-        else if (!tokens.empty() && tokens[0] == "allow_upload")
-            locConfig.setAllowUpload(parseAllowUpload(tokens));
         else if (!tokens.empty() && tokens[0] == "cgi_extension")
         	locConfig.setCgiExtension(parseCgiExtension(tokens));
         else if (!tokens.empty() && tokens[0] != "}") {

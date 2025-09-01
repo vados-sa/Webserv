@@ -16,7 +16,6 @@ private:
     std::string return_target;
     std::string upload_dir;
     bool autoindex;
-    bool allow_upload;
     std::string cgi_extension;
 
 public:
@@ -35,7 +34,6 @@ public:
     const std::string &getReturnTarget() const { return return_target; };
     const std::string &getUploadDir() const { return upload_dir; };
     const bool &getAutoindex() const { return autoindex; };
-    const bool &getAllowUpload() const { return allow_upload; };
     const std::string &getCgiExtension() const { return cgi_extension; };
 
     //setters
@@ -46,9 +44,7 @@ public:
     void setRedirection(std::pair<int, std::string> set) { has_return = true; return_status = set.first; return_target = set.second;};
     void setUploadDir(std::string set) { upload_dir = set; };
     void setAutoindex(bool set) { autoindex = set; };
-    void setAllowUpload(bool set) { allow_upload = set; };
 	void setCgiExtension(std::string set) { cgi_extension = set; };
-
 };
 
 std::ostream &operator<<(std::ostream &os, const std::vector<LocationConfig> &obj);
