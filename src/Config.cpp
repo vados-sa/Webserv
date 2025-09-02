@@ -168,7 +168,8 @@ bool Config::pollLoop(int server_count)
                 std::map<int, std::string> error_pages = srv.getErrorPagesConfig();
                 Response res(error_pages, e.getStatusCode(), e.what(), e.getError());
                 std::string res_string = res.writeResponseString(); //some checks maybe?
-                clients[client_idx].setResponseBuffer(res_string);
+                //clients[client_idx].setResponseBuffer(res_string);
+                handleResponse(client_idx, i);
                 //poll_fds[pollfd_idx].events = POLLOUT;
             }
         }
@@ -228,14 +229,10 @@ void Config::handleIdleClient(int client_idx, int pollfd_idx)
         << ")/port(" << clients[client_idx].getPort() << ")";
     std::string errorMessage = oss.str();
 
-    Response *res = new Response(srv.getErrorPagesConfig(), 408, errorMessage, true);
-    std::string res_string = res->writeResponseString();
-
-    client.setResponseObj(res); //does client need to hold the obj?
-    client.setResponseBuffer(res_string);
-
     poll_fds[pollfd_idx].events = POLLOUT;
     client.setState(Client::IDLE);
+
+    throw HttpException(408, errorMessage, true);
 }
 
 // Parse the header block (up to and incl. the CRLFCRLF) into a lowercased key map.
@@ -407,9 +404,8 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx)
     char buffer[4096];
     int bytes = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
     if (bytes < 0)
-    {
-        return; // check with valgrind if client_fd has to be closed
-    }
+        return;
+
     if (bytes == 0)
     {
         std::cout << "❌ Client disconnected: " << "\n"
@@ -430,14 +426,17 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx)
             break;
         if (consumed < 0)
         {
-            Response res(servers[client.getServerIndex()].getErrorPagesConfig());
-            Request bad;
-            bad.setVersion("HTTP/1.1");
-            res.setPage(400, "Bad Request", true);
-            client.setResponseBuffer(res.writeResponseString());
             client.setKeepAlive(false);
             poll_fds[pollfd_idx].events = POLLIN | POLLOUT;
-            return;
+            throw HttpException(400, "Bad Request", true);
+            // Response res(servers[client.getServerIndex()].getErrorPagesConfig());
+            // Request bad;
+            // bad.setVersion("HTTP/1.1");
+            // res.setPage(400, "Bad Request", true);
+            // client.setResponseBuffer(res.writeResponseString());
+            // client.setKeepAlive(false);
+            // poll_fds[pollfd_idx].events = POLLIN | POLLOUT;
+            // return;
         }
 
         std::string raw = client.getRequest().substr(0, (size_t)consumed);
@@ -456,7 +455,6 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx)
 void Config::handleResponse(int client_idx, int pollfd_idx)
 {
     Client &client = clients[client_idx];
-
     int client_fd = client.getFd();
     std::string responseStr = client.getResponse();
     size_t alreadySent = client.getBytesSent();

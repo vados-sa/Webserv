@@ -78,8 +78,8 @@ void Client::setKeepAlive(const Request &req)
 {
 	const std::string version = req.getVersion();
     std::string connection = "";
-    if (req.findHeader("connection")) {
-        connection = *req.findHeader("connection");
+    if (req.findHeader("Connection")) {
+        connection = *req.findHeader("Connection");
         for (size_t i = 0; i < connection.size(); ++i)
             connection[i] = (char)std::tolower(connection[i]);
     }

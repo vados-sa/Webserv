@@ -20,12 +20,14 @@ static const char *MIME_HTML = "text/html";
 Response::Response() : fullPath_(".") {}
 
 Response::Response(std::map<int, std::string> error_pages)
-    : statusCode_(200), fullPath_("."), error_pages_config(error_pages) {}
+    : statusCode_(200), statusMessage_("OK"), fullPath_("."), error_pages_config(error_pages) {}
 
 Response::Response(std::map<int, std::string> error_pages, int code, const std::string &message, bool error)
-    : statusCode_(200), fullPath_("."), error_pages_config(error_pages)
+    : statusCode_(200), statusMessage_("OK"), fullPath_("."), error_pages_config(error_pages)
 {
+    setVersion("HTTP/1.1");
     setPage(code, message, error);
+    setHeader("Connection", "close");
 }
 
 template <typename T>
@@ -300,9 +302,13 @@ void Response::parseMultipartBody(const Request &obj) {
 std::string Response::writeResponseString() const
 {
     std::ostringstream res;
-    res << version_ << " " << statusCode_ << " " << statusMessage_ << "\r\n"
-        << getHeaders() << "\r\n"
-        << body_;
+    std::map<std::string, std::string> headers = getHeaders();
+    res << "HTTP/1.1 " << statusCode_ << " " << statusMessage_ << "\r\n";
+    for (std::map<std::string, std::string>::iterator it = headers.begin(); it != headers.end(); ++it)
+        res << it->first << ": " << it->second << "\r\n";
+    res << "\r\n"; // linha em branco antes do body
+    res << body_;
+
     return (res.str());
 }
 
@@ -324,6 +330,7 @@ void Response::setCode(const int code)
         codeToMessage[400] = "Bad Request";
         codeToMessage[403] = "Forbidden";
         codeToMessage[404] = "Not Found";
+        codeToMessage[408] = "Request Timeout";
         codeToMessage[405] = "Method Not Allowed";
         codeToMessage[414] = "URI too long";
         codeToMessage[500] = "Internal Server Error";
@@ -344,22 +351,46 @@ void Response::setPage(const int code, const std::string &message, bool error)
         body_ = generateDefaultPage(code, message, error);
     else
         readFileIntoBody("." + errorPagePath);
+
+    // Content-Length e Content-Type
     setHeader(HEADER_CONTENT_LENGTH, int_to_string(body_.size()));
     setHeader(HEADER_CONTENT_TYPE, MIME_HTML);
+
+    // Fechar a conexão para erros ou timeout
+    // if (code >= 400 || code == 408)
+    //     setHeader(HEADER_CONNECTION, "close");
+    // else if (keep_alive_)
+    //     setHeader(HEADER_CONNECTION, "keep-alive");
 }
 
 std::string Response::generateDefaultPage(const int code, const std::string &message, bool error) const
 {
     std::ostringstream html;
-    html << "<!DOCTYPE html>\n<html><head><title>" << code << " " << message << "</title></head>"
-         << "<body style='font-family:sans-serif;text-align:center;margin-top:100px;'>";
+    html << "<!DOCTYPE html>\r\n"
+         << "<html>\r\n"
+         << "<head>\r\n"
+         << "<meta charset=\"UTF-8\">\r\n"
+         << "<title>" << code << " " << message << "</title>\r\n"
+         << "<style>body{font-family:sans-serif;text-align:center;margin-top:100px;}</style>\r\n"
+         << "</head>\r\n"
+         << "<body>\r\n";
+
     if (error)
-        html << "<h1>Error ";
+        html << "<h1>Error " << code << "</h1>\r\n";
     else
-        html << "<h1>Status ";
-    html << code << "</h1><p>" << message << "</p></body></html>";
+        html << "<h1>Status " << code << "</h1>\r\n";
+
+    html << "<p>" << message << "</p>\r\n";
+
+    // Debug info opcional (fd/port) para timeout ou erros específicos
+    // if (code == 408)
+    //     html << "<p><small>Client fd(" << client_fd_ << ")/port(" << client_port_ << ")</small></p>\r\n";
+
+    html << "</body>\r\n</html>\r\n";
+
     return html.str();
 }
+
 
 void Response::setFullPath(const std::string &reqPath) {
     fullPath_.append(reqPath);
@@ -432,7 +463,7 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
     else // HTTP/1.0
         want_close = (connection != "keep-alive"); // default is close
 
-    setHeader("connection", want_close ? "close" : "keep-alive");
+    setHeader("Connection", want_close ? "close" : "keep-alive");
 
     return (writeResponseString());
 }

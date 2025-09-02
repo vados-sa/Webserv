@@ -105,9 +105,16 @@ bool Request::parseBody(std::string &raw)
     if (raw.empty() && method_ != "POST")
         return (true);
 
-    std::map<std::string, std::string>::iterator it = headers_.find("content-length");
+    std::map<std::string, std::string>::iterator it = headers_.find("transfer-encoding");
+    if (it != headers_.end() && it->second == "chunked")
+    {
+        return parseChunkedBody(raw); // use the helper we wrote earlier
+    }
+
+    // 🔹 2. Otherwise, fall back to Content-Length
+    it = headers_.find("content-length");
     if (it == headers_.end())
-        return (false);
+        return false;
 
     const std::string &lengthStr = it->second;
     long length = -1;
@@ -125,6 +132,56 @@ bool Request::parseBody(std::string &raw)
     body_= raw.substr(0, length);
     raw.erase(0, length);
     return (true);
+}
+
+bool Request::parseChunkedBody(std::string &raw)
+{
+    body_.clear();
+    std::string::size_type pos = 0;
+
+    while (true)
+    {
+        // 1. Find end of the chunk size line
+        std::string::size_type endline = raw.find("\r\n", pos);
+        if (endline == std::string::npos)
+            return false; // not enough data yet
+
+        // 2. Parse chunk size (hexadecimal)
+        std::string sizeStr = raw.substr(pos, endline - pos);
+        std::istringstream iss(sizeStr);
+        std::size_t chunkSize = 0;
+        iss >> std::hex >> chunkSize;
+
+        if (iss.fail())
+            return false; // bad chunk size
+
+        pos = endline + 2; // move past "\r\n"
+
+        // 3. If chunk size is 0 → end of body
+        if (chunkSize == 0)
+        {
+            // skip trailing CRLF after last 0\r\n
+            std::string::size_type trailerEnd = raw.find("\r\n", pos);
+            if (trailerEnd == std::string::npos)
+                return false;             // wait for end
+            raw.erase(0, trailerEnd + 2); // consume used data
+            return true;
+        }
+
+        // 4. Make sure we have the whole chunk data
+        if (raw.size() < pos + chunkSize + 2)
+            return false; // wait for more
+
+        // 5. Append chunk to body
+        body_.append(raw, pos, chunkSize);
+
+        pos += chunkSize;
+
+        // 6. Chunks are followed by CRLF
+        if (raw.substr(pos, 2) != "\r\n")
+            return false; // malformed
+        pos += 2;
+    }
 }
 
 std::ostream &operator<<(std::ostream &out, const Request &obj) {

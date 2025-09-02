@@ -19,8 +19,9 @@ private:
     bool parseHeaders(std::string &raw);
     bool parseBody(std::string &raw);
     void parseRequest(const std::string &raw);
+    bool parseChunkedBody(std::string &raw);
 
-public:
+public :
     Request();
     explicit Request(const std::string &raw);
 
