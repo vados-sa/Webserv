@@ -48,7 +48,6 @@ class Config
         void handleIdleClient(int client_idx, int pollfd_idx);
 		void handleClientRequest(int pollfd_idx, int client_idx);
         void handleResponse(int client_idx, int pollfd_idx);
-		bool sendResponse(int pollfd_idx, int client_idx);
 		void cleanup();
 
     public:

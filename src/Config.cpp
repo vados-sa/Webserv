@@ -147,22 +147,32 @@ bool Config::pollLoop(int server_count)
 
         for (int i = poll_fds.size() - 1; i >= 0; --i)
         {
+            const short revent = poll_fds[i].revents;
 
-            if ((i < server_count))
-            {
-                if (poll_fds[i].revents & POLLIN)
-                {
-                    handleNewConnection(poll_fds[i].fd, i);
+            if (revent & (POLLERR | POLLHUP | POLLNVAL)) { // broken fds - rare on server fds
+                std::cerr << "fd " << poll_fds[i].fd << " error/hup/nval\n";
+                if (i >= server_count) {
+                    const int client_idx = i - server_count;
+                    close(poll_fds[i].fd);
+                    poll_fds.erase(poll_fds.begin() + i);
+                    clients.erase(clients.begin() + client_idx);
                 }
+                continue;
+            }
+
+            if (i < server_count)
+            {
+                if (revent & POLLIN)
+                    handleNewConnection(poll_fds[i].fd, i);
                 continue;
             }
 
             const int client_idx = i - server_count;
             if (clients[client_idx].isTimedOut(60) && clients[client_idx].getState() != Client::IDLE)
-                handleIdleClient(client_idx, i); // handle http error !!
-            else if (poll_fds[i].revents & POLLIN)
+                handleIdleClient(client_idx, i);
+            else if (revent & POLLIN)
                 handleClientRequest(i, client_idx);
-            else if (poll_fds[i].revents & POLLOUT)
+            else if (revent & POLLOUT)
                 handleResponse(client_idx, i);
         }
     }
@@ -401,7 +411,11 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx)
     int bytes = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
     if (bytes < 0)
     {
-        return; // check with valgrind if client_fd has to be closed
+        std::cerr << "❌ recv() failed on fd " << client_fd << "\n";
+        close(client_fd);
+        poll_fds.erase(poll_fds.begin() + pollfd_idx);
+        clients.erase(clients.begin() + client_idx);
+        return;
     }
     if (bytes == 0)
     {
@@ -460,9 +474,14 @@ void Config::handleResponse(int client_idx, int pollfd_idx)
         ssize_t bytes = send(client_fd, responseStr.c_str() + alreadySent, remaining, 0);
         if (bytes < 0)
         {
-            perror("send failed");
+            std::cerr << "❌ send() failed on fd " << client_fd << "\n";
+            close(client_fd);
+            poll_fds.erase(poll_fds.begin() + pollfd_idx);
+            clients.erase(clients.begin() + client_idx);
             return;
         }
+        if (bytes == 0)
+            return ;
         client.setBytesSent(alreadySent + bytes);
     }
 
@@ -488,47 +507,6 @@ void Config::handleResponse(int client_idx, int pollfd_idx)
             poll_fds[pollfd_idx].events = POLLIN;
         }
     }
-}
-
-bool Config::sendResponse(int pollfd_idx, int client_idx)
-{
-    Client &client = clients[client_idx];
-    int client_fd = poll_fds[pollfd_idx].fd;
-    const std::string &response = client.getResponse();
-    size_t already_sent = client.getBytesSent(); // assume returns reference
-
-    while (already_sent < response.size())
-    {
-        ssize_t bytes_sent = send(client_fd,
-                                  response.c_str() + already_sent,
-                                  response.size() - already_sent,
-                                  0);
-        if (bytes_sent > 0)
-        {
-            already_sent += bytes_sent; // accumulate sent bytes
-        }
-        else if (bytes_sent == 0)
-        {
-            // Connection closed by client
-            return false;
-        }
-        else
-        {
-            if (errno == EAGAIN || errno == EWOULDBLOCK)
-            {
-                // Socket temporarily not writable; try again later
-                return false;
-            }
-            else
-            {
-                perror("send failed");
-                return false;
-            }
-        }
-    }
-
-    // Fully sent
-    return true;
 }
 
 void Config::cleanup()
