@@ -480,6 +480,8 @@ void Config::handleResponse(int client_idx, int pollfd_idx)
             clients.erase(clients.begin() + client_idx);
             return;
         }
+        if (bytes == 0)
+            return ;
         client.setBytesSent(alreadySent + bytes);
     }
 
