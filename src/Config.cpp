@@ -500,47 +500,6 @@ void Config::handleResponse(int client_idx, int pollfd_idx)
     }
 }
 
-bool Config::sendResponse(int pollfd_idx, int client_idx)
-{
-    Client &client = clients[client_idx];
-    int client_fd = poll_fds[pollfd_idx].fd;
-    const std::string &response = client.getResponse();
-    size_t already_sent = client.getBytesSent(); // assume returns reference
-
-    while (already_sent < response.size())
-    {
-        ssize_t bytes_sent = send(client_fd,
-                                  response.c_str() + already_sent,
-                                  response.size() - already_sent,
-                                  0);
-        if (bytes_sent > 0)
-        {
-            already_sent += bytes_sent; // accumulate sent bytes
-        }
-        else if (bytes_sent == 0)
-        {
-            // Connection closed by client
-            return false;
-        }
-        else
-        {
-            if (errno == EAGAIN || errno == EWOULDBLOCK)
-            {
-                // Socket temporarily not writable; try again later
-                return false;
-            }
-            else
-            {
-                perror("send failed");
-                return false;
-            }
-        }
-    }
-
-    // Fully sent
-    return true;
-}
-
 void Config::cleanup()
 {
     for (size_t i = 1; i < poll_fds.size(); ++i)
