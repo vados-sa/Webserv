@@ -1,5 +1,6 @@
 #include "Config.hpp"
 #include "ConfigParser.hpp"
+#include "HttpException.hpp"
 
 Config::Config(const std::string &filepath) : client_count(0)
 {
@@ -136,34 +137,40 @@ bool Config::pollLoop(int server_count)
         if (ready < 0)
         {
             cleanup();
-            if (errno == EINTR)
-            {
+            if (errno == EINTR) {
                 std::cout << "📡 Signal received, gracefully shutting down..." << std::endl;
                 return true;
             }
             perror("poll failed");
-            return false;
+            return (false);
         }
 
-        for (int i = poll_fds.size() - 1; i >= 0; --i)
-        {
+        for (int i = poll_fds.size() - 1; i >= 0; --i) {
 
             if ((i < server_count))
             {
-                if (poll_fds[i].revents & POLLIN)
-                {
+                if (poll_fds[i].revents & POLLIN) {
                     handleNewConnection(poll_fds[i].fd, i);
                 }
                 continue;
             }
 
             const int client_idx = i - server_count;
-            if (clients[client_idx].isTimedOut(60) && clients[client_idx].getState() != Client::IDLE)
-                handleIdleClient(client_idx, i); // handle http error !!
-            else if (poll_fds[i].revents & POLLIN)
-                handleClientRequest(i, client_idx);
-            else if (poll_fds[i].revents & POLLOUT)
-                handleResponse(client_idx, i);
+            try {
+                if (clients[client_idx].isTimedOut(60) && clients[client_idx].getState() != Client::IDLE)
+                    handleIdleClient(client_idx, i);
+                else if (poll_fds[i].revents & POLLIN)
+                    handleClientRequest(i, client_idx);
+                else if (poll_fds[i].revents & POLLOUT)
+                    handleResponse(client_idx, i);
+            } catch (const HttpException &e) {
+                ServerConfig srv = this->servers[clients[client_idx].getServerIndex()];
+                std::map<int, std::string> error_pages = srv.getErrorPagesConfig();
+                Response res(error_pages, e.getStatusCode(), e.what(), e.getError());
+                std::string res_string = res.writeResponseString(); //some checks maybe?
+                clients[client_idx].setResponseBuffer(res_string);
+                //poll_fds[pollfd_idx].events = POLLOUT;
+            }
         }
     }
 
@@ -211,7 +218,7 @@ void Config::handleNewConnection(int server_fd, int server_idx)
               << std::endl;
 }
 
-void Config::handleIdleClient(int client_idx, int pollfd_idx) 
+void Config::handleIdleClient(int client_idx, int pollfd_idx)
 {
     Client &client = clients[client_idx];
     ServerConfig srv = servers[client.getServerIndex()];
@@ -224,7 +231,7 @@ void Config::handleIdleClient(int client_idx, int pollfd_idx)
     Response *res = new Response(srv.getErrorPagesConfig(), 408, errorMessage, true);
     std::string res_string = res->writeResponseString();
 
-    client.setResponseObj(res);
+    client.setResponseObj(res); //does client need to hold the obj?
     client.setResponseBuffer(res_string);
 
     poll_fds[pollfd_idx].events = POLLOUT;
