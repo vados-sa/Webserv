@@ -147,22 +147,32 @@ bool Config::pollLoop(int server_count)
 
         for (int i = poll_fds.size() - 1; i >= 0; --i)
         {
+            const short revent = poll_fds[i].revents;
 
-            if ((i < server_count))
-            {
-                if (poll_fds[i].revents & POLLIN)
-                {
-                    handleNewConnection(poll_fds[i].fd, i);
+            if (revent & (POLLERR | POLLHUP | POLLNVAL)) { // broken fds - rare on server fds
+                std::cerr << "fd " << poll_fds[i].fd << " error/hup/nval\n";
+                if (i >= server_count) {
+                    const int client_idx = i - server_count;
+                    close(poll_fds[i].fd);
+                    poll_fds.erase(poll_fds.begin() + i);
+                    clients.erase(clients.begin() + client_idx);
                 }
+                continue;
+            }
+
+            if (i < server_count)
+            {
+                if (revent & POLLIN)
+                    handleNewConnection(poll_fds[i].fd, i);
                 continue;
             }
 
             const int client_idx = i - server_count;
             if (clients[client_idx].isTimedOut(60) && clients[client_idx].getState() != Client::IDLE)
-                handleIdleClient(client_idx, i); // handle http error !!
-            else if (poll_fds[i].revents & POLLIN)
+                handleIdleClient(client_idx, i);
+            else if (revent & POLLIN)
                 handleClientRequest(i, client_idx);
-            else if (poll_fds[i].revents & POLLOUT)
+            else if (revent & POLLOUT)
                 handleResponse(client_idx, i);
         }
     }
