@@ -106,8 +106,7 @@ bool Request::parseBody(std::string &raw)
         return (true);
 
     std::map<std::string, std::string>::iterator it = headers_.find("transfer-encoding");
-    if (it != headers_.end() && it->second == "chunked")
-    {
+    if (!raw.empty() && it != headers_.end() && it->second == "chunked") {
         return parseChunkedBody(raw); // use the helper we wrote earlier
     }
 

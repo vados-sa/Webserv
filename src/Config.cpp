@@ -324,11 +324,11 @@ static long parse_chunked_body_consumed(const std::string &buf, size_t body_star
 
         if (chunk_size == 0)
         {
-            std::string::size_type tend = buf.find("\r\n\r\n", p); // Trailers (optional): end with CRLFCRLF
-            if (tend == std::string::npos)
-                return 0;            // need more trailers or final CRLFCRLF
-            return (long)(tend + 4); // everything up to end of trailers
-        } // else: loop for next chunk
+            // // último chunk, fim do corpo
+            // if (buf.size() < p + 2)
+            //     return 0;         // ainda não recebeu o CRLF final
+            return (long)(p + 2); // posição logo após o CRLF do último chunk
+        }
     }
 }
 
