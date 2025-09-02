@@ -411,7 +411,11 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx)
     int bytes = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
     if (bytes < 0)
     {
-        return; // check with valgrind if client_fd has to be closed
+        std::cerr << "❌ recv() failed on fd " << client_fd << "\n";
+        close(client_fd);
+        poll_fds.erase(poll_fds.begin() + pollfd_idx);
+        clients.erase(clients.begin() + client_idx);
+        return;
     }
     if (bytes == 0)
     {
@@ -470,7 +474,10 @@ void Config::handleResponse(int client_idx, int pollfd_idx)
         ssize_t bytes = send(client_fd, responseStr.c_str() + alreadySent, remaining, 0);
         if (bytes < 0)
         {
-            perror("send failed");
+            std::cerr << "❌ send() failed on fd " << client_fd << "\n";
+            close(client_fd);
+            poll_fds.erase(poll_fds.begin() + pollfd_idx);
+            clients.erase(clients.begin() + client_idx);
             return;
         }
         client.setBytesSent(alreadySent + bytes);
