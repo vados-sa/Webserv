@@ -154,6 +154,7 @@ bool Config::pollLoop(int server_count)
                 if (i >= server_count) {
                     const int client_idx = i - server_count;
                     close(poll_fds[i].fd);
+                    //client_count--;
                     poll_fds.erase(poll_fds.begin() + i);
                     clients.erase(clients.begin() + client_idx);
                 }
@@ -201,6 +202,7 @@ void Config::handleNewConnection(int server_fd, int server_idx)
     {
         std::cerr << "Refusing client, max reached\n";
         close(client_fd);
+        client_count--;
         return;
     }
 
@@ -217,6 +219,7 @@ void Config::handleNewConnection(int server_fd, int server_idx)
     {
         perror("fcntl failed for client");
         close(client_fd);
+        client_count--;
         return;
     }
 
@@ -419,6 +422,7 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx)
     {
         std::cerr << "❌ recv() failed on fd " << client_fd << "\n";
         close(client_fd);
+        client_count--;
         poll_fds.erase(poll_fds.begin() + pollfd_idx);
         clients.erase(clients.begin() + client_idx);
         return;
@@ -430,6 +434,7 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx)
                   << "port - " << client.getPort() << "\n"
                   << std::endl;
         close(client_fd);
+        client_count--;
         poll_fds.erase(poll_fds.begin() + pollfd_idx);
         clients.erase(clients.begin() + (client_idx));
         return;
@@ -484,6 +489,7 @@ void Config::handleResponse(int client_idx, int pollfd_idx)
         {
             std::cerr << "❌ send() failed on fd " << client_fd << "\n";
             close(client_fd);
+            client_count--;
             poll_fds.erase(poll_fds.begin() + pollfd_idx);
             clients.erase(clients.begin() + client_idx);
             return;
@@ -507,6 +513,7 @@ void Config::handleResponse(int client_idx, int pollfd_idx)
                   << "port - " << client.getPort() << "\n"
                   << std::endl;
             close(client_fd);
+            client_count--;
             poll_fds.erase(poll_fds.begin() + pollfd_idx);
             clients.erase(clients.begin() + client_idx);
         }
@@ -519,12 +526,10 @@ void Config::handleResponse(int client_idx, int pollfd_idx)
 
 void Config::cleanup()
 {
-    for (size_t i = 0; i < poll_fds.size(); ++i)
+    for (size_t i = 1; i < poll_fds.size(); ++i)
     {
         close(poll_fds[i].fd);
     }
-    servers.clear();
-    serverSockets.clear();
     clients.clear();
     poll_fds.clear();
 }
