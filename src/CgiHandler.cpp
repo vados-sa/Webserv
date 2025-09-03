@@ -1,16 +1,18 @@
 #include "Response.hpp"
 #include "LocationConfig.hpp"
 #include "CgiHandler.hpp"
-#include <cstdlib>               // strdup()
-#include <iostream>              // std::cout, std::cerr, std::endl
-#include <sstream>               // std::istringstream, std::ostringstream, std::stringstream
-#include <fstream>               // std::ofstream (for file uploads)
-#include <sys/stat.h>            // struct stat, stat()
-#include <unistd.h>              // fork(), pipe(), dup2(), execve(), chdir(), read(), write(), close(), usleep()
-#include <sys/types.h>           // pid_t, ssize_t
-#include <sys/wait.h>            // waitpid(), WIFEXITED(), WEXITSTATUS(), WNOHANG
-#include <signal.h>              // kill(), SIGKILL
-#include <errno.h>               // errno, perror()
+#include <cstdlib>
+#include <stdexcept>
+#include <sstream>
+#include <iostream>
+#include <sys/stat.h>
+#include <fstream>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <signal.h>
+#include <cstring>
+#include <cerrno>
 
 CgiHandler::CgiHandler(const Request &reqObj, const LocationConfig &locConfig) : status_cgi(false) {
 
@@ -50,7 +52,7 @@ CgiHandler::CgiHandler(const Request &reqObj, const LocationConfig &locConfig) :
 	env["REQUEST_METHOD"] = reqObj.getMethod();
 	env["SCRIPT_FILENAME"] = cgiScriptPath;
 	env["SERVER_PROTOCOL"] = reqObj.getVersion();
-	env["CONTENT_LENGTH"] = body.empty() ? "0" : std::to_string(body.size());
+	env["CONTENT_LENGTH"] = body.empty() ? "0" : intToString(body.size());
 
 	std::map<std::string, std::string> headers = reqObj.getHeaders();
     for (std::map<std::string, std::string>::iterator it = headers.begin(); it != headers.end(); ++it) {
@@ -418,7 +420,7 @@ std::string getInterpreterPath(const std::string &cgiExtension) {
 
     char buffer[128];
     std::ostringstream result;
-    while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+    while (fgets(buffer, sizeof(buffer), pipe) != NULL) {
         result << buffer;
     }
     pclose(pipe);

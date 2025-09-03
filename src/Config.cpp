@@ -1,5 +1,6 @@
 #include "Config.hpp"
 #include "ConfigParser.hpp"
+#include "HttpException.hpp"
 
 Config::Config(const std::string &filepath) : client_count(0)
 {
@@ -136,13 +137,12 @@ bool Config::pollLoop(int server_count)
         if (ready < 0)
         {
             cleanup();
-            if (errno == EINTR)
-            {
+            if (errno == EINTR) {
                 std::cout << "📡 Signal received, gracefully shutting down..." << std::endl;
                 return true;
             }
             perror("poll failed");
-            return false;
+            return (false);
         }
 
         for (int i = poll_fds.size() - 1; i >= 0; --i)
@@ -168,12 +168,22 @@ bool Config::pollLoop(int server_count)
             }
 
             const int client_idx = i - server_count;
-            if (clients[client_idx].isTimedOut(60) && clients[client_idx].getState() != Client::IDLE)
-                handleIdleClient(client_idx, i);
-            else if (revent & POLLIN)
-                handleClientRequest(i, client_idx);
-            else if (revent & POLLOUT)
+            try {
+                if (clients[client_idx].isTimedOut(60) && clients[client_idx].getState() != Client::IDLE)
+                    handleIdleClient(client_idx, i);
+                else if (poll_fds[i].revents & POLLIN)
+                    handleClientRequest(i, client_idx);
+                else if (poll_fds[i].revents & POLLOUT)
+                    handleResponse(client_idx, i);
+            } catch (const HttpException &e) {
+                ServerConfig srv = this->servers[clients[client_idx].getServerIndex()];
+                std::map<int, std::string> error_pages = srv.getErrorPagesConfig();
+                Response res(error_pages, e.getStatusCode(), e.what(), e.getError());
+                std::string res_string = res.writeResponseString(); //some checks maybe?
+                //clients[client_idx].setResponseBuffer(res_string);
                 handleResponse(client_idx, i);
+                //poll_fds[pollfd_idx].events = POLLOUT;
+            }
         }
     }
 
@@ -221,7 +231,7 @@ void Config::handleNewConnection(int server_fd, int server_idx)
               << std::endl;
 }
 
-void Config::handleIdleClient(int client_idx, int pollfd_idx) 
+void Config::handleIdleClient(int client_idx, int pollfd_idx)
 {
     Client &client = clients[client_idx];
     ServerConfig srv = servers[client.getServerIndex()];
@@ -231,14 +241,10 @@ void Config::handleIdleClient(int client_idx, int pollfd_idx)
         << ")/port(" << clients[client_idx].getPort() << ")";
     std::string errorMessage = oss.str();
 
-    Response *res = new Response(srv.getErrorPagesConfig(), 408, errorMessage, true);
-    std::string res_string = res->writeResponseString();
-
-    client.setResponseObj(res);
-    client.setResponseBuffer(res_string);
-
     poll_fds[pollfd_idx].events = POLLOUT;
     client.setState(Client::IDLE);
+
+    throw HttpException(408, errorMessage, true);
 }
 
 // Parse the header block (up to and incl. the CRLFCRLF) into a lowercased key map.
@@ -330,11 +336,11 @@ static long parse_chunked_body_consumed(const std::string &buf, size_t body_star
 
         if (chunk_size == 0)
         {
-            std::string::size_type tend = buf.find("\r\n\r\n", p); // Trailers (optional): end with CRLFCRLF
-            if (tend == std::string::npos)
-                return 0;            // need more trailers or final CRLFCRLF
-            return (long)(tend + 4); // everything up to end of trailers
-        } // else: loop for next chunk
+            // // último chunk, fim do corpo
+            // if (buf.size() < p + 2)
+            //     return 0;         // ainda não recebeu o CRLF final
+            return (long)(p + 2); // posição logo após o CRLF do último chunk
+        }
     }
 }
 
@@ -437,14 +443,17 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx)
             break;
         if (consumed < 0)
         {
-            Response res(servers[client.getServerIndex()].getErrorPagesConfig());
-            Request bad;
-            bad.setVersion("HTTP/1.1");
-            res.setPage(400, "Bad Request", true);
-            client.setResponseBuffer(res.writeResponseString());
             client.setKeepAlive(false);
             poll_fds[pollfd_idx].events = POLLIN | POLLOUT;
-            return;
+            throw HttpException(400, "Bad Request", true);
+            // Response res(servers[client.getServerIndex()].getErrorPagesConfig());
+            // Request bad;
+            // bad.setVersion("HTTP/1.1");
+            // res.setPage(400, "Bad Request", true);
+            // client.setResponseBuffer(res.writeResponseString());
+            // client.setKeepAlive(false);
+            // poll_fds[pollfd_idx].events = POLLIN | POLLOUT;
+            // return;
         }
 
         std::string raw = client.getRequest().substr(0, (size_t)consumed);
@@ -463,7 +472,6 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx)
 void Config::handleResponse(int client_idx, int pollfd_idx)
 {
     Client &client = clients[client_idx];
-
     int client_fd = client.getFd();
     std::string responseStr = client.getResponse();
     size_t alreadySent = client.getBytesSent();
