@@ -154,9 +154,9 @@ bool Config::pollLoop(int server_count)
                 if (i >= server_count) {
                     const int client_idx = i - server_count;
                     close(poll_fds[i].fd);
-                    //client_count--;
                     poll_fds.erase(poll_fds.begin() + i);
                     clients.erase(clients.begin() + client_idx);
+                    client_count--;
                 }
                 continue;
             }
@@ -197,15 +197,6 @@ void Config::handleNewConnection(int server_fd, int server_idx)
     socklen_t client_len = sizeof(client_addr);
     int client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_len);
 
-    client_count++;
-    if (client_count > MAX_CLIENT)
-    {
-        std::cerr << "Refusing client, max reached\n";
-        close(client_fd);
-        client_count--;
-        return;
-    }
-
     if (client_fd < 0)
     {
         if (errno != EAGAIN && errno != EWOULDBLOCK)
@@ -215,17 +206,25 @@ void Config::handleNewConnection(int server_fd, int server_idx)
         return;
     }
 
+    if (client_count >= MAX_CLIENT)
+    {
+        std::cerr << "Refusing client, max reached\n";
+        close(client_fd);
+        return;
+    }
+
     if (fcntl(client_fd, F_SETFL, O_NONBLOCK) < 0)
     {
         perror("fcntl failed for client");
         close(client_fd);
-        client_count--;
         return;
     }
 
     clients.push_back(Client(client_fd, server_idx));
     pollfd client_pollfd = {client_fd, POLLIN, 0};
     poll_fds.push_back(client_pollfd);
+
+    client_count++;
 
     int port = ntohs(client_addr.sin_port);
     clients.back().setPort(port);
@@ -422,9 +421,9 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx)
     {
         std::cerr << "❌ recv() failed on fd " << client_fd << "\n";
         close(client_fd);
-        client_count--;
         poll_fds.erase(poll_fds.begin() + pollfd_idx);
         clients.erase(clients.begin() + client_idx);
+        client_count--;
         return;
     }
     if (bytes == 0)
@@ -434,9 +433,9 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx)
                   << "port - " << client.getPort() << "\n"
                   << std::endl;
         close(client_fd);
-        client_count--;
         poll_fds.erase(poll_fds.begin() + pollfd_idx);
         clients.erase(clients.begin() + (client_idx));
+        client_count--;
         return;
     }
 
@@ -489,9 +488,9 @@ void Config::handleResponse(int client_idx, int pollfd_idx)
         {
             std::cerr << "❌ send() failed on fd " << client_fd << "\n";
             close(client_fd);
-            client_count--;
             poll_fds.erase(poll_fds.begin() + pollfd_idx);
             clients.erase(clients.begin() + client_idx);
+            client_count--;
             return;
         }
         if (bytes == 0)
@@ -513,9 +512,9 @@ void Config::handleResponse(int client_idx, int pollfd_idx)
                   << "port - " << client.getPort() << "\n"
                   << std::endl;
             close(client_fd);
-            client_count--;
             poll_fds.erase(poll_fds.begin() + pollfd_idx);
             clients.erase(clients.begin() + client_idx);
+            client_count--;
         }
         else
         {
