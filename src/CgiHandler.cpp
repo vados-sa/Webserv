@@ -295,6 +295,8 @@ std::string CgiHandler::run() {
                 kill(pid, SIGKILL);
                 waitpid(pid, &timeout_status, 0);
                 error = TIMEOUT;
+                close(outPipe[0]);
+                close(errPipe[0]);
                 std::cerr << "CGI script timed out" << std::endl;
                 return "";
             }
