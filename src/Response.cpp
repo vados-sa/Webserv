@@ -3,6 +3,8 @@
 #include "LocationConfig.hpp"
 #include "CgiHandler.hpp"
 #include "Config.hpp"
+#include "HttpException.hpp"
+
 #include <dirent.h>
 #include <iostream>
 #include <sstream>
@@ -58,27 +60,26 @@ void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
                 generateAutoIndex(loc);
                 return;
             } else
-                return (setPage(403, "Directory listing denied.", true));
+                throw HttpException(403, "Directory listing denied.", true);
         }
 
         if (!S_ISREG(file_stat.st_mode))
-            return (setPage(403, "Requested resource is not a file", true));
+            throw HttpException(403, "Requested resource is not a file", true);
         if (!(file_stat.st_mode & S_IROTH))
-            return (setPage(403, "You do not have permission to read this file", true));
+            throw HttpException(403, "You do not have permission to read this file", true);
 
         readFileIntoBody(fullPath_);
         setHeader(HEADER_CONTENT_LENGTH, int_to_string(body_.size()));
         setHeader(HEADER_CONTENT_TYPE, getContentType(fullPath_));
-        statusCode_ = 200;
         return;
     } else
     {
         if (errno == ENOENT)
             return (setPage(404, "File does not exist", true));
         else if (errno == EACCES)
-            return (setPage(403, "Access denied.", true));
+            throw HttpException(403, "Access denied.", true);
         else
-            return (setPage(500, "Internal server error while accessing file.", true));
+            throw HttpException(500, "Internal server error while accessing file.", true);
     }
 }
 
@@ -87,9 +88,9 @@ void Response:: readFileIntoBody(const std::string &fileName) {
     if (!file) {
         std::ifstream test(fileName.c_str());
         if (!test) {
-            setPage(404, "Not Found", true);
+            throw HttpException(404, "Not Found", true);
         } else {
-            setPage(500, "Server error: unable to open file.", true);
+            throw HttpException(500, "Server error: unable to open file.", true);
         }
         return;
     }
@@ -105,7 +106,7 @@ void Response::generateAutoIndex(const LocationConfig& loc) {
 
     DIR *dir = opendir(path.c_str());
     if (!dir){
-        setPage(403, "Forbidden", true);
+        throw HttpException(403, "Forbidden", true);
         return;
     }
 
@@ -135,7 +136,7 @@ void Response::generateAutoIndex(const LocationConfig& loc) {
     }
 
     html << "</ul>\n</body>\n</html>\n";
-    setPage(200, "OK", false);
+    // setPage(200, "OK", false);
     closedir(dir);
     body_ = html.str();
     return;
@@ -184,7 +185,7 @@ void Response::handlePost(const Request &reqObj, LocationConfig loc)
     }
 
     if (reqObj.getBody().empty()) {
-        return (setPage(400, "No body detected in request", true));
+        throw HttpException(400, "No body detected in request", true);
     }
 
     parseMultipartBody(reqObj); //insert some check here
