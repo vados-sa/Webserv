@@ -519,10 +519,12 @@ void Config::handleResponse(int client_idx, int pollfd_idx)
 
 void Config::cleanup()
 {
-    for (size_t i = 1; i < poll_fds.size(); ++i)
+    for (size_t i = 0; i < poll_fds.size(); ++i)
     {
         close(poll_fds[i].fd);
     }
+    servers.clear();
+    serverSockets.clear();
     clients.clear();
     poll_fds.clear();
 }
