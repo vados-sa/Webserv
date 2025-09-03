@@ -11,6 +11,8 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <signal.h>
+#include <cstring>
+#include <cerrno>
 
 CgiHandler::CgiHandler(const Request &reqObj, const LocationConfig &locConfig) : status_cgi(false) {
 
@@ -50,7 +52,7 @@ CgiHandler::CgiHandler(const Request &reqObj, const LocationConfig &locConfig) :
 	env["REQUEST_METHOD"] = reqObj.getMethod();
 	env["SCRIPT_FILENAME"] = cgiScriptPath;
 	env["SERVER_PROTOCOL"] = reqObj.getVersion();
-	env["CONTENT_LENGTH"] = body.empty() ? "0" : std::to_string(body.size());
+	env["CONTENT_LENGTH"] = body.empty() ? "0" : intToString(body.size());
 
 	std::map<std::string, std::string> headers = reqObj.getHeaders();
     for (std::map<std::string, std::string>::iterator it = headers.begin(); it != headers.end(); ++it) {
@@ -373,7 +375,7 @@ std::string getInterpreterPath(const std::string &cgiExtension) {
 
     char buffer[128];
     std::ostringstream result;
-    while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+    while (fgets(buffer, sizeof(buffer), pipe) != NULL) {
         result << buffer;
     }
     pclose(pipe);

@@ -86,9 +86,8 @@ void Client::setKeepAlive(const Request &req)
 
     bool want_close;
     if (version == "HTTP/1.1")
-        want_close = (connection == "close"); // default is keep-alive
+		want_close = (connection == "close"); // default is keep-alive
     else // HTTP/1.0
-        want_close = (connection != "keep-alive"); // default is close
-
+		want_close = (connection != "keep-alive"); // default is close
 	keep_alive = !want_close;
 }

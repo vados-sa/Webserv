@@ -565,9 +565,15 @@ void Response::handleRedirect(const LocationConfig &locConfig)
     setHeader("Location", newLocation);
 
     body_ =
-        "<html><head><title>" + std::to_string(statusCode) + " " + statusMessage_ + "</title></head>"
+        "<html><head><title>" + intToString(statusCode) + " " + statusMessage_ + "</title></head>"
         "<body style='font-family:sans-serif;text-align:center;margin-top:100px;'>"
-        "<h1>" + std::to_string(statusCode) + " " + statusMessage_ + "</h1>"
+        "<h1>" + intToString(statusCode) + " " + statusMessage_ + "</h1>"
         "<p>Resource has moved to <a href=\"" +
         newLocation + "\">" + newLocation + "</a>.</p></body></html>";
+}
+
+std::string intToString(int value) {
+    std::ostringstream oss;
+    oss << value;
+    return oss.str();
 }

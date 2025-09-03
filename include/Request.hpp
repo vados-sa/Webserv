@@ -5,6 +5,7 @@
 #include <iostream>
 
 #include "HttpMessage.hpp"
+#include <algorithm>
 
 class Request : public HttpMessage
 {

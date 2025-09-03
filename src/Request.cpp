@@ -1,5 +1,6 @@
 #include "Request.hpp"
 #include <sstream>
+#include <vector>
 
 Request::Request() : isCgi_(false) {};
 
@@ -72,8 +73,8 @@ bool Request::parseHeaders(std::string &raw)
 
     while (std::getline(iss, line))
     {
-        if (!line.empty() && line.back() == '\r')
-            line.pop_back();
+        if (!line.empty() && line[line.size() - 1] == '\r')
+            line.erase(line.size() - 1);
 
         if (line.empty())
             continue;
@@ -228,3 +229,4 @@ std::string normalizePath(const std::string &rawPath) {
     }
     return (normalized);
 }
+
