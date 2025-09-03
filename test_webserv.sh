@@ -113,10 +113,10 @@ CODE=$(curl -s -o /dev/null -w "%{http_code}" $BASE_URL/doesnotexist.html)
 print_result $CODE 404 "GET non-existing file"
 
 # --------------------
-# GET /images/ (autoindex)
-CODE=$(curl -s -o /dev/null -w "%{http_code}" $BASE_URL/images/)
-EXPECTED=$(get_expected /images GET)
-print_result $CODE $EXPECTED "GET /images/ (autoindex)"
+# GET /autoindex/ (autoindex)
+CODE=$(curl -s -o /dev/null -w "%{http_code}" $BASE_URL/autoindex/)
+EXPECTED=$(get_expected /autoindex GET)
+print_result $CODE $EXPECTED "GET /autoindex/ (autoindex)"
 
 # --------------------
 # GET /redirect-me

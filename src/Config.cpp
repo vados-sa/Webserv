@@ -459,8 +459,10 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx)
         std::string raw = client.getRequest().substr(0, (size_t)consumed);
         client.consumeRequestBytes((size_t)consumed);
         Request reqObj(raw);
+        std::cout << "This is the raw request: " << raw << std::endl;
         ServerConfig srv = servers[client.getServerIndex()];
         std::string response = buildRequestAndResponse(raw, srv, reqObj);
+        std::cout << "This is response string: " << response << std::endl;
         client.setKeepAlive(reqObj);
         poll_fds[pollfd_idx].events = POLLIN | POLLOUT;
         client.setResponseBuffer(response);
