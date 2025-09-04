@@ -7,7 +7,7 @@ void signal_handler(int sig) {
 
 int main(int ac, char *av[])
 {
-	signal(SIGINT, signal_handler);
+    signal(SIGINT, signal_handler);
 
     try
     {
@@ -28,11 +28,9 @@ int main(int ac, char *av[])
         if (!config.run()) {
             throw std::runtime_error("Server failed to run.");
         };
+    } catch (const std::exception &e) {
+        std::cerr << "\033[31m" << e.what() << "\033[0m" << std::endl;
+        return 1;
     }
-    catch (const std::exception &e)
-	{
-		std::cerr << "\033[31m" << e.what() << "\033[0m" << std::endl;
-		return 1;
-	}
-	return 0;
+    return 0;
 }

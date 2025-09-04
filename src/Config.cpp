@@ -156,6 +156,7 @@ bool Config::pollLoop(int server_count)
                     close(poll_fds[i].fd);
                     poll_fds.erase(poll_fds.begin() + i);
                     clients.erase(clients.begin() + client_idx);
+                    client_count--;
                 }
                 continue;
             }
@@ -196,20 +197,19 @@ void Config::handleNewConnection(int server_fd, int server_idx)
     socklen_t client_len = sizeof(client_addr);
     int client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_len);
 
-    client_count++;
-    if (client_count > MAX_CLIENT)
-    {
-        std::cerr << "Refusing client, max reached\n";
-        close(client_fd);
-        return;
-    }
-
     if (client_fd < 0)
     {
         if (errno != EAGAIN && errno != EWOULDBLOCK)
         {
             perror("accept failed");
         }
+        return;
+    }
+
+    if (client_count >= MAX_CLIENT)
+    {
+        std::cerr << "Refusing client, max reached\n";
+        close(client_fd);
         return;
     }
 
@@ -223,6 +223,8 @@ void Config::handleNewConnection(int server_fd, int server_idx)
     clients.push_back(Client(client_fd, server_idx));
     pollfd client_pollfd = {client_fd, POLLIN, 0};
     poll_fds.push_back(client_pollfd);
+
+    client_count++;
 
     int port = ntohs(client_addr.sin_port);
     clients.back().setPort(port);
@@ -421,6 +423,7 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx)
         close(client_fd);
         poll_fds.erase(poll_fds.begin() + pollfd_idx);
         clients.erase(clients.begin() + client_idx);
+        client_count--;
         return;
     }
     if (bytes == 0)
@@ -432,6 +435,7 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx)
         close(client_fd);
         poll_fds.erase(poll_fds.begin() + pollfd_idx);
         clients.erase(clients.begin() + (client_idx));
+        client_count--;
         return;
     }
 
@@ -488,6 +492,7 @@ void Config::handleResponse(int client_idx, int pollfd_idx)
             close(client_fd);
             poll_fds.erase(poll_fds.begin() + pollfd_idx);
             clients.erase(clients.begin() + client_idx);
+            client_count--;
             return;
         }
         if (bytes == 0)
@@ -511,6 +516,7 @@ void Config::handleResponse(int client_idx, int pollfd_idx)
             close(client_fd);
             poll_fds.erase(poll_fds.begin() + pollfd_idx);
             clients.erase(clients.begin() + client_idx);
+            client_count--;
         }
         else
         {
@@ -521,12 +527,15 @@ void Config::handleResponse(int client_idx, int pollfd_idx)
 
 void Config::cleanup()
 {
-    for (size_t i = 1; i < poll_fds.size(); ++i)
+    for (size_t i = 0; i < poll_fds.size(); ++i)
     {
         close(poll_fds[i].fd);
     }
-    clients.clear();
     poll_fds.clear();
+    serverSockets.clear();
+    servers.clear();
+    clients.clear();
+    client_count = 0;
 }
 
 std::ostream &operator<<(std::ostream &os, const Config &obj)

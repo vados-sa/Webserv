@@ -20,7 +20,7 @@
 
 // check necessity of includes
 
-const int MAX_CLIENT = 100;
+const int MAX_CLIENT = 1024;
 
 struct PortState {
     bool anyTaken;

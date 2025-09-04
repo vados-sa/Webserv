@@ -18,7 +18,11 @@ NC = \033[0m # No Color
 
 all: $(NAME)
 
-$(OBJ_DIR)/%.o: %.cpp | $(OBJ_DIR)
+
+# Get all header files in include/
+HEADERS = $(wildcard include/*.hpp)
+
+$(OBJ_DIR)/%.o: %.cpp $(HEADERS) | $(OBJ_DIR)
 	@mkdir -p $(dir $@)
 	@echo "$(YELLOW)Compiling $<...$(NC)"
 	@$(CXX) $(CXXFLAGS) -c $< -o $@
