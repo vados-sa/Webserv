@@ -21,7 +21,7 @@ jobs:
 
       - name: Start Webserv container
         run: |
-          docker run -d --name webserv_container2 -p 8080:8080 webserv
+          docker run -d --name webserv_container -p 8080:8080 webserv
 
       - name: Wait for Webserv to be ready
         run: |
