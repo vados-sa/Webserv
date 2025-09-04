@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Site 2 — WebServ Demo</title>
+  <meta name="description" content="Segundo site estático para testes com webserv." />
+  <style>
+    :root{
+      --bg: #0f172a;       /* slate-900 */
+      --panel: #111827;    /* gray-900 */
+      --muted: #94a3b8;    /* slate-400 */
+      --text: #e5e7eb;     /* gray-200 */
+      --accent: #22d3ee;   /* cyan-400 */
+      --accent-2: #a78bfa; /* violet-400 */
+      --ok: #34d399;       /* emerald-400 */
+      --warn: #fbbf24;     /* amber-400 */
+    }
+    *{ box-sizing: border-box }
+    html, body{ height: 100% }
+    body{
+      margin:0; font: 16px/1.6 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      background: radial-gradient(1200px 600px at 80% -10%, rgba(167,139,250,.25), transparent 60%),
+                  radial-gradient(900px 500px at -10% 30%, rgba(34,211,238,.15), transparent 60%),
+                  var(--bg);
+      color: var(--text);
+    }
+    header{
+      position: sticky; top:0; z-index: 10;
+      backdrop-filter: blur(6px);
+      background: color-mix(in oklab, var(--bg) 80%, transparent);
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    .wrap{ max-width: 1100px; margin: 0 auto; padding: 0 18px }
+    nav{ display: flex; align-items: center; justify-content: space-between; height: 64px }
+    .brand{ display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--text) }
+    .logo{
+      width: 34px; height:34px; border-radius: 10px;
+      background: conic-gradient(from 180deg, var(--accent), var(--accent-2), var(--ok), var(--accent));
+      box-shadow: 0 0 0 2px rgba(255,255,255,.07) inset, 0 10px 30px -12px rgba(167,139,250,.55);
+    }
+    .brand span{ font-weight: 700; letter-spacing: .3px }
+    .menu a{
+      color: var(--muted); text-decoration:none; margin-left:16px; font-weight:600
+    }
+    .menu a:hover{ color: var(--text) }
+
+    .hero{ padding: 72px 0 56px }
+    .hero h1{ font-size: clamp(28px, 4vw, 40px); line-height:1.2; margin: 10px 0 }
+    .hero p{ color: var(--muted); max-width: 60ch }
+    .cta{
+      margin-top: 22px; display:flex; gap:12px; flex-wrap: wrap
+    }
+    .btn{
+      display:inline-flex; align-items:center; gap:10px; text-decoration:none; font-weight:700;
+      padding: 12px 16px; border-radius: 12px; border:1px solid rgba(255,255,255,.1)
+    }
+    .btn.primary{ background: linear-gradient(135deg, var(--accent), var(--accent-2)); color:#0b1020 }
+    .btn.ghost{ color: var(--text) }
+
+    .grid{ display:grid; gap:16px; grid-template-columns: repeat(12, 1fr) }
+    .card{
+      grid-column: span 12; background: color-mix(in oklab, var(--panel) 85%, transparent);
+      border: 1px solid rgba(255,255,255,.06); border-radius: 16px; padding: 18px;
+      box-shadow: 0 10px 20px -15px rgba(0,0,0,.7)
+    }
+    .card h3{ margin:0 0 6px }
+    .tag{ font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; color: var(--muted) }
+
+    .two-col .card{ grid-column: span 12 }
+    @media (min-width: 760px){ .two-col .card{ grid-column: span 6 } }
+
+    footer{ margin: 40px 0 50px; color: var(--muted) }
+    code{ color: var(--accent) }
+    pre{ background: rgba(255,255,255,.04); padding: 12px; border-radius: 12px; overflow:auto }
+
+    /* tiny utility */
+    .sr{ position:absolute; left:-9999px }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <nav aria-label="Navegação principal">
+        <a class="brand" href="#top">
+          <i class="logo" aria-hidden="true"></i>
+          <span>Site 2</span>
+        </a>
+        <div class="menu">
+          <a href="#sobre">Sobre</a>
+          <a href="#status">Status</a>
+          <a href="#contato">Contato</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero" id="top">
+      <h1>Segundo site para <span style="white-space:nowrap">webserv</span></h1>
+      <p>Este é um HTML estático, leve e responsivo, ideal para servir como <em>segundo site</em> ou <code>server_name</code> alternativo nos seus testes.</p>
+      <div class="cta">
+        <a class="btn primary" href="#status">Ver status</a>
+        <a class="btn ghost" href="#como-usar">Como usar</a>
+      </div>
+    </section>
+
+    <section class="grid two-col" id="sobre">
+      <article class="card">
+        <h3>Sobre</h3>
+        <p>Você pode usar esta página para validar <strong>host headers</strong>, <strong>roteamento por servidor</strong> e respostas estáticas. Tudo sem dependências externas.</p>
+      </article>
+      <article class="card">
+        <h3>Ping rápido</h3>
+        <p>Se você está vendo isto através do domínio/porta esperada, seu segundo site está <strong style="color: var(--ok)">OK</strong>.</p>
+        <div class="tag">Hostname: <span id="host">(detectando…)</span></div>
+      </article>
+    </section>
+
+    <section class="grid" id="status" aria-labelledby="titulo-status">
+      <h2 id="titulo-status" class="sr">Status</h2>
+      <article class="card">
+        <h3>Variáveis do ambiente HTTP (client-side)</h3>
+        <p>Algumas informações úteis coletadas pelo navegador:</p>
+        <ul>
+          <li>User-Agent: <span class="tag" id="ua"></span></li>
+          <li>Idioma preferido: <span class="tag" id="lang"></span></li>
+          <li>Data/Hora local: <span class="tag" id="now"></span></li>
+          <li>Origem da página: <span class="tag" id="origin"></span></li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="grid" id="como-usar" aria-labelledby="titulo-uso">
+      <h2 id="titulo-uso" class="sr">Como usar</h2>
+      <article class="card">
+        <h3>Como usar este arquivo</h3>
+        <p>Salve como <code>site2.html</code> (ou <code>index.html</code>) dentro do diretório raiz do segundo servidor. Exemplo de configuração (Nginx):</p>
+        <pre><code>server {
+    listen 8081;
+    server_name segundo.local;
+    root /var/www/site2;
+    index index.html;
+}
+</code></pre>
+        <p>No seu <em>webserv</em>, aponte o <code>server_name</code> e a <code>root</code> para onde este arquivo estiver.</p>
+      </article>
+    </section>
+
+    <section class="grid" id="contato">
+      <article class="card">
+        <h3>Contato</h3>
+        <p>Coloque aqui links ou dados que você queira expor neste segundo site.</p>
+      </article>
+    </section>
+
+    <footer class="wrap">
+      <small>© <span id="year"></span> Site 2 • Feito para testes de servidor</small>
+    </footer>
+  </main>
+
+  <script>
+    // dados rápidos do cliente
+    (function(){
+      const $ = (id) => document.getElementById(id);
+      $("ua").textContent = navigator.userAgent;
+      $("lang").textContent = (navigator.language || "-");
+      $("now").textContent = new Date().toString();
+      $("origin").textContent = location.origin || location.href;
+      $("year").textContent = new Date().getFullYear();
+      $("host").textContent = location.host || "-";
+    })();
+  </script>
+</body>
+</html>

@@ -7,28 +7,30 @@ void signal_handler(int sig) {
 
 int main(int ac, char *av[])
 {
-	signal(SIGINT, signal_handler);
+    signal(SIGINT, signal_handler);
 
-	try {
-		if (ac != 2) {
-			throw std::runtime_error("Usage: ./webserv <config_file>");
-		}
-	
-		Config config(av[1]); //dps error check ou sei la! fiz aqui pra testar o parse
-		//std::cout << config << std::endl;
+    try
+    {
+        std::string configfile;
+        if (ac != 2) {
+            configfile = "config/simple.conf";
+        } else {
+            configfile = av[1];
+        }
 
-		if (!config.setupServer()) {
-			throw std::runtime_error("Failed to set server up.");
-		};
+        Config config(configfile);
 
-		if (!config.run()) {
-			throw std::runtime_error("Server failed to run.");
-		};
-	}
-	catch (const std::exception &e)
-	{
-		std::cerr << "\033[31m" << e.what() << "\033[0m" << std::endl;
-		return 1;
-	}
-	return 0;
+        // std::cout << config << std::endl;
+        if (!config.setupServer()) {
+            throw std::runtime_error("Failed to set server up.");
+        };
+
+        if (!config.run()) {
+            throw std::runtime_error("Server failed to run.");
+        };
+    } catch (const std::exception &e) {
+        std::cerr << "\033[31m" << e.what() << "\033[0m" << std::endl;
+        return 1;
+    }
+    return 0;
 }
