@@ -4,7 +4,7 @@
 # Example: ./test_webserv.sh 127.0.0.1 9080
 
 HOST=${1:-127.0.0.1}
-PORT=${2:-9080}
+PORT=${2:-8080}
 BASE_URL="http://$HOST:$PORT"
 
 # Colors
