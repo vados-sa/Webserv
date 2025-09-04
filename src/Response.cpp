@@ -465,7 +465,7 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
         want_close = (connection != "keep-alive"); // default is close
 
     setHeader("Connection", want_close ? "close" : "keep-alive");
-
+    setHeader("Content-Length", intToString(body_.size()));
     return (writeResponseString());
 }
 
