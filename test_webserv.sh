@@ -192,3 +192,12 @@ echo
 echo "------------------------------------"
 echo -e "📊 Summary: ${GREEN}$PASS_COUNT PASS${NC}, ${RED}$FAIL_COUNT FAIL${NC}"
 echo "------------------------------------"
+
+# Exit with failure if any test failed
+if [[ $FAIL_COUNT -ne 0 ]]; then
+    exit 1
+else
+    exit 0
+fi
+
+rm *.txt
