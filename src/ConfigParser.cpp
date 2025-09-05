@@ -418,19 +418,21 @@ std::vector<std::string> ConfigParser::parseAllowedMethods(const std::vector<std
             ret.push_back(method);
             seen.insert(method);
         }
-
-        //ret.push_back(tokens[i]);
     }
     return (ret);
 }
 
 std::pair<int, std::string> ConfigParser::parseRedirection(const std::vector<std::string> &tokens)
 {
+
     std::pair<int, std::string> entry;
     if (tokens.size() < 3) {
         errorMessage << fileName << ":" << lineNum << "  Unable to parse return, missing value";
         throw std::runtime_error(errorMessage.str());
     }
+
+    if (tokens[2] == "\"\"" || tokens[2].empty())
+        throw std::runtime_error("Redirection target must not be empty");
 
     if (tokens.size() > 3)
     {
@@ -445,9 +447,6 @@ std::pair<int, std::string> ConfigParser::parseRedirection(const std::vector<std
             throw std::runtime_error(errorMessage.str());
         }
     }
-
-    if (tokens[2].empty())
-        throw std::runtime_error("Redirection target must not be empty");
 
     int key = std::atoi(tokens[1].c_str());
     if (key == 0 && tokens[1] != "0")
@@ -501,26 +500,6 @@ bool ConfigParser::parseAutoindex(const std::vector<std::string> &tokens)
     throw std::runtime_error(errorMessage.str());
 }
 
-bool ConfigParser::parseAllowUpload(const std::vector<std::string> &tokens) {
-    if (tokens.size() < 2) {
-        errorMessage << fileName << ":" << lineNum << "  Missing allow_upload value in configuration file.";
-        throw std::runtime_error(errorMessage.str());
-
-    }
-
-    if (tokens.size() > 2) {
-        errorMessage << fileName << ":" << lineNum << "  Allow_upload contains unexpected extra tokens.";
-        throw std::runtime_error(errorMessage.str());
-    }
-
-    if (tokens[1] == "on")
-        return (true);
-    if (tokens[1] == "off")
-        return (false);
-
-    errorMessage << fileName << ":" << lineNum << "  Incorrect syntax for allow_upload directive." ;
-    throw std::runtime_error(errorMessage.str());
-}
 
 std::string ConfigParser::parseCgiExtension(const std::vector<std::string> &tokens)
 {

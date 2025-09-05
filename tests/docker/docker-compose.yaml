@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+  webserver:
+    build: .
+    container_name: webserv_c
+    volumes:
+      - ../..:/app
+    ports:
+      - "9080:9080"
+    command: bash
+    stdin_open: true
+    tty: true

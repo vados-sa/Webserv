@@ -4,7 +4,7 @@
 # Example: ./test_webserv.sh 127.0.0.1 9080
 
 HOST=${1:-127.0.0.1}
-PORT=${2:-9080}
+PORT=${2:-8080}
 BASE_URL="http://$HOST:$PORT"
 
 # Colors
@@ -192,3 +192,12 @@ echo
 echo "------------------------------------"
 echo -e "📊 Summary: ${GREEN}$PASS_COUNT PASS${NC}, ${RED}$FAIL_COUNT FAIL${NC}"
 echo "------------------------------------"
+
+# Exit with failure if any test failed
+if [[ $FAIL_COUNT -ne 0 ]]; then
+    exit 1
+else
+    exit 0
+fi
+
+rm *.txt
