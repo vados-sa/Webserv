@@ -501,26 +501,6 @@ bool ConfigParser::parseAutoindex(const std::vector<std::string> &tokens)
     throw std::runtime_error(errorMessage.str());
 }
 
-bool ConfigParser::parseAllowUpload(const std::vector<std::string> &tokens) {
-    if (tokens.size() < 2) {
-        errorMessage << fileName << ":" << lineNum << "  Missing allow_upload value in configuration file.";
-        throw std::runtime_error(errorMessage.str());
-
-    }
-
-    if (tokens.size() > 2) {
-        errorMessage << fileName << ":" << lineNum << "  Allow_upload contains unexpected extra tokens.";
-        throw std::runtime_error(errorMessage.str());
-    }
-
-    if (tokens[1] == "on")
-        return (true);
-    if (tokens[1] == "off")
-        return (false);
-
-    errorMessage << fileName << ":" << lineNum << "  Incorrect syntax for allow_upload directive." ;
-    throw std::runtime_error(errorMessage.str());
-}
 
 std::string ConfigParser::parseCgiExtension(const std::vector<std::string> &tokens)
 {
