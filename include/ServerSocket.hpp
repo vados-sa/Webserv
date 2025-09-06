@@ -36,4 +36,6 @@ class ServerSocket {
 		bool setupServerSocket(int port, std::string host);
 
 		int getFd() const {return fd;}
+		std::string getHost() const {return host;}
+		int getPort() const {return port;}
 };

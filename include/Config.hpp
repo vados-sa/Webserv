@@ -17,6 +17,9 @@
 #include <string>
 #include <cstring>
 #include <cstdlib>
+#include <iomanip>
+#include <ctime>
+#include <sstream>
 
 // check necessity of includes
 
@@ -29,6 +32,8 @@ struct PortState {
 
     PortState() : anyTaken(false), anyServerIdx(-1) {}
 };
+
+enum LogLevel { INFO, ACCESS, ERROR };
 
 class Config
 {
@@ -49,18 +54,19 @@ class Config
 		void handleClientRequest(int pollfd_idx, int client_idx);
         void handleResponse(int client_idx, int pollfd_idx);
 		void cleanup();
-
-    public:
+        
+        public:
         Config(const std::string &filepath);
         Config() {};
         Config(const Config &obj) : servers(obj.servers) {};
         Config &operator=(const Config &other);
         ~Config() {};
-
+        
         void addServer(ServerConfig &server);
         const std::vector<ServerConfig> &getServers() const { return servers; };
 		LocationConfig findLocationConfig(const std::string &path) const;
         bool setupServer();
+        void logs(LogLevel level, const std::string &msg);
         bool run();
 };
 
