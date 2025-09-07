@@ -203,8 +203,13 @@ void Response::handlePost(const Request &reqObj, LocationConfig loc)
 
 void Response::createUploadDir(const std::string &uploadFullPath) {
     if (mkdir(uploadFullPath.c_str(), 0755) == -1) {
-        if (errno != EEXIST)
-            std::cerr << "mkdir failed for " << uploadFullPath << ": " << strerror(errno) << std::endl;
+        if (errno != EEXIST) {
+            std::ostringstream oss;
+            oss << "mkdir failed for " << uploadFullPath << ": " << strerror(errno);
+            std::string msg = oss.str();
+            logs(ERROR, msg);
+            //std::cerr << "mkdir failed for " << uploadFullPath << ": " << strerror(errno) << std::endl;
+        }
     }
 }
 
@@ -286,7 +291,8 @@ void Response::parseMultipartBody(const Request &obj) {
         size_t start = pos + 10;
         size_t end = headers.find("\"", start);
         filename_ = headers.substr(start, end - start);
-        std::cout << filename_ << std::endl;
+        logs(ERROR, filename_);
+        //std::cout << filename_ << std::endl;
     }
 
     // ---- EXTRACT CONTENT-TYPE
@@ -472,8 +478,13 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
 void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
 {
     std::string cgiScriptPath = "." + locConfig.getRoot() + reqObj.getReqPath();
+    std::ostringstream oss;
+    std::string msg;
 
-	std::cout << "Processing CGI Request: " << reqObj.getMethod() << " " << cgiScriptPath << std::endl;
+    oss << "Processing CGI Request: " << reqObj.getMethod() << " " << cgiScriptPath;
+    msg = oss.str();
+    logs(INFO, msg);
+	//std::cout << "Processing CGI Request: " << reqObj.getMethod() << " " << cgiScriptPath << std::endl;
     CgiHandler cgiHandler(reqObj, locConfig);
 	// setenv("SERVER_NAME", "localhost", 1); // Replace with actual server name if available
 	// setenv("SERVER_PORT", "8080", 1);     // Replace with actual server port if available
@@ -488,9 +499,19 @@ void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
     std::string cgiOutput = cgiHandler.run();
     if (cgiHandler.getStatus()) {
         // CGI execution was successful
-        std::cout << "CGI execution successful: " << reqObj.getReqPath() << std::endl;
+        oss.str(""); oss.clear();
+        oss << "CGI execution successful: " << reqObj.getReqPath();
+        msg = oss.str();
+        logs(INFO, msg);
+        //std::cout << "CGI execution successful: " << reqObj.getReqPath() << std::endl;
+        
         setCode(200);
-		std::cout << "Raw CGI output:\n" << cgiOutput << "\nEND OF CGI OUTPUT\n";
+
+        oss.str(""); oss.clear();
+        oss << "Raw CGI output:\n" << cgiOutput << "\nEND OF CGI OUTPUT\n"; // is this needed?
+        msg = oss.str();
+        logs(INFO, msg);
+		//std::cout << "Raw CGI output:\n" << cgiOutput << "\nEND OF CGI OUTPUT\n";
         parseCgiResponse(cgiOutput);
     } else {
 		switch (cgiHandler.getError()) {
