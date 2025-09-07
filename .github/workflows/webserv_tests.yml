@@ -1,0 +1,45 @@
+name: Build and Test Webserv
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      # Build webserv binary first for config error tests
+      - name: Build Webserv binary
+        run: make
+
+      # Run configuration error tests without needing a container
+      - name: Run configuration error tests
+        run: ./config_errors.sh
+
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build Webserv Docker image
+        run: docker build -t webserv .
+
+      - name: Start Webserv container
+        run: |
+          docker rm -f webserv_container2 || true
+          docker run -d --name webserv_container2 -p 8080:8080 webserv
+
+      - name: Wait for Webserv to be ready
+        run: |
+          echo "Waiting for server on ports 8080..."
+          sleep 2
+          echo "Server is ready!"
+
+      - name: Run webserv tests
+        run: ./test_webserv.sh
+
+      - name: Stop Webserv container
+        run: docker stop webserv_container2 && docker rm webserv_container2

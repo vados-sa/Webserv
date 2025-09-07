@@ -176,7 +176,7 @@ void Response::handlePost(const Request &reqObj, LocationConfig loc)
     //     return (setPage(403, "Forbidden", true));
 
     if (loc.getUploadDir().empty())
-        throw std::runtime_error("Config error: allow_upload is enabled but no upload_path specified in location " + loc.getUri());
+        throw std::runtime_error("Config error: No upload_path specified in location " + loc.getUri());
 
     std::string reqPath = reqObj.getReqPath();
     if (reqPath != "/upload" && reqPath.find("/upload/") != 0){
