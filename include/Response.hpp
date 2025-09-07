@@ -55,8 +55,8 @@ public:
 
     // getter
     int getCode() const { return statusCode_; }
-    std::string getStatusMessage() const { return statusMessage_; }
-    std::string getFullPath() const { return fullPath_; }
+    const std::string getStatusMessage() const { return statusMessage_; }
+    const std::string getFullPath() const { return fullPath_; }
 
     //setter
     void setFullPath(const std::string &reqPath);

@@ -27,11 +27,11 @@ public :
     explicit Request(const std::string &raw);
 
     //---getters
-    std::string getMethod() const { return method_; }
-    std::string getReqPath() const { return reqPath_; }
-    std::string getFullPath() const { return fullPath_; }
-    std::string getVersion() const { return version_; }
-    std::string getQueryString() const { return queryString_; }
+    const std::string getMethod() const { return method_; }
+    const std::string getReqPath() const { return reqPath_; }
+    const std::string getFullPath() const { return fullPath_; }
+    const std::string getVersion() const { return version_; }
+    const std::string getQueryString() const { return queryString_; }
     bool isCgi() const { return isCgi_; }
 
     //---setters
