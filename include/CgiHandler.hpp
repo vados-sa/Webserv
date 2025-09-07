@@ -3,6 +3,7 @@
 #include <map>
 #include "Request.hpp"
 #include "LocationConfig.hpp"
+#include "Logger.hpp"
 
 class CgiHandler {
 	public:

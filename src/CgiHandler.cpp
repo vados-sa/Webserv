@@ -19,9 +19,14 @@ CgiHandler::CgiHandler(const Request &reqObj, const LocationConfig &locConfig) :
 	cgiScriptPath = "." + locConfig.getRoot() + reqObj.getReqPath();
 	interpreterPath = getInterpreterPath(locConfig.getCgiExtension());
 	error = NO_ERROR;
+    std::ostringstream oss;
+    std::string msg;
 	if (interpreterPath.empty()) {
 		error = EXECUTION_FAILED;
-		std::cerr << "Interpreter not found for CGI extension: " << locConfig.getCgiExtension() << std::endl;
+        oss << "Interpreter not found for CGI extension: " << locConfig.getCgiExtension();
+        msg = oss.str();
+        logs(ERROR, msg);
+		//std::cerr << "Interpreter not found for CGI extension: " << locConfig.getCgiExtension() << std::endl;
 		return;
 	}
 
@@ -29,11 +34,17 @@ CgiHandler::CgiHandler(const Request &reqObj, const LocationConfig &locConfig) :
 	if (stat(cgiScriptPath.c_str(), &buffer) != 0)
 	{
 		error = SCRIPT_NOT_FOUND;
-		std::cerr << "CGI script not found: " << cgiScriptPath << std::endl;
+        oss << "CGI script not found: " << cgiScriptPath;
+        msg = oss.str();
+        logs(ERROR, msg);
+		//std::cerr << "CGI script not found: " << cgiScriptPath << std::endl;
 		return;
 	}
 
-	std::cout << "CGI Request: " << reqObj.getMethod() << " " << cgiScriptPath << std::endl; //SHOULD IT BE COUT OR CERR?
+    oss << "CGI Request: " << reqObj.getMethod() << " " << cgiScriptPath;
+    msg = oss.str();
+    logs(INFO, msg);
+	//std::cout << "CGI Request: " << reqObj.getMethod() << " " << cgiScriptPath << std::endl; //SHOULD IT BE COUT OR CERR?
 
 	std::string transferEncoding = reqObj.findHeader("Transfer-Encoding") ? *reqObj.findHeader("Transfer-Encoding") : "";
 	if (transferEncoding == "chunked") {
@@ -130,7 +141,8 @@ void CgiHandler::handleFileUpload(const std::string &body, const std::string &up
     // Extract the boundary
     std::string boundary = extractBoundary(env["CONTENT_TYPE"]);
     if (boundary.empty()) {
-        std::cerr << "Boundary not found in Content-Type header" << std::endl;
+        logs(ERROR, "Boundary not found in Content-Type header");
+        //std::cerr << "Boundary not found in Content-Type header" << std::endl;
         return;
     }
 
@@ -147,7 +159,8 @@ void CgiHandler::handleFileUpload(const std::string &body, const std::string &up
 
         // Parse the part and save the file
         if (!processPart(part, uploadDir)) {
-            std::cerr << "Failed to process part" << std::endl;
+            logs(ERROR, "Failed to process part");
+            //std::cerr << "Failed to process part" << std::endl;
         }
     }
 }
@@ -166,7 +179,8 @@ bool CgiHandler::processPart(const std::string &part, const std::string &uploadD
     // Extract headers and content
     std::size_t headerStop = part.find("\r\n\r\n");
     if (headerStop == std::string::npos) {
-        std::cerr << "Malformed multipart/form-data part" << std::endl;
+        logs(ERROR, "Malformed multipart/form-data part");
+        //std::cerr << "Malformed multipart/form-data part" << std::endl;
         return false;
     }
 
@@ -176,7 +190,8 @@ bool CgiHandler::processPart(const std::string &part, const std::string &uploadD
     // Extract the filename
     std::string fileName = extractFileName(headers);
     if (fileName.empty()) {
-        std::cerr << "Filename not found in Content-Disposition header" << std::endl;
+        logs(ERROR, "Filename not found in Content-Disposition header");
+        //std::cerr << "Filename not found in Content-Disposition header" << std::endl;
         return false;
     }
 
@@ -213,13 +228,21 @@ std::string CgiHandler::sanitizeFileName(const std::string &fileName) {
 // Helper function to save the file to disk
 bool CgiHandler::saveFile(const std::string &filePath, const std::string &fileContent) {
     std::ofstream outFile(filePath.c_str(), std::ios::binary); // Use .c_str() for C++98 compatibility
+    std::ostringstream oss;
+    std::string msg;
     if (!outFile) {
-        std::cerr << "Failed to open file: " + filePath << std::endl;
+        oss <<  "File uploaded successfully: " + filePath;
+        msg = oss.str();
+        logs(ERROR, msg);
+        //std::cerr << "Failed to open file: " + filePath << std::endl;
         return false;
     }
     outFile.write(fileContent.c_str(), fileContent.size());
     outFile.close();
-    std::cout << "File uploaded successfully: " + filePath << std::endl;
+    oss <<  "File uploaded successfully: " + filePath;
+    msg = oss.str();
+    logs(INFO, msg);
+    //std::cout << "File uploaded successfully: " + filePath << std::endl;
     return true;
 }
 
@@ -230,14 +253,16 @@ std::string CgiHandler::run() {
     // Create pipes
     if (pipe(inPipe) == -1 || pipe(outPipe) == -1 || pipe(errPipe) == -1) {
         error = PIPE_FAILED;
-        std::cerr << "Failed to create pipes" << std::endl;
+        logs(ERROR, "Failed to create pipes");
+        //std::cerr << "Failed to create pipes" << std::endl;
         return "";
     }
 
     pid_t pid = fork();
     if (pid < 0) {
         error = FORK_FAILED;
-        std::cerr << "Fork failed" << std::endl;
+        logs(ERROR, "Fork failed");
+        //std::cerr << "Fork failed" << std::endl;
         return "";
     }
 
@@ -273,7 +298,11 @@ std::string CgiHandler::run() {
         // Execute the CGI script
         if (execve(interpreterPath.c_str(), argv_fixed, &envp[0]) == -1) {
 			error = EXECVE_FAILED;
-            std::cerr << "CGI execve failed: " << strerror(errno) << std::endl;
+            std::ostringstream oss;
+            oss << "CGI execve failed: " << strerror(errno);
+            std::string msg = oss.str();
+            logs(ERROR, msg);
+            //std::cerr << "CGI execve failed: " << strerror(errno) << std::endl;
             _exit(EXIT_FAILURE);
         }
     } else { // Parent process
@@ -297,7 +326,8 @@ std::string CgiHandler::run() {
                 error = TIMEOUT;
                 close(outPipe[0]);
                 close(errPipe[0]);
-                std::cerr << "CGI script timed out" << std::endl;
+                logs(ERROR, "CGI script timed out");
+                //std::cerr << "CGI script timed out" << std::endl;
                 return "";
             }
             usleep(100000);
@@ -322,11 +352,13 @@ std::string CgiHandler::run() {
         // Check the exit status of the child process
         if (WIFEXITED(timeout_status) && WEXITSTATUS(timeout_status) == 0) {
             status_cgi = true;
-            std::cout << "CGI script executed successfully" << std::endl;
+            logs(INFO, "CGI script executed successfully");
+            //std::cout << "CGI script executed successfully" << std::endl;
             return cgiOutput.str();
         } else {
             error = CGI_SCRIPT_FAILED;
-            std::cerr << "CGI script failed" << std::endl;
+            logs(ERROR, "CGI script failed");
+            //std::cerr << "CGI script failed" << std::endl;
             return "";
         }
     }
@@ -404,19 +436,27 @@ std::string decodeChunkedBody(std::istringstream &rawStream) {
 
 std::string getInterpreterPath(const std::string &cgiExtension) {
     std::string interpreter;
+    std::ostringstream oss;
+    std::string msg;
     if (cgiExtension == ".py") {
         interpreter = "python3";
     } else if (cgiExtension == ".php") {
         interpreter = "php"; // STILL TO BE TESTED
     } else {
-        std::cerr << "Unsupported CGI extension: " << cgiExtension << std::endl;
+        oss << "Unsupported CGI extension: " << cgiExtension;
+        msg = oss.str();
+        logs(ERROR, msg);
+        //std::cerr << "Unsupported CGI extension: " << cgiExtension << std::endl;
         return "";
     }
 
     std::string command = "which " + interpreter + " 2>/dev/null";
     FILE *pipe = popen(command.c_str(), "r");
     if (!pipe) {
-        std::cerr << "Failed to execute `which` command for: " << interpreter << std::endl;
+        oss << "Failed to execute `which` command for: " << interpreter;
+        msg = oss.str();
+        logs(ERROR, msg);
+        //std::cerr << "Failed to execute `which` command for: " << interpreter << std::endl;
         return "";
     }
 
@@ -432,7 +472,10 @@ std::string getInterpreterPath(const std::string &cgiExtension) {
         path.erase(path.size() - 1);
     }
     if (path.empty()) {
-        std::cerr << "Interpreter not found for: " << interpreter << std::endl;
+        oss << "Interpreter not found for: " << interpreter;
+        msg = oss.str();
+        logs(ERROR, msg);
+        //std::cerr << "Interpreter not found for: " << interpreter << std::endl;
     }
     return path;
 }
