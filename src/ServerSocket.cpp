@@ -86,9 +86,5 @@ bool ServerSocket::listenMode() {
 		return false;
 	}
 
-	/* std::cout << "✅ Server listening on " 
-          << (host.empty() ? "0.0.0.0" : host)
-          << ":" << port << "\n"; */
-
 	return true;
 };
