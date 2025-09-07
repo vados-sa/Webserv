@@ -34,16 +34,16 @@ $(OBJ_DIR):
 $(NAME): $(OBJ)
 	@echo "$(YELLOW)Linking $(NAME)...$(NC)"
 	@$(CXX) $(CXXFLAGS) -o $(NAME) $(OBJ)
-	@echo "$(GREEN)✅ $(NAME) is ready to run!$(NC)"
+	@echo "$(GREEN)$(NAME) is ready to run!$(NC)"
 
 clean:
 	@echo "$(RED)Cleaning object files...$(NC)"
-	rm -f $(OBJ) $(REQUEST_OBJ)
+	-@rm -f $(OBJ) $(REQUEST_OBJ) 2>/dev/null
 	@rm -rf $(OBJ_DIR)
 
 fclean: clean
 	@echo "$(RED)Cleaning executable...$(NC)"
-	@rm -f $(NAME)
+	-@rm -f $(NAME) 2>/dev/null
 
 re: fclean all
 
