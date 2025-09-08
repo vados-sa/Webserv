@@ -35,7 +35,6 @@ private:
     std::pair<int, std::string> parseRedirection(const std::vector<std::string> &tokens);
     std::string parseUploadDir(const std::vector<std::string> &tokens);
     bool parseAutoindex(const std::vector<std::string> &tokens);
-    bool parseAllowUpload(const std::vector<std::string> &tokens);
 	std::string parseCgiExtension(const std::vector<std::string> &tokens);
 
 public:

@@ -136,7 +136,6 @@ void Response::generateAutoIndex(const LocationConfig& loc) {
     }
 
     html << "</ul>\n</body>\n</html>\n";
-    // setPage(200, "OK", false);
     closedir(dir);
     body_ = html.str();
     return;
