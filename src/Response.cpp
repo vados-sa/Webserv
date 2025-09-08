@@ -88,9 +88,9 @@ void Response:: readFileIntoBody(const std::string &fileName) {
     std::ifstream file(fileName.c_str(), std::ios::in | std::ios::binary);
     if (!file) {
         std::ifstream test(fileName.c_str());
-        if (!test) {
+        if (!test)
             throw HttpException(404, "Not Found", true);
-        } else {
+        else
             throw HttpException(500, "Server error: unable to open file.", true);
         }
         return;
@@ -106,10 +106,8 @@ void Response::generateAutoIndex(const LocationConfig& loc) {
     std::string path = fullPath_;
 
     DIR *dir = opendir(path.c_str());
-    if (!dir){
+    if (!dir)
         throw HttpException(403, "Forbidden", true);
-        return;
-    }
 
     std::ostringstream html;
 
@@ -219,7 +217,7 @@ void Response::uploadFile(const std::string &uploadFullPath)
 }
 
 void Response::handleDelete(const Request &reqObj) {
-    std::string prefix = "/upload/";
+    std::string prefix = "/upload/"; //talvez criar um vetor e encher com as locations que podem POST
 
     if (reqObj.getReqPath().compare(0, prefix.size(), prefix) != 0)
         throw HttpException(404, "Wrong path. Expected \"/upload/", true);
@@ -241,15 +239,11 @@ void Response::handleDelete(const Request &reqObj) {
 }
 
 void Response::parseMultipartBody(const Request &obj) {
-    // ------ GET BOUNDARY -----
-
     std::string rawValue = *obj.findHeader(HEADER_CONTENT_TYPE);
     size_t pos = rawValue.find("boundary=");
     std::string boundary = "--";
     if (pos != std::string::npos)
         boundary.append(rawValue.substr(pos + 9));
-
-    // ----- EXTRACT BOUNDARY FROM BODY
 
     std::string rawBody = obj.getBody();
     size_t start = rawBody.find(boundary);
@@ -261,7 +255,6 @@ void Response::parseMultipartBody(const Request &obj) {
     if (end != std::string::npos)
         rawBody = rawBody.substr(0, end - 2);
 
-    // ----- EXTRACT HEADERS FROM THE BODY
     std::string headers;
     std::string fileContent;
     size_t headerEnd = rawBody.find("\r\n\r\n");
@@ -271,18 +264,14 @@ void Response::parseMultipartBody(const Request &obj) {
         fileContent = rawBody.substr(headerEnd + 4);
     }
 
-    // ---- EXTRACT FILENAME
-    //string filename = "www/upload/";
     pos = headers.find("filename=\"");
     if (pos != std::string::npos) {
         size_t start = pos + 10;
         size_t end = headers.find("\"", start);
         filename_ = headers.substr(start, end - start);
         logs(ERROR, filename_);
-        //std::cout << filename_ << std::endl;
     }
 
-    // ---- EXTRACT CONTENT-TYPE
     pos = headers.find("content-type: ");
     if (pos != std::string::npos) {
         start = pos + 14;
@@ -300,7 +289,7 @@ std::string Response::writeResponseString() const
     res << "HTTP/1.1 " << statusCode_ << " " << statusMessage_ << "\r\n";
     for (std::map<std::string, std::string>::iterator it = headers.begin(); it != headers.end(); ++it)
         res << it->first << ": " << it->second << "\r\n";
-    res << "\r\n"; // linha em branco antes do body
+    res << "\r\n";
     res << body_;
 
     return (res.str());
@@ -350,12 +339,6 @@ void Response::setPage(const int code, const std::string &message, bool error)
     // Content-Length e Content-Type
     setHeader(HEADER_CONTENT_LENGTH, int_to_string(body_.size()));
     setHeader(HEADER_CONTENT_TYPE, MIME_HTML);
-
-    // Fechar a conexão para erros ou timeout
-    // if (code >= 400 || code == 408)
-    //     setHeader(HEADER_CONNECTION, "close");
-    // else if (keep_alive_)
-    //     setHeader(HEADER_CONNECTION, "keep-alive");
 }
 
 std::string Response::generateDefaultPage(const int code, const std::string &message, bool error) const
@@ -376,11 +359,6 @@ std::string Response::generateDefaultPage(const int code, const std::string &mes
         html << "<h1>Status " << code << "</h1>\r\n";
 
     html << "<p>" << message << "</p>\r\n";
-
-    // Debug info opcional (fd/port) para timeout ou erros específicos
-    // if (code == 408)
-    //     html << "<p><small>Client fd(" << client_fd_ << ")/port(" << client_port_ << ")</small></p>\r\n";
-
     html << "</body>\r\n</html>\r\n";
 
     return html.str();
@@ -477,8 +455,6 @@ void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
 	// Check if the CGI script was found
     if (!cgiHandler.getStatus() && cgiHandler.getError() == CgiHandler::SCRIPT_NOT_FOUND) {
         throw HttpException(404, "The requested CGI script was not found: " + reqObj.getReqPath(), true);
-        // setHeader("Content-Type", "text/html");
-        // return;
     }
     // Run the CGI script and capture its output
     std::string cgiOutput = cgiHandler.run();
@@ -502,27 +478,16 @@ void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
 		switch (cgiHandler.getError()) {
 			case CgiHandler::PIPE_FAILED:
 				throw HttpException(500, "CGI execution failed: pipe creation failed", true);
-				// setHeader("Content-Type", "text/plain");
-				// break;
 			case CgiHandler::FORK_FAILED:
 				throw HttpException(500, "CGI execution failed: fork failed", true);
-				// setHeader("Content-Type", "text/plain");
-				// break;
 			case CgiHandler::EXECVE_FAILED:
 				throw HttpException(500, "CGI execution failed: execve failed", true);
-				// setHeader("Content-Type", "text/plain");
-				// break;
 			case CgiHandler::TIMEOUT:
 				throw HttpException(504, "CGI execution failed: script timed out", true);
-				// setHeader("Content-Type", "text/plain");
-				// break;
 			case CgiHandler::CGI_SCRIPT_FAILED:
 				throw HttpException(500, "CGI execution failed: script error", true);
-				// setHeader("Content-Type", "text/plain");
-				// break;
 			default:
 				throw HttpException(500, "CGI execution failed: unknown error", true);
-				// setHeader("Content-Type", "text/plain");
 		}
     }
 }
@@ -562,8 +527,7 @@ void Response::parseCgiResponse(const std::string &cgiOutput) {
     }
 }
 
-void Response::handleRedirect(const LocationConfig &locConfig)
-{
+void Response::handleRedirect(const LocationConfig &locConfig) {
     int statusCode = locConfig.getReturnStatus();
     statusCode_ = statusCode;
     std::string newLocation = locConfig.getReturnTarget();

@@ -106,15 +106,14 @@ bool Request::parseHeaders(std::string &raw)
 
 bool Request::parseBody(std::string &raw)
 {
-    if (raw.empty() && method_ != "POST")
+    if (raw.empty()) //if (raw.empty() && method_ != "POST")
         return (true);
 
     std::map<std::string, std::string>::iterator it = headers_.find("transfer-encoding");
     if (!raw.empty() && it != headers_.end() && it->second == "chunked") {
-        return parseChunkedBody(raw); // use the helper we wrote earlier
+        return (parseChunkedBody(raw));
     }
 
-    // 🔹 2. Otherwise, fall back to Content-Length
     it = headers_.find("content-length");
     if (it == headers_.end())
         throw HttpException(411, "Length Required", true);
@@ -126,8 +125,8 @@ bool Request::parseBody(std::string &raw)
     if (length < 0)
         throw HttpException(400, "Bad Request", true);
 
-    if (raw.empty() && method_ == "POST" && length != 0)
-        return (false);
+    // if (raw.empty() && method_ == "POST" && length != 0)
+    //     return (false);
 
     if (raw.size() < static_cast<size_t>(length))
         throw HttpException(400, "Bad Request", true);
@@ -144,31 +143,25 @@ bool Request::parseChunkedBody(std::string &raw)
 
     while (true)
     {
-        // 1. Find end of the chunk size line
         std::string::size_type endline = raw.find("\r\n", pos);
         if (endline == std::string::npos)
             throw HttpException(400, "Malformed chunk size line", true);
 
-        // 2. Parse chunk size (hexadecimal)
         std::string sizeStr = raw.substr(pos, endline - pos);
         std::istringstream iss(sizeStr);
         std::size_t chunkSize = 0;
         iss >> std::hex >> chunkSize;
-
         if (iss.fail())
             throw HttpException(400, "Invalid chunk size", true);
 
         pos = endline + 2; // move past "\r\n"
 
-        // 3. If chunk size is 0 → end of body
-        if (chunkSize == 0)
-        {
-            // skip trailing CRLF after last 0\r\n
+        if (chunkSize == 0) {
             std::string::size_type trailerEnd = raw.find("\r\n", pos);
             if (trailerEnd == std::string::npos)
                 throw HttpException(400, "Missing CRLF after last chunk", true);
             raw.erase(0, trailerEnd + 2); // consume used data
-            return true;
+            return (true);
         }
 
         totalSize += chunkSize;
@@ -178,12 +171,10 @@ bool Request::parseChunkedBody(std::string &raw)
         if (raw.size() < pos + chunkSize + 2)
             throw HttpException(400, "Incomplete chunk data", true);
 
-        // 5. Append chunk to body
         body_.append(raw, pos, chunkSize);
 
         pos += chunkSize;
 
-        // 6. Chunks are followed by CRLF
         if (raw.substr(pos, 2) != "\r\n")
             throw HttpException(400, "Missing CRLF after chunk data", true);
         pos += 2;
