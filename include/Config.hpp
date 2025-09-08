@@ -48,9 +48,8 @@ class Config
         Config &operator=(const Config &other);
         ~Config() {};
         
-        void addServer(ServerConfig &server);
         const std::vector<ServerConfig> &getServers() const { return servers; };
-		LocationConfig findLocationConfig(const std::string &path) const;
+        void addServer(ServerConfig &server);
         bool setupServer();
         bool run();
 };
