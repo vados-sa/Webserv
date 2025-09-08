@@ -1,6 +1,7 @@
 #include "Config.hpp"
 #include "ConfigParser.hpp"
 #include "HttpException.hpp"
+#include "Utils.hpp"
 
 Config::Config(const std::string &filepath) : client_count(0)
 {
@@ -169,7 +170,7 @@ bool Config::pollLoop(int server_count)
                 if (revent & POLLERR) oss << "POLLERR";
                 if (revent & POLLHUP) oss << "POLLHUP";
                 if (revent & POLLNVAL) oss << "POLLNVAL";
-                oss << " event on client fd=" << poll_fds[i].fd << " port=" << servers[clients[client_idx].getServerIndex()].getPort();
+                oss << " event on client fd=" << poll_fds[i].fd << " server_port=" << servers[clients[client_idx].getServerIndex()].getPort();
                 logs(INFO, oss.str());
                 close(poll_fds[i].fd);
                 poll_fds.erase(poll_fds.begin() + i);
@@ -197,6 +198,8 @@ bool Config::pollLoop(int server_count)
                 ServerConfig srv = this->servers[clients[client_idx].getServerIndex()];
                 std::map<int, std::string> error_pages = srv.getErrorPagesConfig();
                 Response res(error_pages, e.getStatusCode(), e.what(), e.getError());
+                std::string msg = util::intToString(e.getStatusCode()) + " " + e.what();
+                logs(ERROR, msg);
                 std::string res_string = res.writeResponseString(); //some checks maybe?
                 //clients[client_idx].setResponseBuffer(res_string);
                 handleResponse(client_idx, i);
@@ -247,7 +250,7 @@ void Config::handleNewConnection(int server_fd, int server_idx)
     int port = ntohs(client_addr.sin_port);
     clients.back().setPort(port);
     std::ostringstream oss;
-    oss << "Accepted client fd=" << client_fd << " port=" << servers[server_idx].getPort();
+    oss << "Accepted client fd=" << client_fd << " server_port=" << servers[server_idx].getPort();
     std::string msg = oss.str();
     logs(INFO, msg);
 }
@@ -255,11 +258,12 @@ void Config::handleNewConnection(int server_fd, int server_idx)
 void Config::handleIdleClient(int client_idx, int pollfd_idx)
 {
     Client &client = clients[client_idx];
-    ServerConfig srv = servers[client.getServerIndex()];
+    int server_idx = client.getServerIndex();
+    ServerConfig srv = servers[server_idx];
 
     std::ostringstream oss;
-    oss << "Request Timeout\nClient fd(" << poll_fds[pollfd_idx].fd
-        << ")/port(" << clients[client_idx].getPort() << ")";
+    oss << "Request Timeout client fd=" << poll_fds[pollfd_idx].fd
+        << " server_port=" << servers[server_idx].getPort();
     std::string errorMessage = oss.str();
 
     poll_fds[pollfd_idx].events = POLLOUT;
@@ -439,7 +443,7 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx)
     if (bytes < 0)
     {
         std::ostringstream oss;
-        oss << "recv() failed on client fd=" << client_fd << " port=" << servers[client.getServerIndex()].getPort();
+        oss << "recv() failed on client fd=" << client_fd << " server_port=" << servers[client.getServerIndex()].getPort();
         std::string msg = oss.str();
         logs(ERROR, msg);
         close(client_fd);
@@ -451,7 +455,7 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx)
     if (bytes == 0)
     {
         std::ostringstream oss;
-        oss << "Disconnected client fd=" << client_fd << " port=" << servers[client.getServerIndex()].getPort();
+        oss << "Disconnected client fd=" << client_fd << " server_port=" << servers[client.getServerIndex()].getPort();
         std::string msg = oss.str();
         logs(INFO, msg);
         close(client_fd);
@@ -511,7 +515,7 @@ void Config::handleResponse(int client_idx, int pollfd_idx)
         if (bytes < 0)
         {
             std::ostringstream oss;
-            oss << "send() failed on client fd=" << client_fd << " port=" << servers[client.getServerIndex()].getPort();
+            oss << "send() failed on client fd=" << client_fd << " server_port=" << servers[client.getServerIndex()].getPort();
             std::string msg = oss.str();
             logs(ERROR, msg);
             close(client_fd);
@@ -535,7 +539,7 @@ void Config::handleResponse(int client_idx, int pollfd_idx)
         if (!client.getKeepAlive() || (client.getState() == Client::IDLE))
         {
             std::ostringstream oss;
-            oss << "Disconnecting client fd=" << client_fd << " port=" << servers[client.getServerIndex()].getPort();
+            oss << "Disconnecting client fd=" << client_fd << " server_port=" << servers[client.getServerIndex()].getPort();
             std::string msg = oss.str();
             logs(INFO, msg);
             close(client_fd);
@@ -603,6 +607,9 @@ std::string buildRequestAndResponse(const std::string &raw, const ServerConfig &
     if (loc)
         applyLocationConfig(reqObj, *loc);
     outReq = reqObj;
+
+    std::string msg = reqObj.getMethod() + " request " + reqObj.getFullPath(); 
+    logs(INFO, msg);
 
     Response res(srv.getErrorPagesConfig());
     return (res.buildResponse(reqObj, *loc));
