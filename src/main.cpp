@@ -12,7 +12,7 @@ int main(int ac, char *av[])
     try
     {
         std::string configfile;
-        if (ac != 2) {
+        if (ac != 2) { // gotta fix this check -> take care of more than 2 arguments !!
             configfile = "config/simple.conf";
         } else {
             configfile = av[1];
@@ -29,7 +29,11 @@ int main(int ac, char *av[])
             throw std::runtime_error("Server failed to run.");
         };
     } catch (const std::exception &e) {
-        std::cerr << "\033[31m" << e.what() << "\033[0m" << std::endl;
+        std::ostringstream oss;
+        oss << "\033[31m" << e.what() << "\033[0m";
+        std::string msg = oss.str();
+        logs(ERROR, msg);
+        //std::cerr << "\033[31m" << e.what() << "\033[0m" << std::endl;
         return 1;
     }
     return 0;

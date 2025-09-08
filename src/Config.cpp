@@ -33,7 +33,7 @@ bool Config::setupServer()
     std::string errorMsg;
     if (validateBindings(errorMsg) == false)
     {
-        std::cerr << errorMsg << std::endl;
+        logs(ERROR, errorMsg);
         return false;
     }
 
@@ -42,6 +42,13 @@ bool Config::setupServer()
         ServerSocket socketObj;
         if (!socketObj.setupServerSocket(servers[i].getPort(), servers[i].getHost()))
             return false;
+        else {
+            std::ostringstream oss;
+            oss << "Server listening on " << (socketObj.getHost().empty() ? "0.0.0.0" : socketObj.getHost())
+            << ":" << socketObj.getPort(); 
+            std::string msg = oss.str();
+            logs(INFO, msg);
+        }
         serverSockets.push_back(socketObj);
     }
     return true;
@@ -138,7 +145,7 @@ bool Config::pollLoop(int server_count)
         {
             cleanup();
             if (errno == EINTR) {
-                std::cout << "📡 Signal received, gracefully shutting down..." << std::endl;
+                logs(INFO, "Signal received, shutting down the server...\n");
                 return true;
             }
             perror("poll failed");
@@ -149,15 +156,25 @@ bool Config::pollLoop(int server_count)
         {
             const short revent = poll_fds[i].revents;
 
-            if (revent & (POLLERR | POLLHUP | POLLNVAL)) { // broken fds - rare on server fds
-                std::cerr << "fd " << poll_fds[i].fd << " error/hup/nval\n";
-                if (i >= server_count) {
-                    const int client_idx = i - server_count;
-                    close(poll_fds[i].fd);
-                    poll_fds.erase(poll_fds.begin() + i);
-                    clients.erase(clients.begin() + client_idx);
-                    client_count--;
+            if (revent & (POLLERR | POLLHUP | POLLNVAL)) {
+                std::ostringstream oss;
+                if (i < server_count) {
+                    oss << "Critical poll event on server socket fd=" << poll_fds[i].fd ;
+                    std::string msg = oss.str();
+                    logs(ERROR, msg);
+                    cleanup();
+                    return false;
                 }
+                int client_idx = i - server_count;
+                if (revent & POLLERR) oss << "POLLERR";
+                if (revent & POLLHUP) oss << "POLLHUP";
+                if (revent & POLLNVAL) oss << "POLLNVAL";
+                oss << " event on client fd=" << poll_fds[i].fd << " port=" << servers[clients[client_idx].getServerIndex()].getPort();
+                logs(INFO, oss.str());
+                close(poll_fds[i].fd);
+                poll_fds.erase(poll_fds.begin() + i);
+                clients.erase(clients.begin() + client_idx);
+                client_count--;
                 continue;
             }
 
@@ -208,7 +225,8 @@ void Config::handleNewConnection(int server_fd, int server_idx)
 
     if (client_count >= MAX_CLIENT)
     {
-        std::cerr << "Refusing client, max reached\n";
+        std::string msg = "Refusing client, max reached";
+        logs(ERROR, msg);
         close(client_fd);
         return;
     }
@@ -228,9 +246,10 @@ void Config::handleNewConnection(int server_fd, int server_idx)
 
     int port = ntohs(client_addr.sin_port);
     clients.back().setPort(port);
-    std::cout << "🔌 New client (fd " << client_fd << ") connected on port: "
-              << port << "\n"
-              << std::endl;
+    std::ostringstream oss;
+    oss << "Accepted client fd=" << client_fd << " port=" << servers[server_idx].getPort();
+    std::string msg = oss.str();
+    logs(INFO, msg);
 }
 
 void Config::handleIdleClient(int client_idx, int pollfd_idx)
@@ -419,7 +438,10 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx)
     int bytes = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
     if (bytes < 0)
     {
-        std::cerr << "❌ recv() failed on fd " << client_fd << "\n";
+        std::ostringstream oss;
+        oss << "recv() failed on client fd=" << client_fd << " port=" << servers[client.getServerIndex()].getPort();
+        std::string msg = oss.str();
+        logs(ERROR, msg);
         close(client_fd);
         poll_fds.erase(poll_fds.begin() + pollfd_idx);
         clients.erase(clients.begin() + client_idx);
@@ -428,10 +450,10 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx)
     }
     if (bytes == 0)
     {
-        std::cout << "❌ Client disconnected: " << "\n"
-                  << "fd - " << client_fd << "\n"
-                  << "port - " << client.getPort() << "\n"
-                  << std::endl;
+        std::ostringstream oss;
+        oss << "Disconnected client fd=" << client_fd << " port=" << servers[client.getServerIndex()].getPort();
+        std::string msg = oss.str();
+        logs(INFO, msg);
         close(client_fd);
         poll_fds.erase(poll_fds.begin() + pollfd_idx);
         clients.erase(clients.begin() + (client_idx));
@@ -463,10 +485,10 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx)
         std::string raw = client.getRequest().substr(0, (size_t)consumed);
         client.consumeRequestBytes((size_t)consumed);
         Request reqObj(raw);
-        std::cout << "This is the raw request: " << raw << std::endl;
+        //std::cout << "This is the raw request: " << raw << std::endl;
         ServerConfig srv = servers[client.getServerIndex()];
         std::string response = buildRequestAndResponse(raw, srv, reqObj);
-        std::cout << "This is response string: " << response << std::endl;
+        //std::cout << "This is response string: " << response << std::endl;
         client.setKeepAlive(reqObj);
         poll_fds[pollfd_idx].events = POLLIN | POLLOUT;
         client.setResponseBuffer(response);
@@ -488,7 +510,10 @@ void Config::handleResponse(int client_idx, int pollfd_idx)
         ssize_t bytes = send(client_fd, responseStr.c_str() + alreadySent, remaining, 0);
         if (bytes < 0)
         {
-            std::cerr << "❌ send() failed on fd " << client_fd << "\n";
+            std::ostringstream oss;
+            oss << "send() failed on client fd=" << client_fd << " port=" << servers[client.getServerIndex()].getPort();
+            std::string msg = oss.str();
+            logs(ERROR, msg);
             close(client_fd);
             poll_fds.erase(poll_fds.begin() + pollfd_idx);
             clients.erase(clients.begin() + client_idx);
@@ -509,10 +534,10 @@ void Config::handleResponse(int client_idx, int pollfd_idx)
         //client.setResponseObj(NULL);
         if (!client.getKeepAlive() || (client.getState() == Client::IDLE))
         {
-            std::cout << "❌ Disconnecting client: " << "\n"
-                  << "fd - " << client_fd << "\n"
-                  << "port - " << client.getPort() << "\n"
-                  << std::endl;
+            std::ostringstream oss;
+            oss << "Disconnecting client fd=" << client_fd << " port=" << servers[client.getServerIndex()].getPort();
+            std::string msg = oss.str();
+            logs(INFO, msg);
             close(client_fd);
             poll_fds.erase(poll_fds.begin() + pollfd_idx);
             clients.erase(clients.begin() + client_idx);

@@ -2,6 +2,7 @@
 
 #include <string>
 #include "HttpMessage.hpp"
+#include "Logger.hpp"
 
 
 class Config;

@@ -5,6 +5,7 @@
 #include "Client.hpp"
 #include "Request.hpp"
 #include "Response.hpp"
+#include "Logger.hpp"
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -49,14 +50,14 @@ class Config
 		void handleClientRequest(int pollfd_idx, int client_idx);
         void handleResponse(int client_idx, int pollfd_idx);
 		void cleanup();
-
-    public:
+        
+        public:
         Config(const std::string &filepath);
         Config() {};
         Config(const Config &obj) : servers(obj.servers) {};
         Config &operator=(const Config &other);
         ~Config() {};
-
+        
         void addServer(ServerConfig &server);
         const std::vector<ServerConfig> &getServers() const { return servers; };
 		LocationConfig findLocationConfig(const std::string &path) const;
