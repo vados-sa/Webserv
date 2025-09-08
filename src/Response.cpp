@@ -204,9 +204,7 @@ void Response::createUploadDir(const std::string &uploadFullPath) {
             std::ostringstream oss;
             oss << "mkdir failed for " << uploadFullPath << ": " << strerror(errno);
             std::string msg = oss.str();
-            //std::string msg = "mkdir failed for " + uploadFullPath + ": " + strerror(errno);
             logs(ERROR, msg);
-            //std::cerr << "mkdir failed for " << uploadFullPath << ": " << strerror(errno) << std::endl;
         }
     }
 }
@@ -481,13 +479,10 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
 void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
 {
     std::string cgiScriptPath = "." + locConfig.getRoot() + reqObj.getReqPath();
-    std::ostringstream oss;
     std::string msg;
 
-    oss << "Processing CGI Request: " << reqObj.getMethod() << " " << cgiScriptPath;
-    msg = oss.str();
+    msg = "Processing CGI Request: " + reqObj.getMethod() + " " + cgiScriptPath;
     logs(INFO, msg);
-	//std::cout << "Processing CGI Request: " << reqObj.getMethod() << " " << cgiScriptPath << std::endl;
     CgiHandler cgiHandler(reqObj, locConfig);
 	// setenv("SERVER_NAME", "localhost", 1); // Replace with actual server name if available
 	// setenv("SERVER_PORT", "8080", 1);     // Replace with actual server port if available
@@ -502,9 +497,7 @@ void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
     std::string cgiOutput = cgiHandler.run();
     if (cgiHandler.getStatus()) {
         // CGI execution was successful
-        oss.str(""); oss.clear();
-        oss << "CGI execution successful: " << reqObj.getReqPath();
-        msg = oss.str();
+        msg = "CGI execution successful: " + reqObj.getReqPath();
         logs(INFO, msg);
         
         setCode(200);
