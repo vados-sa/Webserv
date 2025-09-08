@@ -215,6 +215,7 @@ void Response::handleDelete(const Request &reqObj) {
     filename_ = "." + reqObj.getFullPath();
     struct stat fileStat;
 
+
     if (stat(filename_.c_str(), &fileStat) != 0)
         throw HttpException(404, "File not found: \"" + filename_ + "\"", true);
 
@@ -225,6 +226,7 @@ void Response::handleDelete(const Request &reqObj) {
     if (remove(filename_.c_str()) != 0)
         throw HttpException(500, "Failed to delete file: \"" + filename_ + "\"", true);
 
+    logs(INFO, "\"" + filename_ + "\" deleted successfully");
     setPage(204, "No content. File \"" + filename_ + "\" deleted successfully.", false);
 }
 
@@ -259,7 +261,8 @@ void Response::parseMultipartBody(const Request &obj) {
         size_t start = pos + 10;
         size_t end = headers.find("\"", start);
         filename_ = headers.substr(start, end - start);
-        logs(ERROR, filename_);
+        logs(INFO, "\"" + filename_ + "\" uploaded successfully");
+
     }
 
     pos = headers.find("content-type: ");
@@ -430,13 +433,10 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
 void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
 {
     std::string cgiScriptPath = "." + locConfig.getRoot() + reqObj.getReqPath();
-    std::ostringstream oss;
     std::string msg;
 
-    oss << "Processing CGI Request: " << reqObj.getMethod() << " " << cgiScriptPath;
-    msg = oss.str();
+    msg = "Processing CGI Request: " + reqObj.getMethod() + " " + cgiScriptPath;
     logs(INFO, msg);
-	//std::cout << "Processing CGI Request: " << reqObj.getMethod() << " " << cgiScriptPath << std::endl;
     CgiHandler cgiHandler(reqObj, locConfig);
 	// setenv("SERVER_NAME", "localhost", 1); // Replace with actual server name if available
 	// setenv("SERVER_PORT", "8080", 1);     // Replace with actual server port if available
@@ -449,19 +449,10 @@ void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
     std::string cgiOutput = cgiHandler.run();
     if (cgiHandler.getStatus()) {
         // CGI execution was successful
-        oss.str(""); oss.clear();
-        oss << "CGI execution successful: " << reqObj.getReqPath();
-        msg = oss.str();
+        msg = "CGI execution successful: " + reqObj.getReqPath();
         logs(INFO, msg);
-        //std::cout << "CGI execution successful: " << reqObj.getReqPath() << std::endl;
-
         setCode(200);
 
-        oss.str(""); oss.clear();
-        oss << "Raw CGI output:\n" << cgiOutput << "\nEND OF CGI OUTPUT\n"; // is this needed?
-        msg = oss.str();
-        logs(INFO, msg);
-		//std::cout << "Raw CGI output:\n" << cgiOutput << "\nEND OF CGI OUTPUT\n";
         parseCgiResponse(cgiOutput);
     } else {
 		switch (cgiHandler.getError()) {
