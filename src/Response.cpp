@@ -205,7 +205,6 @@ void Response::createUploadDir(const std::string &uploadFullPath) {
             oss << "mkdir failed for " << uploadFullPath << ": " << strerror(errno);
             std::string msg = oss.str();
             logs(ERROR, msg);
-            //std::cerr << "mkdir failed for " << uploadFullPath << ": " << strerror(errno) << std::endl;
         }
     }
 }
@@ -226,6 +225,7 @@ void Response::handleDelete(const Request &reqObj) {
     std::string prefix = "/upload/";
 
     if (reqObj.getReqPath().compare(0, prefix.size(), prefix) != 0) {
+        logs(ERROR, "404 Wrong path. Expected \"/upload/");
         setPage(404, "Wrong path. Expected \"/upload/", true);
         return;
     }
@@ -234,19 +234,23 @@ void Response::handleDelete(const Request &reqObj) {
     struct stat fileStat;
 
     if (stat(filename_.c_str(), &fileStat) != 0) {
+        logs(ERROR, "404 File not found: \"" + filename_ + "\"");
         setPage(404, "File not found: \"" + filename_ + "\"", true);
         return;
     }
 
     if (!S_ISREG(fileStat.st_mode)) {
+        logs(ERROR, "404 \"" + filename_ + "\" is not a regular file");
         setPage(404, "\"" + filename_ + "\" is not a regular file", true);
         return;
     }
 
     if (remove(filename_.c_str()) != 0) {
+        logs(ERROR, "500 Failed to delete file: \"" + filename_ + "\"");
         setPage(500, "Failed to delete file: \"" + filename_ + "\"", true);
         return;
     }
+    logs(INFO, "\"" + filename_ + "\" deleted successfully");
     setPage(204, "No content. File \"" + filename_ + "\" deleted successfully.", false);
 }
 
@@ -288,7 +292,7 @@ void Response::parseMultipartBody(const Request &obj) {
         size_t start = pos + 10;
         size_t end = headers.find("\"", start);
         filename_ = headers.substr(start, end - start);
-        logs(ERROR, filename_);
+        logs(INFO, "\"" + filename_ + "\" uploaded successfully");
         //std::cout << filename_ << std::endl;
     }
 
@@ -475,13 +479,10 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
 void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
 {
     std::string cgiScriptPath = "." + locConfig.getRoot() + reqObj.getReqPath();
-    std::ostringstream oss;
     std::string msg;
 
-    oss << "Processing CGI Request: " << reqObj.getMethod() << " " << cgiScriptPath;
-    msg = oss.str();
+    msg = "Processing CGI Request: " + reqObj.getMethod() + " " + cgiScriptPath;
     logs(INFO, msg);
-	//std::cout << "Processing CGI Request: " << reqObj.getMethod() << " " << cgiScriptPath << std::endl;
     CgiHandler cgiHandler(reqObj, locConfig);
 	// setenv("SERVER_NAME", "localhost", 1); // Replace with actual server name if available
 	// setenv("SERVER_PORT", "8080", 1);     // Replace with actual server port if available
@@ -496,19 +497,11 @@ void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
     std::string cgiOutput = cgiHandler.run();
     if (cgiHandler.getStatus()) {
         // CGI execution was successful
-        oss.str(""); oss.clear();
-        oss << "CGI execution successful: " << reqObj.getReqPath();
-        msg = oss.str();
+        msg = "CGI execution successful: " + reqObj.getReqPath();
         logs(INFO, msg);
-        //std::cout << "CGI execution successful: " << reqObj.getReqPath() << std::endl;
         
         setCode(200);
 
-        oss.str(""); oss.clear();
-        oss << "Raw CGI output:\n" << cgiOutput << "\nEND OF CGI OUTPUT\n"; // is this needed?
-        msg = oss.str();
-        logs(INFO, msg);
-		//std::cout << "Raw CGI output:\n" << cgiOutput << "\nEND OF CGI OUTPUT\n";
         parseCgiResponse(cgiOutput);
     } else {
 		switch (cgiHandler.getError()) {
