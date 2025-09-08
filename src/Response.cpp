@@ -33,13 +33,6 @@ Response::Response(std::map<int, std::string> error_pages, int code, const std::
     setHeader("Connection", "close");
 }
 
-template <typename T>
-std::string int_to_string(T value) {
-    std::ostringstream oss;
-    oss << value;
-    return oss.str();
-}
-
 void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
 
     (void) reqObj;
@@ -51,10 +44,9 @@ void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
         if (S_ISDIR(file_stat.st_mode)) {
             for (size_t i = 0; i < index_files.size(); ++i) {
                 std::string candidate = fullPath_ + "/" + index_files[i];
-                if (stat(candidate.c_str(), &file_stat) == 0 && S_ISREG(file_stat.st_mode))
-                {
+                if (stat(candidate.c_str(), &file_stat) == 0 && S_ISREG(file_stat.st_mode)) {
                     fullPath_ = candidate;
-                    return handleGet(reqObj, loc);
+                    return (handleGet(reqObj, loc));
                 }
             }
             if (loc.getAutoindex()) {
@@ -70,7 +62,7 @@ void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
             throw HttpException(403, "You do not have permission to read this file", true);
 
         readFileIntoBody(fullPath_);
-        setHeader(HEADER_CONTENT_LENGTH, int_to_string(body_.size()));
+        setHeader(HEADER_CONTENT_LENGTH, util::intToString(body_.size()));
         setHeader(HEADER_CONTENT_TYPE, getContentType(fullPath_));
         return;
     } else
@@ -92,7 +84,6 @@ void Response:: readFileIntoBody(const std::string &fileName) {
             throw HttpException(404, "Not Found", true);
         else
             throw HttpException(500, "Server error: unable to open file.", true);
-        }
         return;
     }
 
@@ -199,7 +190,6 @@ void Response::createUploadDir(const std::string &uploadFullPath) {
             oss << "mkdir failed for " << uploadFullPath << ": " << strerror(errno);
             std::string msg = oss.str();
             logs(ERROR, msg);
-            //std::cerr << "mkdir failed for " << uploadFullPath << ": " << strerror(errno) << std::endl;
         }
     }
 }
@@ -336,8 +326,7 @@ void Response::setPage(const int code, const std::string &message, bool error)
     else
         readFileIntoBody("." + errorPagePath);
 
-    // Content-Length e Content-Type
-    setHeader(HEADER_CONTENT_LENGTH, int_to_string(body_.size()));
+    setHeader(HEADER_CONTENT_LENGTH, util::intToString(body_.size()));
     setHeader(HEADER_CONTENT_TYPE, MIME_HTML);
 }
 
@@ -361,7 +350,7 @@ std::string Response::generateDefaultPage(const int code, const std::string &mes
     html << "<p>" << message << "</p>\r\n";
     html << "</body>\r\n</html>\r\n";
 
-    return html.str();
+    return (html.str());
 }
 
 
@@ -465,7 +454,7 @@ void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
         msg = oss.str();
         logs(INFO, msg);
         //std::cout << "CGI execution successful: " << reqObj.getReqPath() << std::endl;
-        
+
         setCode(200);
 
         oss.str(""); oss.clear();
@@ -523,7 +512,7 @@ void Response::parseCgiResponse(const std::string &cgiOutput) {
     setBody(b);
 
     if (!findHeader("Content-Length")) {
-        setHeader("Content-Length", int_to_string(b.size()));
+        setHeader("Content-Length", util::intToString(b.size()));
     }
 }
 
