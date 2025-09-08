@@ -13,17 +13,9 @@ Request::Request(const std::string &raw) : isCgi_(false) {
 void Request::parseRequest(const std::string &raw) {
     std::string temp = raw;
 
-    if (!this->parseRequestLine(temp)) {
-        throw std::runtime_error("Failed to parse request line");
-    }
-
-    if (!this->parseHeaders(temp)) {
-        throw std::runtime_error("Failed to parse request headers");
-    }
-
-    if (!this->parseBody(temp)) {
-        throw std::runtime_error("Failed to parse request body");
-    }
+    parseRequestLine(temp);
+    parseHeaders(temp);
+    parseBody(temp);
 }
 
 bool Request::parseRequestLine(std::string &raw)
@@ -32,9 +24,12 @@ bool Request::parseRequestLine(std::string &raw)
     std::string method, path, version;
 
     if (!(iss >> method >> path >> version))
-        return (false);
+        throw HttpException(400, "Malformed request line", true);
 
     setMethod(method);
+    if (method != "GET" && method != "POST" && method != "DELETE")
+        throw HttpException(405, "Method Not Allowed", true);
+
     std::string query;
     size_t qpos = path.find('?');
     if (qpos != std::string::npos) {
@@ -50,11 +45,13 @@ bool Request::parseRequestLine(std::string &raw)
 
     setReqPath(cleanPath);
     setQueryString(query);
+    if (version != "HTTP/1.0" && version != "HTTP/1.1")
+        throw HttpException(400, "Bad Request: unsupported HTTP version", true);
     setVersion(version);
 
     size_t pos = raw.find("\r\n");
     if (pos == std::string::npos)
-        return false;
+        throw HttpException(400, "Malformed request line ending", true);
     raw.erase(0, pos + 2);
 
     return (true);
@@ -64,7 +61,7 @@ bool Request::parseHeaders(std::string &raw)
 {
     std::string::size_type headerEnd = raw.find("\r\n\r\n");
     if (headerEnd == std::string::npos)
-        return (false);
+        throw HttpException(400, "Malformed headers: missing CRLFCRLF", true);
 
     std::string headersBlock = raw.substr(0, headerEnd);
     raw.erase(0, headerEnd + 4);
@@ -82,7 +79,7 @@ bool Request::parseHeaders(std::string &raw)
 
         std::string::size_type pos = line.find(":");
         if (pos == std::string::npos)
-            return (false);
+            throw HttpException(400, "Malformed header line", true);
 
         std::string key = line.substr(0, pos);
         std::string value = line.substr(pos + 1);
@@ -93,10 +90,15 @@ bool Request::parseHeaders(std::string &raw)
         value.erase(value.find_last_not_of(" \t\r\n") + 1);
 
         if (key.empty())
-            return (false);
+            throw HttpException(400, "Bad Request", true);
 
         std::transform(key.begin(), key.end(), key.begin(), ::tolower);
         headers_[key] = value;
+    }
+
+    if (headers_.count("transfer-encoding")) {
+        if (headers_["transfer-encoding"] != "chunked")
+            throw HttpException(400, "Unsupported Transfer-Encoding", true);
     }
 
     return (true);
@@ -115,20 +117,20 @@ bool Request::parseBody(std::string &raw)
     // 🔹 2. Otherwise, fall back to Content-Length
     it = headers_.find("content-length");
     if (it == headers_.end())
-        return false;
+        throw HttpException(411, "Length Required", true);
 
     const std::string &lengthStr = it->second;
     long length = -1;
     std::istringstream(lengthStr) >> length;
 
     if (length < 0)
-        return (false);
+        throw HttpException(400, "Bad Request", true);
 
     if (raw.empty() && method_ == "POST" && length != 0)
         return (false);
 
     if (raw.size() < static_cast<size_t>(length))
-        return (false);
+        throw HttpException(400, "Bad Request", true);
 
     body_= raw.substr(0, length);
     raw.erase(0, length);
@@ -145,7 +147,7 @@ bool Request::parseChunkedBody(std::string &raw)
         // 1. Find end of the chunk size line
         std::string::size_type endline = raw.find("\r\n", pos);
         if (endline == std::string::npos)
-            return false; // not enough data yet
+            throw HttpException(400, "Malformed chunk size line", true);
 
         // 2. Parse chunk size (hexadecimal)
         std::string sizeStr = raw.substr(pos, endline - pos);
@@ -154,7 +156,7 @@ bool Request::parseChunkedBody(std::string &raw)
         iss >> std::hex >> chunkSize;
 
         if (iss.fail())
-            return false; // bad chunk size
+            throw HttpException(400, "Invalid chunk size", true);
 
         pos = endline + 2; // move past "\r\n"
 
@@ -164,14 +166,17 @@ bool Request::parseChunkedBody(std::string &raw)
             // skip trailing CRLF after last 0\r\n
             std::string::size_type trailerEnd = raw.find("\r\n", pos);
             if (trailerEnd == std::string::npos)
-                return false;             // wait for end
+                throw HttpException(400, "Missing CRLF after last chunk", true);
             raw.erase(0, trailerEnd + 2); // consume used data
             return true;
         }
 
-        // 4. Make sure we have the whole chunk data
+        totalSize += chunkSize;
+        if ((int)totalSize > maxBodySize_)
+            throw HttpException(413, "Payload Too Large", true);
+
         if (raw.size() < pos + chunkSize + 2)
-            return false; // wait for more
+            throw HttpException(400, "Incomplete chunk data", true);
 
         // 5. Append chunk to body
         body_.append(raw, pos, chunkSize);
@@ -180,7 +185,7 @@ bool Request::parseChunkedBody(std::string &raw)
 
         // 6. Chunks are followed by CRLF
         if (raw.substr(pos, 2) != "\r\n")
-            return false; // malformed
+            throw HttpException(400, "Missing CRLF after chunk data", true);
         pos += 2;
     }
 }

@@ -76,7 +76,7 @@ void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
     } else
     {
         if (errno == ENOENT)
-            return (setPage(404, "File does not exist", true));
+            throw HttpException(404, "File does not exist", true);
         else if (errno == EACCES)
             throw HttpException(403, "Access denied.", true);
         else
@@ -176,21 +176,17 @@ void Response::handlePost(const Request &reqObj, LocationConfig loc)
         throw std::runtime_error("Config error: No upload_path specified in location " + loc.getUri());
 
     std::string reqPath = reqObj.getReqPath();
-    if (reqPath != "/upload" && reqPath.find("/upload/") != 0){
-        setPage(405, "Method Not Allowed", true); // POST not allowed here
-        return;
-    }
+    if (reqPath != "/upload" && reqPath.find("/upload/") != 0)
+        throw HttpException(405, "Method Not Allowed", true);
 
-    if (reqObj.getBody().empty()) {
-        throw HttpException(400, "No body detected in request", true);
-    }
+    // if (reqObj.getBody().empty()) {
+    //     throw HttpException(400, "No body detected in request", true);
+    // }
 
     parseMultipartBody(reqObj); //insert some check here
 
-    if (!reqObj.findHeader(HEADER_CONTENT_TYPE)) {
-        setPage(400, "Missing Content-Type header", true);
-        return;
-    }
+    if (!reqObj.findHeader(HEADER_CONTENT_TYPE))
+        throw HttpException(400, "Missing Content-Type header", true);
 
     std::string uploadFullPath = "./" + loc.getUploadDir();
     createUploadDir(uploadFullPath);
@@ -219,34 +215,28 @@ void Response::uploadFile(const std::string &uploadFullPath)
         return (setPage(201, "File created", false));
     }
     else
-        return (setPage(500, "Server error: could not open file for writing.", true));
+        throw HttpException(500, "Server error: could not open file for writing.", true);
 }
 
 void Response::handleDelete(const Request &reqObj) {
     std::string prefix = "/upload/";
 
-    if (reqObj.getReqPath().compare(0, prefix.size(), prefix) != 0) {
-        setPage(404, "Wrong path. Expected \"/upload/", true);
-        return;
-    }
+    if (reqObj.getReqPath().compare(0, prefix.size(), prefix) != 0)
+        throw HttpException(404, "Wrong path. Expected \"/upload/", true);
 
     filename_ = "." + reqObj.getFullPath();
     struct stat fileStat;
 
-    if (stat(filename_.c_str(), &fileStat) != 0) {
-        setPage(404, "File not found: \"" + filename_ + "\"", true);
-        return;
-    }
+    if (stat(filename_.c_str(), &fileStat) != 0)
+        throw HttpException(404, "File not found: \"" + filename_ + "\"", true);
 
-    if (!S_ISREG(fileStat.st_mode)) {
-        setPage(404, "\"" + filename_ + "\" is not a regular file", true);
-        return;
-    }
 
-    if (remove(filename_.c_str()) != 0) {
-        setPage(500, "Failed to delete file: \"" + filename_ + "\"", true);
-        return;
-    }
+    if (!S_ISREG(fileStat.st_mode))
+        throw HttpException(404, "\"" + filename_ + "\" is not a regular file", true);
+
+    if (remove(filename_.c_str()) != 0)
+        throw HttpException(500, "Failed to delete file: \"" + filename_ + "\"", true);
+
     setPage(204, "No content. File \"" + filename_ + "\" deleted successfully.", false);
 }
 
@@ -336,6 +326,7 @@ void Response::setCode(const int code)
         codeToMessage[404] = "Not Found";
         codeToMessage[408] = "Request Timeout";
         codeToMessage[405] = "Method Not Allowed";
+        codeToMessage[411] = "Length Required";
         codeToMessage[414] = "URI too long";
         codeToMessage[500] = "Internal Server Error";
     }
@@ -448,10 +439,7 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
     } else if (!reqObj.getMethod().compare("DELETE")) {
         handleDelete(reqObj);
     } else
-        setPage(501, "Method not implemented", true);
-
-    //if (reqObj.findHeader(HEADER_CONNECTION))
-    //    this->setHeader(HEADER_CONNECTION, *reqObj.findHeader(HEADER_CONNECTION));
+        throw HttpException(501, "Method not implemented", true);
 
     const std::string version = reqObj.getVersion();
     std::string connection;
@@ -488,9 +476,9 @@ void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
 
 	// Check if the CGI script was found
     if (!cgiHandler.getStatus() && cgiHandler.getError() == CgiHandler::SCRIPT_NOT_FOUND) {
-        setPage(404, "The requested CGI script was not found: " + reqObj.getReqPath(), true);
-        setHeader("Content-Type", "text/html");
-        return;
+        throw HttpException(404, "The requested CGI script was not found: " + reqObj.getReqPath(), true);
+        // setHeader("Content-Type", "text/html");
+        // return;
     }
     // Run the CGI script and capture its output
     std::string cgiOutput = cgiHandler.run();
@@ -513,28 +501,28 @@ void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
     } else {
 		switch (cgiHandler.getError()) {
 			case CgiHandler::PIPE_FAILED:
-				setPage(500, "CGI execution failed: pipe creation failed", true);
-				setHeader("Content-Type", "text/plain");
-				break;
+				throw HttpException(500, "CGI execution failed: pipe creation failed", true);
+				// setHeader("Content-Type", "text/plain");
+				// break;
 			case CgiHandler::FORK_FAILED:
-				setPage(500, "CGI execution failed: fork failed", true);
-				setHeader("Content-Type", "text/plain");
-				break;
+				throw HttpException(500, "CGI execution failed: fork failed", true);
+				// setHeader("Content-Type", "text/plain");
+				// break;
 			case CgiHandler::EXECVE_FAILED:
-				setPage(500, "CGI execution failed: execve failed", true);
-				setHeader("Content-Type", "text/plain");
-				break;
+				throw HttpException(500, "CGI execution failed: execve failed", true);
+				// setHeader("Content-Type", "text/plain");
+				// break;
 			case CgiHandler::TIMEOUT:
-				setPage(504, "CGI execution failed: script timed out", true);
-				setHeader("Content-Type", "text/plain");
-				break;
+				throw HttpException(504, "CGI execution failed: script timed out", true);
+				// setHeader("Content-Type", "text/plain");
+				// break;
 			case CgiHandler::CGI_SCRIPT_FAILED:
-				setPage(500, "CGI execution failed: script error", true);
-				setHeader("Content-Type", "text/plain");
-				break;
+				throw HttpException(500, "CGI execution failed: script error", true);
+				// setHeader("Content-Type", "text/plain");
+				// break;
 			default:
-				setPage(500, "CGI execution failed: unknown error", true);
-				setHeader("Content-Type", "text/plain");
+				throw HttpException(500, "CGI execution failed: unknown error", true);
+				// setHeader("Content-Type", "text/plain");
 		}
     }
 }
