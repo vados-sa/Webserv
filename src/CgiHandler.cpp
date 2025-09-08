@@ -233,7 +233,7 @@ bool CgiHandler::saveFile(const std::string &filePath, const std::string &fileCo
     std::ostringstream oss;
     std::string msg;
     if (!outFile) {
-        oss <<  "File uploaded successfully: " + filePath;
+        oss << "Failed to open file: " + filePath;
         msg = oss.str();
         logs(ERROR, msg);
         //std::cerr << "Failed to open file: " + filePath << std::endl;
@@ -249,23 +249,144 @@ bool CgiHandler::saveFile(const std::string &filePath, const std::string &fileCo
 }
 
 
-std::string CgiHandler::run() {
+// std::string CgiHandler::run() {
+//     int inPipe[2], outPipe[2], errPipe[2];
+
+//     // Create pipes
+//     if (pipe(inPipe) == -1 || pipe(outPipe) == -1 || pipe(errPipe) == -1) {
+//         error = PIPE_FAILED;
+//         logs(ERROR, "Failed to create pipes");
+//         //std::cerr << "Failed to create pipes" << std::endl;
+//         return "";
+//     }
+
+//     pid_t pid = fork();
+//     if (pid < 0) {
+//         error = FORK_FAILED;
+//         logs(ERROR, "Fork failed");
+//         //std::cerr << "Fork failed" << std::endl;
+//         return "";
+//     }
+
+//     if (pid == 0) { // Child process
+//         dup2(inPipe[0], STDIN_FILENO);
+//         dup2(outPipe[1], STDOUT_FILENO);
+//         dup2(errPipe[1], STDERR_FILENO);
+
+//         close(inPipe[1]);
+//         close(outPipe[0]);
+//         close(errPipe[0]);
+
+//         // Prepare environment variables
+//         std::vector<char *> envp;
+//         for (std::map<std::string, std::string>::const_iterator it = env.begin(); it != env.end(); ++it) {
+//             std::string entry = it->first + "=" + it->second;
+//             envp.push_back(strdup(entry.c_str()));
+//         }
+//         envp.push_back(NULL);
+
+//         // Change to script's directory for relative path file access
+//         std::string scriptDir = cgiScriptPath.substr(0, cgiScriptPath.find_last_of('/'));
+//         if (chdir(scriptDir.c_str()) != 0) {
+//             perror("chdir failed");
+//             _exit(EXIT_FAILURE);
+//         }
+
+//         // Prepare arguments
+//         // After chdir, we need just the script filename, not the full path
+//         std::string scriptName = cgiScriptPath.substr(cgiScriptPath.find_last_of('/') + 1);
+//         char *argv_fixed[] = {const_cast<char *>(interpreterPath.c_str()), const_cast<char *>(scriptName.c_str()), NULL};
+
+//         // Execute the CGI script
+//         if (execve(interpreterPath.c_str(), argv_fixed, &envp[0]) == -1) {
+// 			error = EXECVE_FAILED;
+//             std::ostringstream oss;
+//             oss << "CGI execve failed: " << strerror(errno);
+//             std::string msg = oss.str();
+//             logs(ERROR, msg);
+//             //std::cerr << "CGI execve failed: " << strerror(errno) << std::endl;
+//             _exit(EXIT_FAILURE);
+//         }
+//     } else { // Parent process
+//         close(inPipe[0]);
+//         close(outPipe[1]);
+//         close(errPipe[1]);
+
+//         // Write the request body to the CGI script's stdin
+//         if (!body.empty()) {
+//             write(inPipe[1], body.c_str(), body.size());
+//         }
+//         close(inPipe[1]);
+
+//         // Timeout mechanism
+//         int timeout_status;
+//         time_t startTime = time(NULL);
+//         while (waitpid(pid, &timeout_status, WNOHANG) == 0) {
+//             if (time(NULL) - startTime > 5) {
+//                 kill(pid, SIGKILL);
+//                 waitpid(pid, &timeout_status, 0);
+//                 error = TIMEOUT;
+//                 close(outPipe[0]);
+//                 close(errPipe[0]);
+//                 logs(ERROR, "CGI script timed out");
+//                 //std::cerr << "CGI script timed out" << std::endl;
+//                 return "";
+//             }
+//             usleep(100000);
+//         }
+
+//         // Read stdout and stderr
+//         std::stringstream cgiOutput;
+//         char buffer[4096];
+//         ssize_t bytesRead;
+
+//         while ((bytesRead = read(outPipe[0], buffer, sizeof(buffer))) > 0) {
+//             cgiOutput.write(buffer, bytesRead);
+//         }
+//         close(outPipe[0]);
+
+//         std::stringstream cgiError;
+//         while ((bytesRead = read(errPipe[0], buffer, sizeof(buffer))) > 0) {
+//             cgiError.write(buffer, bytesRead);
+//         }
+//         close(errPipe[0]);
+
+//         // Check the exit status of the child process
+//         if (WIFEXITED(timeout_status) && WEXITSTATUS(timeout_status) == 0) {
+//             status_cgi = true;
+//             logs(INFO, "CGI script executed successfully");
+//             //std::cout << "CGI script executed successfully" << std::endl;
+//             return cgiOutput.str();
+//         } else {
+//             error = CGI_SCRIPT_FAILED;
+//             logs(ERROR, "CGI script failed");
+//             //std::cerr << "CGI script failed" << std::endl;
+//             return "";
+//         }
+//     }
+//     return "";
+// }
+
+
+// Non-blocking CGI execution - starts the CGI process and returns immediately
+bool CgiHandler::startCgi(Client &client) {
     int inPipe[2], outPipe[2], errPipe[2];
 
     // Create pipes
     if (pipe(inPipe) == -1 || pipe(outPipe) == -1 || pipe(errPipe) == -1) {
         error = PIPE_FAILED;
         logs(ERROR, "Failed to create pipes");
-        //std::cerr << "Failed to create pipes" << std::endl;
-        return "";
+        return false;
     }
 
     pid_t pid = fork();
     if (pid < 0) {
         error = FORK_FAILED;
         logs(ERROR, "Fork failed");
-        //std::cerr << "Fork failed" << std::endl;
-        return "";
+        close(inPipe[0]); close(inPipe[1]);
+        close(outPipe[0]); close(outPipe[1]);
+        close(errPipe[0]); close(errPipe[1]);
+        return false;
     }
 
     if (pid == 0) { // Child process
@@ -293,18 +414,15 @@ std::string CgiHandler::run() {
         }
 
         // Prepare arguments
-        // After chdir, we need just the script filename, not the full path
         std::string scriptName = cgiScriptPath.substr(cgiScriptPath.find_last_of('/') + 1);
         char *argv_fixed[] = {const_cast<char *>(interpreterPath.c_str()), const_cast<char *>(scriptName.c_str()), NULL};
 
         // Execute the CGI script
         if (execve(interpreterPath.c_str(), argv_fixed, &envp[0]) == -1) {
-			error = EXECVE_FAILED;
             std::ostringstream oss;
             oss << "CGI execve failed: " << strerror(errno);
             std::string msg = oss.str();
             logs(ERROR, msg);
-            //std::cerr << "CGI execve failed: " << strerror(errno) << std::endl;
             _exit(EXIT_FAILURE);
         }
     } else { // Parent process
@@ -312,59 +430,50 @@ std::string CgiHandler::run() {
         close(outPipe[1]);
         close(errPipe[1]);
 
-        // Write the request body to the CGI script's stdin
-        if (!body.empty()) {
-            write(inPipe[1], body.c_str(), body.size());
-        }
-        close(inPipe[1]);
-
-        // Timeout mechanism
-        int timeout_status;
-        time_t startTime = time(NULL);
-        while (waitpid(pid, &timeout_status, WNOHANG) == 0) {
-            if (time(NULL) - startTime > 5) {
-                kill(pid, SIGKILL);
-                waitpid(pid, &timeout_status, 0);
-                error = TIMEOUT;
-                close(outPipe[0]);
-                close(errPipe[0]);
-                logs(ERROR, "CGI script timed out");
-                //std::cerr << "CGI script timed out" << std::endl;
-                return "";
-            }
-            usleep(100000);
+        // Set pipes to non-blocking mode
+        if (fcntl(inPipe[1], F_SETFL, O_NONBLOCK) < 0 ||
+            fcntl(outPipe[0], F_SETFL, O_NONBLOCK) < 0 ||
+            fcntl(errPipe[0], F_SETFL, O_NONBLOCK) < 0) {
+            logs(ERROR, "Failed to set CGI pipes to non-blocking mode");
+            close(inPipe[1]);
+            close(outPipe[0]);
+            close(errPipe[0]);
+            kill(pid, SIGKILL);
+            return false;
         }
 
-        // Read stdout and stderr
-        std::stringstream cgiOutput;
-        char buffer[4096];
-        ssize_t bytesRead;
+        // Store CGI context in client
+        Client::CgiContext &cgi = client.getCgiContext();
+        cgi.pid = pid;
+        cgi.stdin_fd = inPipe[1];
+        cgi.stdout_fd = outPipe[0];
+        cgi.stderr_fd = errPipe[0];
+        cgi.input_buffer = body;
+        cgi.input_sent = 0;
+        cgi.start_time = time(NULL);
+        cgi.stdin_closed = false;
+        cgi.stdout_closed = false;
+        cgi.stderr_closed = false;
 
-        while ((bytesRead = read(outPipe[0], buffer, sizeof(buffer))) > 0) {
-            cgiOutput.write(buffer, bytesRead);
-        }
-        close(outPipe[0]);
-
-        std::stringstream cgiError;
-        while ((bytesRead = read(errPipe[0], buffer, sizeof(buffer))) > 0) {
-            cgiError.write(buffer, bytesRead);
-        }
-        close(errPipe[0]);
-
-        // Check the exit status of the child process
-        if (WIFEXITED(timeout_status) && WEXITSTATUS(timeout_status) == 0) {
-            status_cgi = true;
-            logs(INFO, "CGI script executed successfully");
-            //std::cout << "CGI script executed successfully" << std::endl;
-            return cgiOutput.str();
-        } else {
-            error = CGI_SCRIPT_FAILED;
-            logs(ERROR, "CGI script failed");
-            //std::cerr << "CGI script failed" << std::endl;
-            return "";
-        }
+        status_cgi = true; // Successfully started
+        return true;
     }
-    return "";
+    return false;
+}
+
+// Finish CGI execution - process final output and return result
+std::string CgiHandler::finishCgi(const Client &client, int exit_status) {
+    const Client::CgiContext &cgi = client.getCgiContext();
+    
+    if (WIFEXITED(exit_status) && WEXITSTATUS(exit_status) == 0) {
+        status_cgi = true;
+        logs(INFO, "CGI script executed successfully");
+        return cgi.output_buffer;
+    } else {
+        error = CGI_SCRIPT_FAILED;
+        logs(ERROR, "CGI script failed");
+        return "";
+    }
 }
 
 

@@ -63,7 +63,7 @@ public:
     void setFullPath(const std::string &reqPath);
     void setCode(const int code);
     void setPage(const  int code, const std::string &message, bool error);
-	void handleCgi(const Request &reqObj, const LocationConfig &locConfig);
+	//void handleCgi(const Request &reqObj, const LocationConfig &locConfig);
 	void parseCgiResponse(const std::string &cgiOutput);
 };
 

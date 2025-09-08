@@ -439,8 +439,8 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
 
     if (!locConfig.getReturnTarget().empty()) {
         handleRedirect(locConfig);
-    } else if (reqObj.isCgi()) {
-        handleCgi(reqObj, locConfig);
+    // } else if (reqObj.isCgi()) {
+    //     handleCgi(reqObj, locConfig);
     } else if (!reqObj.getMethod().compare("GET")) {
         handleGet(reqObj, locConfig);
     } else if (!reqObj.getMethod().compare("POST")) {
@@ -472,72 +472,72 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
     return (writeResponseString());
 }
 
-void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
-{
-    std::string cgiScriptPath = "." + locConfig.getRoot() + reqObj.getReqPath();
-    std::ostringstream oss;
-    std::string msg;
+// void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
+// {
+//     std::string cgiScriptPath = "." + locConfig.getRoot() + reqObj.getReqPath();
+//     std::ostringstream oss;
+//     std::string msg;
 
-    oss << "Processing CGI Request: " << reqObj.getMethod() << " " << cgiScriptPath;
-    msg = oss.str();
-    logs(INFO, msg);
-	//std::cout << "Processing CGI Request: " << reqObj.getMethod() << " " << cgiScriptPath << std::endl;
-    CgiHandler cgiHandler(reqObj, locConfig);
-	// setenv("SERVER_NAME", "localhost", 1); // Replace with actual server name if available
-	// setenv("SERVER_PORT", "8080", 1);     // Replace with actual server port if available
+//     oss << "Processing CGI Request: " << reqObj.getMethod() << " " << cgiScriptPath;
+//     msg = oss.str();
+//     logs(INFO, msg);
+// 	//std::cout << "Processing CGI Request: " << reqObj.getMethod() << " " << cgiScriptPath << std::endl;
+//     CgiHandler cgiHandler(reqObj, locConfig);
+// 	// setenv("SERVER_NAME", "localhost", 1); // Replace with actual server name if available
+// 	// setenv("SERVER_PORT", "8080", 1);     // Replace with actual server port if available
 
-	// Check if the CGI script was found
-    if (!cgiHandler.getStatus() && cgiHandler.getError() == CgiHandler::SCRIPT_NOT_FOUND) {
-        setPage(404, "The requested CGI script was not found: " + reqObj.getReqPath(), true);
-        setHeader("Content-Type", "text/html");
-        return;
-    }
-    // Run the CGI script and capture its output
-    std::string cgiOutput = cgiHandler.run();
-    if (cgiHandler.getStatus()) {
-        // CGI execution was successful
-        oss.str(""); oss.clear();
-        oss << "CGI execution successful: " << reqObj.getReqPath();
-        msg = oss.str();
-        logs(INFO, msg);
-        //std::cout << "CGI execution successful: " << reqObj.getReqPath() << std::endl;
+// 	// Check if the CGI script was found
+//     if (!cgiHandler.getStatus() && cgiHandler.getError() == CgiHandler::SCRIPT_NOT_FOUND) {
+//         setPage(404, "The requested CGI script was not found: " + reqObj.getReqPath(), true);
+//         setHeader("Content-Type", "text/html");
+//         return;
+//     }
+//     // Run the CGI script and capture its output
+//     std::string cgiOutput = cgiHandler.run();
+//     if (cgiHandler.getStatus()) {
+//         // CGI execution was successful
+//         oss.str(""); oss.clear();
+//         oss << "CGI execution successful: " << reqObj.getReqPath();
+//         msg = oss.str();
+//         logs(INFO, msg);
+//         //std::cout << "CGI execution successful: " << reqObj.getReqPath() << std::endl;
         
-        setCode(200);
+//         setCode(200);
 
-        oss.str(""); oss.clear();
-        oss << "Raw CGI output:\n" << cgiOutput << "\nEND OF CGI OUTPUT\n"; // is this needed?
-        msg = oss.str();
-        logs(INFO, msg);
-		//std::cout << "Raw CGI output:\n" << cgiOutput << "\nEND OF CGI OUTPUT\n";
-        parseCgiResponse(cgiOutput);
-    } else {
-		switch (cgiHandler.getError()) {
-			case CgiHandler::PIPE_FAILED:
-				setPage(500, "CGI execution failed: pipe creation failed", true);
-				setHeader("Content-Type", "text/plain");
-				break;
-			case CgiHandler::FORK_FAILED:
-				setPage(500, "CGI execution failed: fork failed", true);
-				setHeader("Content-Type", "text/plain");
-				break;
-			case CgiHandler::EXECVE_FAILED:
-				setPage(500, "CGI execution failed: execve failed", true);
-				setHeader("Content-Type", "text/plain");
-				break;
-			case CgiHandler::TIMEOUT:
-				setPage(504, "CGI execution failed: script timed out", true);
-				setHeader("Content-Type", "text/plain");
-				break;
-			case CgiHandler::CGI_SCRIPT_FAILED:
-				setPage(500, "CGI execution failed: script error", true);
-				setHeader("Content-Type", "text/plain");
-				break;
-			default:
-				setPage(500, "CGI execution failed: unknown error", true);
-				setHeader("Content-Type", "text/plain");
-		}
-    }
-}
+//         oss.str(""); oss.clear();
+//         oss << "Raw CGI output:\n" << cgiOutput << "\nEND OF CGI OUTPUT\n"; // is this needed?
+//         msg = oss.str();
+//         logs(INFO, msg);
+// 		//std::cout << "Raw CGI output:\n" << cgiOutput << "\nEND OF CGI OUTPUT\n";
+//         parseCgiResponse(cgiOutput);
+//     } else {
+// 		switch (cgiHandler.getError()) {
+// 			case CgiHandler::PIPE_FAILED:
+// 				setPage(500, "CGI execution failed: pipe creation failed", true);
+// 				setHeader("Content-Type", "text/plain");
+// 				break;
+// 			case CgiHandler::FORK_FAILED:
+// 				setPage(500, "CGI execution failed: fork failed", true);
+// 				setHeader("Content-Type", "text/plain");
+// 				break;
+// 			case CgiHandler::EXECVE_FAILED:
+// 				setPage(500, "CGI execution failed: execve failed", true);
+// 				setHeader("Content-Type", "text/plain");
+// 				break;
+// 			case CgiHandler::TIMEOUT:
+// 				setPage(504, "CGI execution failed: script timed out", true);
+// 				setHeader("Content-Type", "text/plain");
+// 				break;
+// 			case CgiHandler::CGI_SCRIPT_FAILED:
+// 				setPage(500, "CGI execution failed: script error", true);
+// 				setHeader("Content-Type", "text/plain");
+// 				break;
+// 			default:
+// 				setPage(500, "CGI execution failed: unknown error", true);
+// 				setHeader("Content-Type", "text/plain");
+// 		}
+//     }
+// }
 
 void Response::parseCgiResponse(const std::string &cgiOutput) {
     std::istringstream stream(cgiOutput);
@@ -567,6 +567,7 @@ void Response::parseCgiResponse(const std::string &cgiOutput) {
     }
     std::string b = body.str();
     if (!b.empty() && b[b.size()-1] == '\n') b.erase(b.size()-1);
+    
     setBody(b);
 
     if (!findHeader("Content-Length")) {

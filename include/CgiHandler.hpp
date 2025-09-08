@@ -2,6 +2,7 @@
 
 #include <map>
 #include "Request.hpp"
+#include "Client.hpp"
 #include "LocationConfig.hpp"
 #include "Logger.hpp"
 
@@ -30,7 +31,14 @@ class CgiHandler {
 		void handleFileUpload(const std::string &body, const std::string &uploadDir);
 		bool getStatus() const { return status_cgi; };
 		CgiErrorType getError() const { return error; };
-		std::string run();
+		
+		// Non-blocking CGI execution
+		bool startCgi(Client &client);
+		std::string finishCgi(const Client &client, int exit_status);
+		
+		// Old blocking method (keep for reference)
+		//std::string run();
+		
 		std::string extractBoundary(const std::string &contentType);
 		bool processPart(const std::string &part, const std::string &uploadDir);
 		std::string extractFileName(const std::string &headers);

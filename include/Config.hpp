@@ -41,6 +41,10 @@ class Config
         int client_count;
         std::vector<Client> clients;
 		std::vector<pollfd> poll_fds;
+		
+		// Map to track what each fd represents
+		std::map<int, std::string> fd_types; // "server", "client", "cgi_stdin", "cgi_stdout", "cgi_stderr"
+		std::map<int, int> fd_to_client; // Map CGI fds to client index
 
         bool validateBindings(std::string &errorMsg) const;
         void setupPollfdSet(int server_count);
@@ -49,6 +53,18 @@ class Config
         void handleIdleClient(int client_idx, int pollfd_idx);
 		void handleClientRequest(int pollfd_idx, int client_idx);
         void handleResponse(int client_idx, int pollfd_idx);
+        
+        // CGI handling methods
+        void handleCgiRequest(int client_idx, const Request &reqObj, const LocationConfig &locConfig);
+        void handleCgiIO(int client_idx);
+        void handleCgiStdin(int client_idx);
+        void handleCgiStdout(int client_idx);
+        void handleCgiStderr(int client_idx);
+        void finalizeCgiExecution(int client_idx);
+        void addCgiPollFds(int client_idx);
+        void removeCgiPollFds(int client_idx);
+        void checkCgiProcesses();
+        
 		void cleanup();
         
         public:

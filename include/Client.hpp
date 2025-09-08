@@ -21,7 +21,27 @@ class Client {
 			CONNECTED,
 			SENDING_REQUEST,
 			WAITING_RESPONSE,
+			WAITING_CGI,
 			IDLE
+		};
+
+		struct CgiContext {
+			pid_t pid;
+			int stdin_fd;   // write to CGI
+			int stdout_fd;  // read from CGI
+			int stderr_fd;  // read CGI errors
+			std::string input_buffer;   // data to write to CGI
+			std::string output_buffer;  // data read from CGI
+			std::string error_buffer;   // errors from CGI
+			size_t input_sent;          // bytes already sent to CGI
+			time_t start_time;
+			bool stdin_closed;
+			bool stdout_closed;
+			bool stderr_closed;
+			
+			CgiContext() : pid(-1), stdin_fd(-1), stdout_fd(-1), stderr_fd(-1),
+							input_sent(0), start_time(0), stdin_closed(false),
+							stdout_closed(false), stderr_closed(false) {}
 		};
 
 	private:
@@ -35,6 +55,7 @@ class Client {
 		int port;
 		bool keep_alive;
         Response *res;
+		CgiContext cgi_context;
 
     public:
     	Client(int fd, int server_index);
@@ -56,6 +77,8 @@ class Client {
 		int getPort() const {return port;}
 		bool getKeepAlive() const {return keep_alive;}
     	Response *getResponseObj() { return res; }
+		CgiContext &getCgiContext() { return cgi_context; }
+		const CgiContext &getCgiContext() const { return cgi_context; }
 
     	void setState(State new_state);
 		void setResponseBuffer(std::string response);
