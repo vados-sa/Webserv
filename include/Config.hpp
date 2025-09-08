@@ -3,23 +3,13 @@
 #include "ServerConfig.hpp"
 #include "ServerSocket.hpp"
 #include "Client.hpp"
-#include "Request.hpp"
-#include "Response.hpp"
-#include "Logger.hpp"
+#include "LocationConfig.hpp"
 
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <unistd.h>
-#include <fcntl.h>
 #include <poll.h>
 
 #include <vector>
-#include <iostream>
 #include <string>
-#include <cstring>
-#include <cstdlib>
-
-// check necessity of includes
+#include <iostream>
 
 const int MAX_CLIENT = 1024;
 

@@ -1,6 +1,17 @@
 #include "Config.hpp"
 #include "ConfigParser.hpp"
 #include "HttpException.hpp"
+#include "Request.hpp"
+#include "Response.hpp"
+#include "Logger.hpp"
+
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <unistd.h>
+#include <fcntl.h>
+
+#include <cstring>
+#include <cstdlib>
 
 Config::Config(const std::string &filepath) : client_count(0)
 {
@@ -197,10 +208,8 @@ bool Config::pollLoop(int server_count)
                 ServerConfig srv = this->servers[clients[client_idx].getServerIndex()];
                 std::map<int, std::string> error_pages = srv.getErrorPagesConfig();
                 Response res(error_pages, e.getStatusCode(), e.what(), e.getError());
-                std::string res_string = res.writeResponseString(); //some checks maybe?
-                //clients[client_idx].setResponseBuffer(res_string);
+                std::string res_string = res.writeResponseString();
                 handleResponse(client_idx, i);
-                //poll_fds[pollfd_idx].events = POLLOUT;
             }
         }
     }
@@ -268,8 +277,8 @@ void Config::handleIdleClient(int client_idx, int pollfd_idx)
     throw HttpException(408, errorMessage, true);
 }
 
-// Parse the header block (up to and incl. the CRLFCRLF) into a lowercased key map.
-// Returns false on malformed headers (e.g., missing colon).
+/* Parse the header block (up to and incl. the CRLFCRLF) into a lowercased key map.
+ Returns false on malformed headers (e.g., missing colon). */
 static bool parse_headers_block(const std::string &headers,
                                 std::map<std::string, std::string> &out_hmap)
 {
@@ -472,14 +481,6 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx)
             client.setKeepAlive(false);
             poll_fds[pollfd_idx].events = POLLIN | POLLOUT;
             throw HttpException(400, "Bad Request", true);
-            // Response res(servers[client.getServerIndex()].getErrorPagesConfig());
-            // Request bad;
-            // bad.setVersion("HTTP/1.1");
-            // res.setPage(400, "Bad Request", true);
-            // client.setResponseBuffer(res.writeResponseString());
-            // client.setKeepAlive(false);
-            // poll_fds[pollfd_idx].events = POLLIN | POLLOUT;
-            // return;
         }
 
         std::string raw = client.getRequest().substr(0, (size_t)consumed);
@@ -525,13 +526,10 @@ void Config::handleResponse(int client_idx, int pollfd_idx)
         client.setBytesSent(alreadySent + bytes);
     }
 
-    // If all bytes sent
     if (client.getBytesSent() >= responseStr.size())
     {
         client.setBytesSent(0);
         alreadySent = 0;
-        // delete client.getResponseObj(); // delete heap Response
-        //client.setResponseObj(NULL);
         if (!client.getKeepAlive() || (client.getState() == Client::IDLE))
         {
             std::ostringstream oss;
