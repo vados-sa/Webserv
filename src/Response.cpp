@@ -204,6 +204,7 @@ void Response::createUploadDir(const std::string &uploadFullPath) {
             std::ostringstream oss;
             oss << "mkdir failed for " << uploadFullPath << ": " << strerror(errno);
             std::string msg = oss.str();
+            //std::string msg = "mkdir failed for " + uploadFullPath + ": " + strerror(errno);
             logs(ERROR, msg);
             //std::cerr << "mkdir failed for " << uploadFullPath << ": " << strerror(errno) << std::endl;
         }
@@ -226,6 +227,7 @@ void Response::handleDelete(const Request &reqObj) {
     std::string prefix = "/upload/";
 
     if (reqObj.getReqPath().compare(0, prefix.size(), prefix) != 0) {
+        logs(ERROR, "404 Wrong path. Expected \"/upload/");
         setPage(404, "Wrong path. Expected \"/upload/", true);
         return;
     }
@@ -234,19 +236,23 @@ void Response::handleDelete(const Request &reqObj) {
     struct stat fileStat;
 
     if (stat(filename_.c_str(), &fileStat) != 0) {
+        logs(ERROR, "404 File not found: \"" + filename_ + "\"");
         setPage(404, "File not found: \"" + filename_ + "\"", true);
         return;
     }
 
     if (!S_ISREG(fileStat.st_mode)) {
+        logs(ERROR, "404 \"" + filename_ + "\" is not a regular file");
         setPage(404, "\"" + filename_ + "\" is not a regular file", true);
         return;
     }
 
     if (remove(filename_.c_str()) != 0) {
+        logs(ERROR, "500 Failed to delete file: \"" + filename_ + "\"");
         setPage(500, "Failed to delete file: \"" + filename_ + "\"", true);
         return;
     }
+    logs(INFO, "\"" + filename_ + "\" deleted successfully");
     setPage(204, "No content. File \"" + filename_ + "\" deleted successfully.", false);
 }
 
@@ -288,7 +294,7 @@ void Response::parseMultipartBody(const Request &obj) {
         size_t start = pos + 10;
         size_t end = headers.find("\"", start);
         filename_ = headers.substr(start, end - start);
-        logs(ERROR, filename_);
+        logs(INFO, "\"" + filename_ + "\" uploaded successfully");
         //std::cout << filename_ << std::endl;
     }
 
