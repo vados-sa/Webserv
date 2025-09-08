@@ -6,7 +6,7 @@ CXXFLAGS = -g -O0 -Wall -Wextra -Werror -std=c++98 -Iinclude/
 SRC = src/main.cpp src/Config.cpp src/Client.cpp src/ServerConfig.cpp \
 		src/ConfigParser.cpp  src/LocationConfig.cpp src/ServerSocket.cpp \
 		src/Request.cpp src/Response.cpp  src/HttpMessage.cpp src/CgiHandler.cpp \
-		src/Logger.cpp
+		src/Logger.cpp src.Utils.cpp
 OBJ_DIR = obj
 OBJ = $(SRC:%.cpp=$(OBJ_DIR)/%.o)
 

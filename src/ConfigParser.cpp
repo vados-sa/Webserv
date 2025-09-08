@@ -1,5 +1,6 @@
 #include "ConfigParser.hpp"
 #include "Config.hpp"
+#include "Utils.hpp"
 
 Config ConfigParser::parseConfigFile(const std::string &filename) {
     Config config;
@@ -330,15 +331,15 @@ std::string ConfigParser::parsePath(const std::vector<std::string> &tokens)
             throw std::runtime_error(errorMessage.str());
         }
 
-        if (!isValidPath(tokens[1])) {
+        if (!util::isValidPath(tokens[1])) {
             errorMessage << fileName << ":" << lineNum << "  Path contains illegal characters";
             throw std::runtime_error(errorMessage.str());
         }
-        return (tokens[1]);
+        return (util::normalizePath(tokens[1]));
     }
 
     errorMessage << fileName << ":" << lineNum << "  Incorrect syntax for location path.";
-    throw std::runtime_error(errorMessage.str());
+    throw (std::runtime_error(errorMessage.str()));
 }
 
 std::string ConfigParser::parseRoot(const std::vector<std::string> &tokens)
@@ -358,7 +359,7 @@ std::string ConfigParser::parseRoot(const std::vector<std::string> &tokens)
         throw std::runtime_error(errorMessage.str());
     }
 
-    if (!isValidPath(tokens[1])){
+    if (!util::isValidPath(tokens[1])){
         errorMessage << fileName << ":" << lineNum << "  Root path contains illegal characters";
         throw std::runtime_error(errorMessage.str());
     }
@@ -381,7 +382,7 @@ std::vector<std::string> ConfigParser::parseIndex(const std::vector<std::string>
             throw std::runtime_error(errorMessage.str());
         }
 
-        if (!isValidPath(tokens[i])){
+        if (!util::isValidPath(tokens[i])){
             errorMessage << fileName << ":" << lineNum << "  Index value contains illegal characters: " << tokens[i];
             throw std::runtime_error(errorMessage.str());
         }
@@ -500,7 +501,6 @@ bool ConfigParser::parseAutoindex(const std::vector<std::string> &tokens)
     throw std::runtime_error(errorMessage.str());
 }
 
-
 std::string ConfigParser::parseCgiExtension(const std::vector<std::string> &tokens)
 {
 	if (tokens.size() != 2) {
@@ -515,27 +515,10 @@ std::string ConfigParser::parseCgiExtension(const std::vector<std::string> &toke
 	if (extension[0] != '.') {
         throw std::runtime_error("Error: CGI extension must start with a '.' character.");
     }
-	if (!isValidPath(extension)) {
+	if (!util::isValidPath(extension)) {
 		throw std::runtime_error("Error: Invalid CGI extension '" + extension + "'.");
 	}
 	return extension;
-}
-
-bool isValidPathChar(char c)
-{
-    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
-        (c >= '0' && c <= '9') ||
-        c == '/' || c == '-' || c == '_' || c == '.' || c == '~')
-        return (true);
-    return (false);
-}
-
-bool isValidPath(const std::string &path)
-{
-    for (std::string::const_iterator it = path.begin(); it != path.end(); ++it)
-        if (!isValidPathChar(*it))
-            return (false);
-    return (true);
 }
 
 std::string trimComment(std::string line) {

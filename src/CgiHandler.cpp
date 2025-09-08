@@ -1,6 +1,8 @@
 #include "Response.hpp"
 #include "LocationConfig.hpp"
 #include "CgiHandler.hpp"
+#include "Utils.hpp"
+
 #include <cstdlib>
 #include <stdexcept>
 #include <sstream>
@@ -63,7 +65,7 @@ CgiHandler::CgiHandler(const Request &reqObj, const LocationConfig &locConfig) :
 	env["REQUEST_METHOD"] = reqObj.getMethod();
 	env["SCRIPT_FILENAME"] = cgiScriptPath;
 	env["SERVER_PROTOCOL"] = reqObj.getVersion();
-	env["CONTENT_LENGTH"] = body.empty() ? "0" : intToString(body.size());
+	env["CONTENT_LENGTH"] = body.empty() ? "0" : util::intToString(body.size());
 
 	std::map<std::string, std::string> headers = reqObj.getHeaders();
     for (std::map<std::string, std::string>::iterator it = headers.begin(); it != headers.end(); ++it) {
