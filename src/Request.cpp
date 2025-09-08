@@ -6,7 +6,7 @@
 
 Request::Request() : isCgi_(false) {};
 
-Request::Request(const std::string &raw) : isCgi_(false) {
+Request::Request(const std::string &raw, int maxBodySize) : maxBodySize_(maxBodySize), isCgi_(false) {
     this->parseRequest(raw);
 };
 
@@ -140,6 +140,7 @@ bool Request::parseChunkedBody(std::string &raw)
 {
     body_.clear();
     std::string::size_type pos = 0;
+    std::size_t totalSize = 0;
 
     while (true)
     {

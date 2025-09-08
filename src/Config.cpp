@@ -45,7 +45,7 @@ bool Config::setupServer()
         else {
             std::ostringstream oss;
             oss << "Server listening on " << (socketObj.getHost().empty() ? "0.0.0.0" : socketObj.getHost())
-            << ":" << socketObj.getPort(); 
+            << ":" << socketObj.getPort();
             std::string msg = oss.str();
             logs(INFO, msg);
         }
@@ -474,9 +474,8 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx)
         }
         std::string raw = client.getRequest().substr(0, (size_t)consumed);
         client.consumeRequestBytes((size_t)consumed);
-        Request reqObj(raw);
-        //std::cout << "This is the raw request: " << raw << std::endl;
         ServerConfig srv = servers[client.getServerIndex()];
+        Request reqObj(raw, srv.getMaxBodySize());
         std::string response = buildRequestAndResponse(raw, srv, reqObj);
         client.setKeepAlive(reqObj);
         poll_fds[pollfd_idx].events = POLLIN | POLLOUT;
@@ -586,7 +585,7 @@ const LocationConfig *matchLocation(const std::string &reqPath, const ServerConf
 
 std::string buildRequestAndResponse(const std::string &raw, const ServerConfig &srv, Request &outReq)
 {
-    Request reqObj(raw);
+    Request reqObj(raw, srv.getMaxBodySize());
     const LocationConfig *loc = matchLocation(reqObj.getReqPath(), srv);
     if (loc)
         applyLocationConfig(reqObj, *loc);
