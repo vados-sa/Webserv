@@ -1,4 +1,6 @@
 #include "Request.hpp"
+#include "Utils.hpp"
+#include "HttpException.hpp"
 #include <sstream>
 #include <vector>
 
@@ -30,22 +32,21 @@ bool Request::parseRequestLine(std::string &raw)
     std::string method, path, version;
 
     if (!(iss >> method >> path >> version))
-    {
-        return false;
-    }
+        return (false);
 
     setMethod(method);
     std::string query;
     size_t qpos = path.find('?');
-    if (qpos != std::string::npos)
-    {
+    if (qpos != std::string::npos) {
         query = path.substr(qpos + 1);
         path = path.substr(0, qpos);
     }
 
-    std::string cleanPath = normalizePath(path);
+    std::string cleanPath = util::normalizePath(path); /// turns "a/b/../c/./d" and turn it into a clean, normalized path "/a/c/d"
     if (cleanPath.empty())
-        return false;
+        cleanPath = "/";
+    if (!util::isValidPath(cleanPath))
+        throw HttpException(400, "Bad Request", true);
 
     setReqPath(cleanPath);
     setQueryString(query);
@@ -56,7 +57,7 @@ bool Request::parseRequestLine(std::string &raw)
         return false;
     raw.erase(0, pos + 2);
 
-    return true;
+    return (true);
 }
 
 bool Request::parseHeaders(std::string &raw)
@@ -204,29 +205,4 @@ std::ostream &operator<<(std::ostream &os, const std::map<std::string, std::stri
     return os;
 }
 
-std::string normalizePath(const std::string &rawPath) {
-    std::istringstream iss(rawPath);
-    std::vector<std::string> parts;
-    std::string token;
-
-    while (std::getline(iss, token, '/')) {
-        if (token.empty() || token == ".")
-            continue ;
-        else if (token == "..") {
-            if (!parts.empty())
-                parts.pop_back();
-        }
-        else
-            parts.push_back(token);
-    }
-
-    std::string normalized = "/";
-    for (std::vector<std::string>::iterator it = parts.begin(); it != parts.end(); ++it)
-    {
-        normalized += *it;
-        if (it + 1 != parts.end())
-            normalized += "/";
-    }
-    return (normalized);
-}
 

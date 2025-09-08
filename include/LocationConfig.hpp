@@ -48,6 +48,5 @@ public:
 };
 
 std::ostream &operator<<(std::ostream &os, const std::vector<LocationConfig> &obj);
-
 std::ostream &operator<<(std::ostream &os, const std::vector<std::string>& obj);
 

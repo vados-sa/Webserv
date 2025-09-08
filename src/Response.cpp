@@ -4,6 +4,7 @@
 #include "CgiHandler.hpp"
 #include "Config.hpp"
 #include "HttpException.hpp"
+#include "Utils.hpp"
 
 #include <dirent.h>
 #include <iostream>
@@ -171,9 +172,6 @@ std::string Response::getContentType(const std::string &path)
 
 void Response::handlePost(const Request &reqObj, LocationConfig loc)
 {
-    // if (!loc.getAllowUpload())
-    //     return (setPage(403, "Forbidden", true));
-
     if (loc.getUploadDir().empty())
         throw std::runtime_error("Config error: No upload_path specified in location " + loc.getUri());
 
@@ -197,7 +195,7 @@ void Response::handlePost(const Request &reqObj, LocationConfig loc)
     std::string uploadFullPath = "./" + loc.getUploadDir();
     createUploadDir(uploadFullPath);
     uploadFile(uploadFullPath);
-    setPage(201, "File uploaded successfully", true);
+    setPage(201, "File uploaded successfully", false);
 }
 
 void Response::createUploadDir(const std::string &uploadFullPath) {
@@ -244,7 +242,7 @@ void Response::handleDelete(const Request &reqObj) {
         setPage(500, "Failed to delete file: \"" + filename_ + "\"", true);
         return;
     }
-    setPage(204, "No content. File \"" + filename_ + "\" deleted successfully.", true);
+    setPage(204, "No content. File \"" + filename_ + "\" deleted successfully.", false);
 }
 
 void Response::parseMultipartBody(const Request &obj) {
@@ -464,7 +462,7 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
         want_close = (connection != "keep-alive"); // default is close
 
     setHeader("Connection", want_close ? "close" : "keep-alive");
-    setHeader("Content-Length", intToString(body_.size()));
+    setHeader("Content-Length", util::intToString(body_.size()));
     return (writeResponseString());
 }
 
@@ -564,15 +562,9 @@ void Response::handleRedirect(const LocationConfig &locConfig)
     setHeader("Location", newLocation);
 
     body_ =
-        "<html><head><title>" + intToString(statusCode) + " " + statusMessage_ + "</title></head>"
+        "<html><head><title>" + util::intToString(statusCode) + " " + statusMessage_ + "</title></head>"
         "<body style='font-family:sans-serif;text-align:center;margin-top:100px;'>"
-        "<h1>" + intToString(statusCode) + " " + statusMessage_ + "</h1>"
+        "<h1>" + util::intToString(statusCode) + " " + statusMessage_ + "</h1>"
         "<p>Resource has moved to <a href=\"" +
         newLocation + "\">" + newLocation + "</a>.</p></body></html>";
-}
-
-std::string intToString(int value) {
-    std::ostringstream oss;
-    oss << value;
-    return oss.str();
 }

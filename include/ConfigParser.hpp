@@ -41,8 +41,6 @@ public:
     Config  parseConfigFile(const std::string &filename);
 };
 
-bool isValidPathChar(char c);
-bool isValidPath(const std::string &path);
 std::string trimComment(std::string line);
 std::string trimWhitespace(std::string line);
 std::string trimLine(std::string line);
