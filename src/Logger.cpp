@@ -1,11 +1,13 @@
 #include "Logger.hpp"
+#include <iostream>
+#include <ctime>
 
 static std::string timestamp() {
     std::time_t now = std::time(0);
     std::tm *ltm = std::localtime(&now);
-    std::ostringstream oss;
-    oss << std::put_time(ltm, "%Y-%m-%d %H:%M:%S");
-    return oss.str();
+    char buf[32];
+    std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", ltm);
+    return std::string(buf);
 }
 
 void logs(LogLevel level, const std::string &msg) {
