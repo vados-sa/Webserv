@@ -196,27 +196,13 @@ bool Config::pollLoop(int server_count)
                     }
                 } else if (fd_type.find("cgi_") == 0) {
                     // CGI file descriptor closed - this is normal when process completes
-                    // oss << "CGI fd closed: " << fd_type << " fd=" << fd;
-                    // logs(INFO, oss.str());
-                    
-                    // Remove the errored fd from poll set immediately
+                    close(fd);
                     poll_fds.erase(poll_fds.begin() + i);
                     fd_types.erase(fd);
                     fd_to_client.erase(fd);
-                    i--; // Adjust index since we removed an element
                     
                     // Don't immediately error out - let checkCgiProcesses handle completion
                 }
-                int client_idx = i - server_count;
-                if (revent & POLLERR) oss << "POLLERR";
-                if (revent & POLLHUP) oss << "POLLHUP";
-                if (revent & POLLNVAL) oss << "POLLNVAL";
-                oss << " event on client fd=" << poll_fds[i].fd << " server_port=" << servers[clients[client_idx].getServerIndex()].getPort();
-                logs(INFO, oss.str());
-                close(poll_fds[i].fd);
-                poll_fds.erase(poll_fds.begin() + i);
-                clients.erase(clients.begin() + client_idx);
-                client_count--;
                 continue;
             }
 
@@ -833,9 +819,15 @@ void Config::removeCgiPollFds(int client_idx) {
     }
     
     // Close file descriptors
-    if (cgi.stdin_fd >= 0) close(cgi.stdin_fd);
-    if (cgi.stdout_fd >= 0) close(cgi.stdout_fd);
-    if (cgi.stderr_fd >= 0) close(cgi.stderr_fd);
+    if (cgi.stdin_fd >= 0 && !cgi.stdin_closed) {
+        close(cgi.stdin_fd);
+    }
+    if (cgi.stdout_fd >= 0 && !cgi.stdout_closed) {
+        close(cgi.stdout_fd);
+    }
+    if (cgi.stderr_fd >= 0 && !cgi.stderr_closed) {
+        close(cgi.stderr_fd);
+    }
 }
 
 void Config::checkCgiProcesses() {
@@ -976,14 +968,17 @@ void Config::handleCgiStdin(int client_idx) {
     
     // Close stdin when all data is sent
     if (cgi.input_sent >= cgi.input_buffer.size()) {
+        int stdin_fd = cgi.stdin_fd;  // Store fd before closing
         close(cgi.stdin_fd);
         cgi.stdin_fd = -1;
         cgi.stdin_closed = true;
         
         // Remove stdin from poll set
         for (int i = poll_fds.size() - 1; i >= 0; --i) {
-            if (poll_fds[i].fd == cgi.stdin_fd) {
+            if (poll_fds[i].fd == stdin_fd) {
                 poll_fds.erase(poll_fds.begin() + i);
+                fd_types.erase(stdin_fd);
+                fd_to_client.erase(stdin_fd);
                 break;
             }
         }
@@ -1001,15 +996,37 @@ void Config::handleCgiStdout(int client_idx) {
         cgi.output_buffer.append(buffer, bytes_read);
     } else if (bytes_read == 0) {
         // EOF - CGI closed stdout
+        int stdout_fd = cgi.stdout_fd;
         close(cgi.stdout_fd);
         cgi.stdout_fd = -1;
         cgi.stdout_closed = true;
+        
+        // Remove from poll set
+        for (int i = poll_fds.size() - 1; i >= 0; --i) {
+            if (poll_fds[i].fd == stdout_fd) {
+                poll_fds.erase(poll_fds.begin() + i);
+                fd_types.erase(stdout_fd);
+                fd_to_client.erase(stdout_fd);
+                break;
+            }
+        }
     } else if (errno != EAGAIN && errno != EWOULDBLOCK) {
         // Error reading from CGI
         std::cerr << "Error reading from CGI stdout: " << strerror(errno) << std::endl;
+        int stdout_fd = cgi.stdout_fd;
         close(cgi.stdout_fd);
         cgi.stdout_fd = -1;
         cgi.stdout_closed = true;
+        
+        // Remove from poll set
+        for (int i = poll_fds.size() - 1; i >= 0; --i) {
+            if (poll_fds[i].fd == stdout_fd) {
+                poll_fds.erase(poll_fds.begin() + i);
+                fd_types.erase(stdout_fd);
+                fd_to_client.erase(stdout_fd);
+                break;
+            }
+        }
     }
 }
 
@@ -1024,14 +1041,36 @@ void Config::handleCgiStderr(int client_idx) {
         cgi.error_buffer.append(buffer, bytes_read);
     } else if (bytes_read == 0) {
         // EOF - CGI closed stderr
+        int stderr_fd = cgi.stderr_fd;
         close(cgi.stderr_fd);
         cgi.stderr_fd = -1;
         cgi.stderr_closed = true;
+        
+        // Remove from poll set
+        for (int i = poll_fds.size() - 1; i >= 0; --i) {
+            if (poll_fds[i].fd == stderr_fd) {
+                poll_fds.erase(poll_fds.begin() + i);
+                fd_types.erase(stderr_fd);
+                fd_to_client.erase(stderr_fd);
+                break;
+            }
+        }
     } else if (errno != EAGAIN && errno != EWOULDBLOCK) {
         // Error reading from CGI
+        int stderr_fd = cgi.stderr_fd;
         close(cgi.stderr_fd);
         cgi.stderr_fd = -1;
         cgi.stderr_closed = true;
+        
+        // Remove from poll set
+        for (int i = poll_fds.size() - 1; i >= 0; --i) {
+            if (poll_fds[i].fd == stderr_fd) {
+                poll_fds.erase(poll_fds.begin() + i);
+                fd_types.erase(stderr_fd);
+                fd_to_client.erase(stderr_fd);
+                break;
+            }
+        }
     }
 }
 
