@@ -109,32 +109,21 @@ void Response::generateAutoIndex(const LocationConfig& loc) {
     if (!dir)
         throw HttpException(403, "Forbidden", true);
 
-    std::ostringstream html;
-
-    html << "<!DOCTYPE html>\n"
-            << "<html>\n<head>\n"
-            << "<title>Index of " << uri << "</title>\n"
-            << "</head>\n<body>\n"
-            << "<h1>Index of " << uri << "</h1>\n"
-            << "<ul>\n";
-
+    std::vector<std::string> entries;
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL)
     {
         std::string name(entry->d_name);
         if (name == "." || name == "..")
             continue;
-        struct stat st;
-        std::string fullpath = path + "/" + name;
-        if (stat(fullpath.c_str(), &st) == 0 && S_ISDIR(st.st_mode))
-            name += "/";
-        html << "<li><a href=\"" << uri;
-        if (uri[uri.size() - 1] != '/')
-            html << "/";
-        html << name << "\">" << name << "</a></li>\n";
-    }
 
-    html << "</ul>\n</body>\n</html>\n";
+        struct ::stat st;
+        std::string fullpath = path + "/" + name;
+        if (::stat(fullpath.c_str(), &st) == 0 && S_ISDIR(st.st_mode))
+            name += "/";
+
+        entries.push_back(name);
+    }
     closedir(dir);
     body_ = util::generateAutoIndexHtml(uri, entries);
 }
@@ -336,29 +325,13 @@ void Response::setPage(const int code, const std::string &message, bool error)
     setHeader(HEADER_CONTENT_TYPE, MIME_HTML);
 }
 
-std::string Response::generateDefaultPage(const int code, const std::string &message, bool error) const
+std::string Response::generateDefaultPage(int code, const std::string &message, bool error) const
 {
-    std::ostringstream html;
-    html << "<!DOCTYPE html>\r\n"
-         << "<html>\r\n"
-         << "<head>\r\n"
-         << "<meta charset=\"UTF-8\">\r\n"
-         << "<title>" << code << " " << message << "</title>\r\n"
-         << "<style>body{font-family:sans-serif;text-align:center;margin-top:100px;}</style>\r\n"
-         << "</head>\r\n"
-         << "<body>\r\n";
-
-    if (error)
-        html << "<h1>Error " << code << "</h1>\r\n";
-    else
-        html << "<h1>Status " << code << "</h1>\r\n";
-
-    html << "<p>" << message << "</p>\r\n";
-    html << "</body>\r\n</html>\r\n";
-
-    return (html.str());
+    std::ostringstream content;
+    content << "<h1>" << (error ? "Error " : "Status ") << code << "</h1>\n"
+            << "<p>" << message << "</p>";
+    return util::wrapHtml(util::intToString(code) + " " + message, content.str());
 }
-
 
 void Response::setFullPath(const std::string &reqPath) {
     fullPath_.append(reqPath);
