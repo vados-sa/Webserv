@@ -28,18 +28,6 @@ void Client::setState(State new_state) {
 	state_start_time = time(NULL);
 }
 
-void Client::setResponseBuffer(std::string response) {
-	response_buffer = response;
-}
-
-void Client::setBytesSent(size_t bytes) {
-	bytes_sent = bytes;
-}
-
-void Client::setPort(int p) {
-	port = p;
-}
-
 void Client::setKeepAlive(const Request &req)
 {
 	const std::string version = req.getVersion();
