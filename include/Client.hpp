@@ -1,19 +1,10 @@
 #pragma once
 
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/errno.h>
-
-#include <iostream>
-#include <string>
-#include <ctime>
-#include <sstream>
-#include <map>
-
 #include "Response.hpp"
 #include "Request.hpp"
+
+#include <string>
+#include <ctime>
 
 class Client {
 	public:
@@ -43,7 +34,6 @@ class Client {
 
 		int getFd() const { return client_fd;}
 		void appendRequestData(char* buffer, int bytes);
-		//bool isRequestComplete() const;
 		void consumeRequestBytes(size_t n) {request_buffer.erase(0, n);};
 		bool isTimedOut(int timeout_seconds) const;
 
