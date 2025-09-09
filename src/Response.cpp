@@ -20,6 +20,20 @@ static const char *HEADER_CONTENT_LENGTH = "content-length";
 static const char *HEADER_CONNECTION = "connection";
 static const char *MIME_HTML = "text/html";
 
+static const std::pair<const char *, const char *> mimeArray[] = {
+    std::pair<const char *, const char *>(".html", "text/html"),
+    std::pair<const char *, const char *>(".htm", "text/html"),
+    std::pair<const char *, const char *>(".css", "text/css"),
+    std::pair<const char *, const char *>(".js", "application/javascript"),
+    std::pair<const char *, const char *>(".png", "image/png"),
+    std::pair<const char *, const char *>(".jpg", "image/jpeg"),
+    std::pair<const char *, const char *>(".jpeg", "image/jpeg"),
+    std::pair<const char *, const char *>(".gif", "image/gif"),
+    std::pair<const char *, const char *>(".txt", "text/plain"),
+    std::pair<const char *, const char *>(".pdf", "application/pdf"),
+    std::pair<const char *, const char *>(".json", "application/json"),
+    std::pair<const char *, const char *>(".svg", "image/svg+xml")};
+
 Response::Response() : fullPath_(".") {}
 
 Response::Response(std::map<int, std::string> error_pages)
@@ -128,28 +142,22 @@ void Response::generateAutoIndex(const LocationConfig& loc) {
 
     html << "</ul>\n</body>\n</html>\n";
     closedir(dir);
-    body_ = html.str();
-    return;
+    body_ = util::generateAutoIndexHtml(uri, entries);
+}
+
+static std::map<std::string, std::string> initMime()
+{
+    std::map<std::string, std::string> m;
+    size_t len = sizeof(mimeArray) / sizeof(mimeArray[0]);
+    for (size_t i = 0; i < len; ++i)
+        m[mimeArray[i].first] = mimeArray[i].second;
+    return m;
 }
 
 std::string Response::getContentType(const std::string &path)
 {
-    static std::map<std::string, std::string> mime;
-    if (mime.empty())
-    {
-        mime[".html"] = "text/html";
-        mime[".htm"] = "text/html";
-        mime[".css"] = "text/css";
-        mime[".js"] = "application/javascript";
-        mime[".png"] = "image/png";
-        mime[".jpg"] = "image/jpeg";
-        mime[".jpeg"] = "image/jpeg";
-        mime[".gif"] = "image/gif";
-        mime[".txt"] = "text/plain";
-        mime[".pdf"] = "application/pdf";
-        mime[".json"] = "application/json";
-        mime[".svg"] = "image/svg+xml";
-    }
+    static std::map<std::string, std::string> mime = initMime();
+
     size_t dot = path.rfind('.');
     if (dot != std::string::npos) {
         std::string ext = path.substr(dot);
