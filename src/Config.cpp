@@ -46,7 +46,7 @@ bool Config::setupServer()
         else {
             std::ostringstream oss;
             oss << "Server listening on " << (socketObj.getHost().empty() ? "0.0.0.0" : socketObj.getHost())
-            << ":" << socketObj.getPort(); 
+            << ":" << socketObj.getPort();
             std::string msg = oss.str();
             logs(INFO, msg);
         }
@@ -201,7 +201,7 @@ bool Config::pollLoop(int server_count)
                 std::string msg = util::intToString(e.getStatusCode()) + " " + e.what();
                 logs(ERROR, msg);
                 std::string res_string = res.writeResponseString(); //some checks maybe?
-                //clients[client_idx].setResponseBuffer(res_string);
+                clients[client_idx].setResponseBuffer(res_string);
                 handleResponse(client_idx, i);
                 //poll_fds[pollfd_idx].events = POLLOUT;
             }
@@ -471,32 +471,19 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx)
         long consumed = extract_one_http_request(client.getRequest());
         if (consumed == 0)
             break;
-        if (consumed < 0)
-        {
+        if (consumed < 0) {
             client.setKeepAlive(false);
             poll_fds[pollfd_idx].events = POLLIN | POLLOUT;
             throw HttpException(400, "Bad Request", true);
-            // Response res(servers[client.getServerIndex()].getErrorPagesConfig());
-            // Request bad;
-            // bad.setVersion("HTTP/1.1");
-            // res.setPage(400, "Bad Request", true);
-            // client.setResponseBuffer(res.writeResponseString());
-            // client.setKeepAlive(false);
-            // poll_fds[pollfd_idx].events = POLLIN | POLLOUT;
-            // return;
         }
-
         std::string raw = client.getRequest().substr(0, (size_t)consumed);
         client.consumeRequestBytes((size_t)consumed);
-        Request reqObj(raw);
-        //std::cout << "This is the raw request: " << raw << std::endl;
         ServerConfig srv = servers[client.getServerIndex()];
+        Request reqObj(raw, srv.getMaxBodySize());
         std::string response = buildRequestAndResponse(raw, srv, reqObj);
-        //std::cout << "This is response string: " << response << std::endl;
         client.setKeepAlive(reqObj);
         poll_fds[pollfd_idx].events = POLLIN | POLLOUT;
         client.setResponseBuffer(response);
-
         break;
     }
 }
@@ -602,7 +589,7 @@ const LocationConfig *matchLocation(const std::string &reqPath, const ServerConf
 
 std::string buildRequestAndResponse(const std::string &raw, const ServerConfig &srv, Request &outReq)
 {
-    Request reqObj(raw);
+    Request reqObj(raw, srv.getMaxBodySize());
     const LocationConfig *loc = matchLocation(reqObj.getReqPath(), srv);
     if (loc)
         applyLocationConfig(reqObj, *loc);
@@ -621,11 +608,10 @@ void applyLocationConfig(Request &reqObj, const LocationConfig &loc)
 
     const std::string &ext = loc.getCgiExtension();
     if (!ext.empty() && requestPath.size() >= ext.size() &&
-        requestPath.compare(requestPath.size() - ext.size(), ext.size(), ext) == 0)
-    {
+        requestPath.compare(requestPath.size() - ext.size(), ext.size(), ext) == 0) {
         reqObj.setIsCgi(true);
     }
 
     std::string remainingPath = requestPath.substr(loc.getUri().size());
-    reqObj.setFullPath(loc.getRoot() + remainingPath);
+    reqObj.setFullPath(loc.getRoot() + "/" + remainingPath);
 }

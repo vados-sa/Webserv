@@ -33,13 +33,6 @@ Response::Response(std::map<int, std::string> error_pages, int code, const std::
     setHeader("Connection", "close");
 }
 
-template <typename T>
-std::string int_to_string(T value) {
-    std::ostringstream oss;
-    oss << value;
-    return oss.str();
-}
-
 void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
 
     (void) reqObj;
@@ -51,10 +44,9 @@ void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
         if (S_ISDIR(file_stat.st_mode)) {
             for (size_t i = 0; i < index_files.size(); ++i) {
                 std::string candidate = fullPath_ + "/" + index_files[i];
-                if (stat(candidate.c_str(), &file_stat) == 0 && S_ISREG(file_stat.st_mode))
-                {
+                if (stat(candidate.c_str(), &file_stat) == 0 && S_ISREG(file_stat.st_mode)) {
                     fullPath_ = candidate;
-                    return handleGet(reqObj, loc);
+                    return (handleGet(reqObj, loc));
                 }
             }
             if (loc.getAutoindex()) {
@@ -70,13 +62,13 @@ void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
             throw HttpException(403, "You do not have permission to read this file", true);
 
         readFileIntoBody(fullPath_);
-        setHeader(HEADER_CONTENT_LENGTH, int_to_string(body_.size()));
+        setHeader(HEADER_CONTENT_LENGTH, util::intToString(body_.size()));
         setHeader(HEADER_CONTENT_TYPE, getContentType(fullPath_));
         return;
     } else
     {
         if (errno == ENOENT)
-            return (setPage(404, "File does not exist", true));
+            throw HttpException(404, "File does not exist", true);
         else if (errno == EACCES)
             throw HttpException(403, "Access denied.", true);
         else
@@ -88,11 +80,10 @@ void Response:: readFileIntoBody(const std::string &fileName) {
     std::ifstream file(fileName.c_str(), std::ios::in | std::ios::binary);
     if (!file) {
         std::ifstream test(fileName.c_str());
-        if (!test) {
+        if (!test)
             throw HttpException(404, "Not Found", true);
-        } else {
+        else
             throw HttpException(500, "Server error: unable to open file.", true);
-        }
         return;
     }
 
@@ -106,10 +97,8 @@ void Response::generateAutoIndex(const LocationConfig& loc) {
     std::string path = fullPath_;
 
     DIR *dir = opendir(path.c_str());
-    if (!dir){
+    if (!dir)
         throw HttpException(403, "Forbidden", true);
-        return;
-    }
 
     std::ostringstream html;
 
@@ -176,21 +165,17 @@ void Response::handlePost(const Request &reqObj, LocationConfig loc)
         throw std::runtime_error("Config error: No upload_path specified in location " + loc.getUri());
 
     std::string reqPath = reqObj.getReqPath();
-    if (reqPath != "/upload" && reqPath.find("/upload/") != 0){
-        setPage(405, "Method Not Allowed", true); // POST not allowed here
-        return;
-    }
+    if (reqPath != "/upload" && reqPath.find("/upload/") != 0)
+        throw HttpException(405, "Method Not Allowed", true);
 
-    if (reqObj.getBody().empty()) {
-        throw HttpException(400, "No body detected in request", true);
-    }
+    // if (reqObj.getBody().empty()) {
+    //     throw HttpException(400, "No body detected in request", true);
+    // }
 
     parseMultipartBody(reqObj); //insert some check here
 
-    if (!reqObj.findHeader(HEADER_CONTENT_TYPE)) {
-        setPage(400, "Missing Content-Type header", true);
-        return;
-    }
+    if (!reqObj.findHeader(HEADER_CONTENT_TYPE))
+        throw HttpException(400, "Missing Content-Type header", true);
 
     std::string uploadFullPath = "./" + loc.getUploadDir();
     createUploadDir(uploadFullPath);
@@ -218,52 +203,39 @@ void Response::uploadFile(const std::string &uploadFullPath)
         return (setPage(201, "File created", false));
     }
     else
-        return (setPage(500, "Server error: could not open file for writing.", true));
+        throw HttpException(500, "Server error: could not open file for writing.", true);
 }
 
 void Response::handleDelete(const Request &reqObj) {
-    std::string prefix = "/upload/";
+    std::string prefix = "/upload/"; //talvez criar um vetor e encher com as locations que podem POST
 
-    if (reqObj.getReqPath().compare(0, prefix.size(), prefix) != 0) {
-        logs(ERROR, "404 Wrong path. Expected \"/upload/");
-        setPage(404, "Wrong path. Expected \"/upload/", true);
-        return;
-    }
+    if (reqObj.getReqPath().compare(0, prefix.size(), prefix) != 0)
+        throw HttpException(404, "Wrong path. Expected \"/upload/", true);
 
     filename_ = "." + reqObj.getFullPath();
     struct stat fileStat;
 
-    if (stat(filename_.c_str(), &fileStat) != 0) {
-        logs(ERROR, "404 File not found: \"" + filename_ + "\"");
-        setPage(404, "File not found: \"" + filename_ + "\"", true);
-        return;
-    }
 
-    if (!S_ISREG(fileStat.st_mode)) {
-        logs(ERROR, "404 \"" + filename_ + "\" is not a regular file");
-        setPage(404, "\"" + filename_ + "\" is not a regular file", true);
-        return;
-    }
+    if (stat(filename_.c_str(), &fileStat) != 0)
+        throw HttpException(404, "File not found: \"" + filename_ + "\"", true);
 
-    if (remove(filename_.c_str()) != 0) {
-        logs(ERROR, "500 Failed to delete file: \"" + filename_ + "\"");
-        setPage(500, "Failed to delete file: \"" + filename_ + "\"", true);
-        return;
-    }
+
+    if (!S_ISREG(fileStat.st_mode))
+        throw HttpException(404, "\"" + filename_ + "\" is not a regular file", true);
+
+    if (remove(filename_.c_str()) != 0)
+        throw HttpException(500, "Failed to delete file: \"" + filename_ + "\"", true);
+
     logs(INFO, "\"" + filename_ + "\" deleted successfully");
     setPage(204, "No content. File \"" + filename_ + "\" deleted successfully.", false);
 }
 
 void Response::parseMultipartBody(const Request &obj) {
-    // ------ GET BOUNDARY -----
-
     std::string rawValue = *obj.findHeader(HEADER_CONTENT_TYPE);
     size_t pos = rawValue.find("boundary=");
     std::string boundary = "--";
     if (pos != std::string::npos)
         boundary.append(rawValue.substr(pos + 9));
-
-    // ----- EXTRACT BOUNDARY FROM BODY
 
     std::string rawBody = obj.getBody();
     size_t start = rawBody.find(boundary);
@@ -275,7 +247,6 @@ void Response::parseMultipartBody(const Request &obj) {
     if (end != std::string::npos)
         rawBody = rawBody.substr(0, end - 2);
 
-    // ----- EXTRACT HEADERS FROM THE BODY
     std::string headers;
     std::string fileContent;
     size_t headerEnd = rawBody.find("\r\n\r\n");
@@ -285,18 +256,15 @@ void Response::parseMultipartBody(const Request &obj) {
         fileContent = rawBody.substr(headerEnd + 4);
     }
 
-    // ---- EXTRACT FILENAME
-    //string filename = "www/upload/";
     pos = headers.find("filename=\"");
     if (pos != std::string::npos) {
         size_t start = pos + 10;
         size_t end = headers.find("\"", start);
         filename_ = headers.substr(start, end - start);
         logs(INFO, "\"" + filename_ + "\" uploaded successfully");
-        //std::cout << filename_ << std::endl;
+
     }
 
-    // ---- EXTRACT CONTENT-TYPE
     pos = headers.find("content-type: ");
     if (pos != std::string::npos) {
         start = pos + 14;
@@ -314,7 +282,7 @@ std::string Response::writeResponseString() const
     res << "HTTP/1.1 " << statusCode_ << " " << statusMessage_ << "\r\n";
     for (std::map<std::string, std::string>::iterator it = headers.begin(); it != headers.end(); ++it)
         res << it->first << ": " << it->second << "\r\n";
-    res << "\r\n"; // linha em branco antes do body
+    res << "\r\n";
     res << body_;
 
     return (res.str());
@@ -340,6 +308,7 @@ void Response::setCode(const int code)
         codeToMessage[404] = "Not Found";
         codeToMessage[408] = "Request Timeout";
         codeToMessage[405] = "Method Not Allowed";
+        codeToMessage[411] = "Length Required";
         codeToMessage[414] = "URI too long";
         codeToMessage[500] = "Internal Server Error";
     }
@@ -360,15 +329,8 @@ void Response::setPage(const int code, const std::string &message, bool error)
     else
         readFileIntoBody("." + errorPagePath);
 
-    // Content-Length e Content-Type
-    setHeader(HEADER_CONTENT_LENGTH, int_to_string(body_.size()));
+    setHeader(HEADER_CONTENT_LENGTH, util::intToString(body_.size()));
     setHeader(HEADER_CONTENT_TYPE, MIME_HTML);
-
-    // Fechar a conexão para erros ou timeout
-    // if (code >= 400 || code == 408)
-    //     setHeader(HEADER_CONNECTION, "close");
-    // else if (keep_alive_)
-    //     setHeader(HEADER_CONNECTION, "keep-alive");
 }
 
 std::string Response::generateDefaultPage(const int code, const std::string &message, bool error) const
@@ -389,14 +351,9 @@ std::string Response::generateDefaultPage(const int code, const std::string &mes
         html << "<h1>Status " << code << "</h1>\r\n";
 
     html << "<p>" << message << "</p>\r\n";
-
-    // Debug info opcional (fd/port) para timeout ou erros específicos
-    // if (code == 408)
-    //     html << "<p><small>Client fd(" << client_fd_ << ")/port(" << client_port_ << ")</small></p>\r\n";
-
     html << "</body>\r\n</html>\r\n";
 
-    return html.str();
+    return (html.str());
 }
 
 
@@ -452,10 +409,7 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
     } else if (!reqObj.getMethod().compare("DELETE")) {
         handleDelete(reqObj);
     } else
-        setPage(501, "Method not implemented", true);
-
-    //if (reqObj.findHeader(HEADER_CONNECTION))
-    //    this->setHeader(HEADER_CONNECTION, *reqObj.findHeader(HEADER_CONNECTION));
+        throw HttpException(501, "Method not implemented", true);
 
     const std::string version = reqObj.getVersion();
     std::string connection;
@@ -489,9 +443,7 @@ void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
 
 	// Check if the CGI script was found
     if (!cgiHandler.getStatus() && cgiHandler.getError() == CgiHandler::SCRIPT_NOT_FOUND) {
-        setPage(404, "The requested CGI script was not found: " + reqObj.getReqPath(), true);
-        setHeader("Content-Type", "text/html");
-        return;
+        throw HttpException(404, "The requested CGI script was not found: " + reqObj.getReqPath(), true);
     }
     // Run the CGI script and capture its output
     std::string cgiOutput = cgiHandler.run();
@@ -499,35 +451,23 @@ void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
         // CGI execution was successful
         msg = "CGI execution successful: " + reqObj.getReqPath();
         logs(INFO, msg);
-        
         setCode(200);
 
         parseCgiResponse(cgiOutput);
     } else {
 		switch (cgiHandler.getError()) {
 			case CgiHandler::PIPE_FAILED:
-				setPage(500, "CGI execution failed: pipe creation failed", true);
-				setHeader("Content-Type", "text/plain");
-				break;
+				throw HttpException(500, "CGI execution failed: pipe creation failed", true);
 			case CgiHandler::FORK_FAILED:
-				setPage(500, "CGI execution failed: fork failed", true);
-				setHeader("Content-Type", "text/plain");
-				break;
+				throw HttpException(500, "CGI execution failed: fork failed", true);
 			case CgiHandler::EXECVE_FAILED:
-				setPage(500, "CGI execution failed: execve failed", true);
-				setHeader("Content-Type", "text/plain");
-				break;
+				throw HttpException(500, "CGI execution failed: execve failed", true);
 			case CgiHandler::TIMEOUT:
-				setPage(504, "CGI execution failed: script timed out", true);
-				setHeader("Content-Type", "text/plain");
-				break;
+				throw HttpException(504, "CGI execution failed: script timed out", true);
 			case CgiHandler::CGI_SCRIPT_FAILED:
-				setPage(500, "CGI execution failed: script error", true);
-				setHeader("Content-Type", "text/plain");
-				break;
+				throw HttpException(500, "CGI execution failed: script error", true);
 			default:
-				setPage(500, "CGI execution failed: unknown error", true);
-				setHeader("Content-Type", "text/plain");
+				throw HttpException(500, "CGI execution failed: unknown error", true);
 		}
     }
 }
@@ -563,12 +503,11 @@ void Response::parseCgiResponse(const std::string &cgiOutput) {
     setBody(b);
 
     if (!findHeader("Content-Length")) {
-        setHeader("Content-Length", int_to_string(b.size()));
+        setHeader("Content-Length", util::intToString(b.size()));
     }
 }
 
-void Response::handleRedirect(const LocationConfig &locConfig)
-{
+void Response::handleRedirect(const LocationConfig &locConfig) {
     int statusCode = locConfig.getReturnStatus();
     statusCode_ = statusCode;
     std::string newLocation = locConfig.getReturnTarget();
