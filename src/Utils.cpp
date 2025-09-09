@@ -6,7 +6,7 @@
 #include <sys/stat.h>
 #include <sstream>
 #include <vector>
-
+#include <cerrno>
 
 namespace util {
     std::string normalizePath(const std::string &rawPath)
