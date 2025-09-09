@@ -47,9 +47,8 @@ Response::Response(std::map<int, std::string> error_pages, int code, const std::
     setHeader("Connection", "close");
 }
 
-void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
+void Response::handleGet(const LocationConfig &loc) {
 
-    (void) reqObj;
     struct stat file_stat;
     if (!util::fileExists(fullPath_, file_stat))
         return;
@@ -64,7 +63,7 @@ void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
             if (::stat(candidate.c_str(), &s) == 0 && S_ISREG(s.st_mode))
             {
                 fullPath_ = candidate;
-                return handleGet(reqObj, loc);
+                return handleGet(loc);
             }
         }
         if (loc.getAutoindex())
@@ -337,18 +336,18 @@ void Response::setFullPath(const std::string &reqPath) {
     fullPath_.append(reqPath);
 }
 
-std::ostream &operator<<(std::ostream &out, const Response &obj)
-{
-    out << "Version: " << obj.getVersion() << std::endl
-        << "Code: " << obj.getCode() << std::endl
-        << "Status Message: " << obj.getStatusMessage() << std::endl
-        << " ----- " << std::endl
-        << "Headers: " << std::endl
-        << obj.getHeaders() << std::endl
-        << " ----- " << std::endl
-        << "Body: " << obj.getBody() << std::endl;
-    return (out);
-}
+// std::ostream &operator<<(std::ostream &out, const Response &obj)
+// {
+//     out << "Version: " << obj.getVersion() << std::endl
+//         << "Code: " << obj.getCode() << std::endl
+//         << "Status Message: " << obj.getStatusMessage() << std::endl
+//         << " ----- " << std::endl
+//         << "Headers: " << std::endl
+//         << obj.getHeaders() << std::endl
+//         << " ----- " << std::endl
+//         << "Body: " << obj.getBody() << std::endl;
+//     return (out);
+// }
 
 std::string Response::buildResponse(const Request &reqObj, const LocationConfig &locConfig)
 {
@@ -379,7 +378,7 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
     } else if (reqObj.isCgi()) {
         handleCgi(reqObj, locConfig);
     } else if (!reqObj.getMethod().compare("GET")) {
-        handleGet(reqObj, locConfig);
+        handleGet(locConfig);
     } else if (!reqObj.getMethod().compare("POST")) {
         handlePost(reqObj, locConfig);
     } else if (!reqObj.getMethod().compare("DELETE")) {
@@ -414,10 +413,7 @@ void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
     msg = "Processing CGI Request: " + reqObj.getMethod() + " " + cgiScriptPath;
     logs(INFO, msg);
     CgiHandler cgiHandler(reqObj, locConfig);
-	// setenv("SERVER_NAME", "localhost", 1); // Replace with actual server name if available
-	// setenv("SERVER_PORT", "8080", 1);     // Replace with actual server port if available
 
-	// Check if the CGI script was found
     if (!cgiHandler.getStatus() && cgiHandler.getError() == CgiHandler::SCRIPT_NOT_FOUND) {
         throw HttpException(404, "The requested CGI script was not found: " + reqObj.getReqPath(), true);
     }

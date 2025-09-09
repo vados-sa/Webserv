@@ -23,7 +23,7 @@ private:
 
     void parseMultipartBody(const Request &obj);
     void generateAutoIndex(const LocationConfig &loc);
-    void handleGet(const Request &reqObj, const LocationConfig &loc);
+    void handleGet(const LocationConfig &loc);
     void handleDelete(const Request &reqObj);
     std::string getContentType(const std::string &path);
     void handleRedirect(const LocationConfig &locConfig);
