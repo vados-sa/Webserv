@@ -35,6 +35,9 @@ private:
     void readFileIntoBody(const std::string &fileName);
     std::string generateDefaultPage(const int code, const std::string &message, bool error) const;
 
+    void handleCgi(const Request &reqObj, const LocationConfig &locConfig);
+    void parseCgiResponse(const std::string &cgiOutput);
+
 public:
     Response();
     Response(std::map<int, std::string> error_pages_config);
@@ -49,9 +52,7 @@ public:
 
     void setFullPath(const std::string &reqPath);
     void setCode(const int code);
-    void setPage(const  int code, const std::string &message, bool error);
-	void handleCgi(const Request &reqObj, const LocationConfig &locConfig);
-	void parseCgiResponse(const std::string &cgiOutput);
+    void setPage(const int code, const std::string &message, bool error);
 };
 
 std::ostream &operator<<(std::ostream &out, const Response &obj);
