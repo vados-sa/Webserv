@@ -54,7 +54,7 @@ class Config
         bool run();
 };
 
-std::ostream &operator<<(std::ostream &os, const Config &obj);
+//std::ostream &operator<<(std::ostream &os, const Config &obj); // to print config in main
 const LocationConfig *matchLocation(const std::string &path, const ServerConfig &obj);
 std::string buildRequestAndResponse(const std::string& raw, const ServerConfig& srv, Request& outReq);
 void applyLocationConfig(Request& reqObj, const LocationConfig& loc);

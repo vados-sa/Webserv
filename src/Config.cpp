@@ -561,7 +561,7 @@ void Config::cleanup()
     client_count = 0;
 }
 
-std::ostream &operator<<(std::ostream &os, const Config &obj)
+/* std::ostream &operator<<(std::ostream &os, const Config &obj)
 {
     std::vector<ServerConfig> serversVector = obj.getServers();
 
@@ -570,7 +570,7 @@ std::ostream &operator<<(std::ostream &os, const Config &obj)
         os << serversVector[i] << std::endl;
     }
     return os;
-}
+} */
 
 const LocationConfig *matchLocation(const std::string &reqPath, const ServerConfig &srv)
 {

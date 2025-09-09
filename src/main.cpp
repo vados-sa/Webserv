@@ -20,7 +20,7 @@ int main(int ac, char *av[])
 
         Config config(configfile);
 
-        // std::cout << config << std::endl;
+        //std::cout << config << std::endl;
         if (!config.setupServer()) {
             throw std::runtime_error("Failed to set server up.");
         };
