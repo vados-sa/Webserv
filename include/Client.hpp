@@ -1,19 +1,10 @@
 #pragma once
 
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/errno.h>
-
-#include <iostream>
-#include <string>
-#include <ctime>
-#include <sstream>
-#include <map>
-
 #include "Response.hpp"
 #include "Request.hpp"
+
+#include <string>
+#include <ctime>
 
 class Client {
 	public:
@@ -62,29 +53,27 @@ class Client {
     	~Client();
 
 
-		int getFd() const { return client_fd;}
 		void appendRequestData(char* buffer, int bytes);
-		//bool isRequestComplete() const;
 		void consumeRequestBytes(size_t n) {request_buffer.erase(0, n);};
 		bool isTimedOut(int timeout_seconds) const;
-
-		std::string getRequest() const {return request_buffer;}
+		
+		int getFd() const { return client_fd; }
+		std::string getRequest() const { return request_buffer; }
     	int getServerIndex() const { return server_idx; }
-    	std::string getResponse() const {return response_buffer;}
-
+    	std::string getResponse() const { return response_buffer; }
 		size_t getBytesSent() const {return bytes_sent;}
 		State getState() const { return Client::current_state; }
-		int getPort() const {return port;}
-		bool getKeepAlive() const {return keep_alive;}
+		int getPort() const { return port; }
+		bool getKeepAlive() const { return keep_alive; }
     	Response *getResponseObj() { return res; }
 		CgiContext &getCgiContext() { return cgi_context; }
 		const CgiContext &getCgiContext() const { return cgi_context; }
 
     	void setState(State new_state);
-		void setResponseBuffer(std::string response);
-		void setBytesSent(size_t bytes);
-		void setPort(int p);
-		void setKeepAlive(bool set) {keep_alive = set;};
 		void setKeepAlive(const Request &req);
+		void setResponseBuffer(std::string response) { response_buffer = response; }
+		void setBytesSent(size_t bytes) { bytes_sent = bytes; }
+		void setPort(int p) { port = p; }
+		void setKeepAlive(bool set) {keep_alive = set;};
         void setResponseObj(Response *r) { res = r; }
 };

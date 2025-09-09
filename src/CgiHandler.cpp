@@ -15,20 +15,18 @@
 #include <signal.h>
 #include <cstring>
 #include <cerrno>
+#include <fcntl.h>
 
 CgiHandler::CgiHandler(const Request &reqObj, const LocationConfig &locConfig) : status_cgi(false) {
 
 	cgiScriptPath = "." + locConfig.getRoot() + reqObj.getReqPath();
 	interpreterPath = getInterpreterPath(locConfig.getCgiExtension());
 	error = NO_ERROR;
-    std::ostringstream oss;
     std::string msg;
 	if (interpreterPath.empty()) {
 		error = EXECUTION_FAILED;
-        oss << "Interpreter not found for CGI extension: " << locConfig.getCgiExtension();
-        msg = oss.str();
+        msg = "Interpreter not found for CGI extension: " + locConfig.getCgiExtension();
         logs(ERROR, msg);
-		//std::cerr << "Interpreter not found for CGI extension: " << locConfig.getCgiExtension() << std::endl;
 		return;
 	}
 
@@ -36,17 +34,13 @@ CgiHandler::CgiHandler(const Request &reqObj, const LocationConfig &locConfig) :
 	if (stat(cgiScriptPath.c_str(), &buffer) != 0)
 	{
 		error = SCRIPT_NOT_FOUND;
-        oss << "CGI script not found: " << cgiScriptPath;
-        msg = oss.str();
+        msg = "CGI script not found: " + cgiScriptPath;
         logs(ERROR, msg);
-		//std::cerr << "CGI script not found: " << cgiScriptPath << std::endl;
 		return;
 	}
 
-    oss << "CGI Request: " << reqObj.getMethod() << " " << cgiScriptPath;
-    msg = oss.str();
+    msg = "CGI Request: " + reqObj.getMethod() + " " + cgiScriptPath;
     logs(INFO, msg);
-	//std::cout << "CGI Request: " << reqObj.getMethod() << " " << cgiScriptPath << std::endl; //SHOULD IT BE COUT OR CERR?
 
 	std::string transferEncoding = reqObj.findHeader("Transfer-Encoding") ? *reqObj.findHeader("Transfer-Encoding") : "";
 	if (transferEncoding == "chunked") {
@@ -144,7 +138,6 @@ void CgiHandler::handleFileUpload(const std::string &body, const std::string &up
     std::string boundary = extractBoundary(env["CONTENT_TYPE"]);
     if (boundary.empty()) {
         logs(ERROR, "Boundary not found in Content-Type header");
-        //std::cerr << "Boundary not found in Content-Type header" << std::endl;
         return;
     }
 
@@ -162,7 +155,6 @@ void CgiHandler::handleFileUpload(const std::string &body, const std::string &up
         // Parse the part and save the file
         if (!processPart(part, uploadDir)) {
             logs(ERROR, "Failed to process part");
-            //std::cerr << "Failed to process part" << std::endl;
         }
     }
 }
@@ -182,7 +174,6 @@ bool CgiHandler::processPart(const std::string &part, const std::string &uploadD
     std::size_t headerStop = part.find("\r\n\r\n");
     if (headerStop == std::string::npos) {
         logs(ERROR, "Malformed multipart/form-data part");
-        //std::cerr << "Malformed multipart/form-data part" << std::endl;
         return false;
     }
 
@@ -193,7 +184,6 @@ bool CgiHandler::processPart(const std::string &part, const std::string &uploadD
     std::string fileName = extractFileName(headers);
     if (fileName.empty()) {
         logs(ERROR, "Filename not found in Content-Disposition header");
-        //std::cerr << "Filename not found in Content-Disposition header" << std::endl;
         return false;
     }
 
@@ -230,21 +220,15 @@ std::string CgiHandler::sanitizeFileName(const std::string &fileName) {
 // Helper function to save the file to disk
 bool CgiHandler::saveFile(const std::string &filePath, const std::string &fileContent) {
     std::ofstream outFile(filePath.c_str(), std::ios::binary); // Use .c_str() for C++98 compatibility
-    std::ostringstream oss;
     std::string msg;
     if (!outFile) {
-        oss << "Failed to open file: " + filePath;
-        msg = oss.str();
-        logs(ERROR, msg);
-        //std::cerr << "Failed to open file: " + filePath << std::endl;
+        logs(ERROR, "Failed to open file: " + filePath);
         return false;
     }
     outFile.write(fileContent.c_str(), fileContent.size());
     outFile.close();
-    oss <<  "File uploaded successfully: " + filePath;
-    msg = oss.str();
+    msg = "File uploaded successfully: " + filePath;
     logs(INFO, msg);
-    //std::cout << "File uploaded successfully: " + filePath << std::endl;
     return true;
 }
 
@@ -464,7 +448,7 @@ bool CgiHandler::startCgi(Client &client) {
 // Finish CGI execution - process final output and return result
 std::string CgiHandler::finishCgi(const Client &client, int exit_status) {
     const Client::CgiContext &cgi = client.getCgiContext();
-    
+
     if (WIFEXITED(exit_status) && WEXITSTATUS(exit_status) == 0) {
         status_cgi = true;
         logs(INFO, "CGI script executed successfully");
@@ -547,27 +531,22 @@ std::string decodeChunkedBody(std::istringstream &rawStream) {
 
 std::string getInterpreterPath(const std::string &cgiExtension) {
     std::string interpreter;
-    std::ostringstream oss;
     std::string msg;
     if (cgiExtension == ".py") {
         interpreter = "python3";
     } else if (cgiExtension == ".php") {
         interpreter = "php"; // STILL TO BE TESTED
     } else {
-        oss << "Unsupported CGI extension: " << cgiExtension;
-        msg = oss.str();
+        msg = "Unsupported CGI extension: " + cgiExtension;
         logs(ERROR, msg);
-        //std::cerr << "Unsupported CGI extension: " << cgiExtension << std::endl;
         return "";
     }
 
     std::string command = "which " + interpreter + " 2>/dev/null";
     FILE *pipe = popen(command.c_str(), "r");
     if (!pipe) {
-        oss << "Failed to execute `which` command for: " << interpreter;
-        msg = oss.str();
+        msg = "Failed to execute `which` command for: " + interpreter;
         logs(ERROR, msg);
-        //std::cerr << "Failed to execute `which` command for: " << interpreter << std::endl;
         return "";
     }
 
@@ -583,10 +562,8 @@ std::string getInterpreterPath(const std::string &cgiExtension) {
         path.erase(path.size() - 1);
     }
     if (path.empty()) {
-        oss << "Interpreter not found for: " << interpreter;
-        msg = oss.str();
+        msg = "Interpreter not found for: " + interpreter;
         logs(ERROR, msg);
-        //std::cerr << "Interpreter not found for: " << interpreter << std::endl;
     }
     return path;
 }

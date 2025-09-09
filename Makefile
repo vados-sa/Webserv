@@ -10,17 +10,13 @@ SRC = src/main.cpp src/Config.cpp src/Client.cpp src/ServerConfig.cpp \
 OBJ_DIR = obj
 OBJ = $(SRC:%.cpp=$(OBJ_DIR)/%.o)
 
-
-# Colors
 GREEN = \033[0;32m
 YELLOW = \033[0;33m
 RED = \033[0;31m
-NC = \033[0m # No Color
+NC = \033[0m
 
 all: $(NAME)
 
-
-# Get all header files in include/
 HEADERS = $(wildcard include/*.hpp)
 
 $(OBJ_DIR)/%.o: %.cpp $(HEADERS) | $(OBJ_DIR)

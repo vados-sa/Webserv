@@ -20,6 +20,20 @@ static const char *HEADER_CONTENT_LENGTH = "content-length";
 static const char *HEADER_CONNECTION = "connection";
 static const char *MIME_HTML = "text/html";
 
+static const std::pair<const char *, const char *> mimeArray[] = {
+    std::pair<const char *, const char *>(".html", "text/html"),
+    std::pair<const char *, const char *>(".htm", "text/html"),
+    std::pair<const char *, const char *>(".css", "text/css"),
+    std::pair<const char *, const char *>(".js", "application/javascript"),
+    std::pair<const char *, const char *>(".png", "image/png"),
+    std::pair<const char *, const char *>(".jpg", "image/jpeg"),
+    std::pair<const char *, const char *>(".jpeg", "image/jpeg"),
+    std::pair<const char *, const char *>(".gif", "image/gif"),
+    std::pair<const char *, const char *>(".txt", "text/plain"),
+    std::pair<const char *, const char *>(".pdf", "application/pdf"),
+    std::pair<const char *, const char *>(".json", "application/json"),
+    std::pair<const char *, const char *>(".svg", "image/svg+xml")};
+
 Response::Response() : fullPath_(".") {}
 
 Response::Response(std::map<int, std::string> error_pages)
@@ -33,66 +47,51 @@ Response::Response(std::map<int, std::string> error_pages, int code, const std::
     setHeader("Connection", "close");
 }
 
-template <typename T>
-std::string int_to_string(T value) {
-    std::ostringstream oss;
-    oss << value;
-    return oss.str();
-}
+void Response::handleGet(const LocationConfig &loc) {
 
-void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
-
-    (void) reqObj;
     struct stat file_stat;
-
-    std::vector<std::string> index_files = loc.getIndexFiles();
-
-    if (stat(fullPath_.c_str(), &file_stat) == 0) {
-        if (S_ISDIR(file_stat.st_mode)) {
-            for (size_t i = 0; i < index_files.size(); ++i) {
-                std::string candidate = fullPath_ + "/" + index_files[i];
-                if (stat(candidate.c_str(), &file_stat) == 0 && S_ISREG(file_stat.st_mode))
-                {
-                    fullPath_ = candidate;
-                    return handleGet(reqObj, loc);
-                }
-            }
-            if (loc.getAutoindex()) {
-                generateAutoIndex(loc);
-                return;
-            } else
-                throw HttpException(403, "Directory listing denied.", true);
-        }
-
-        if (!S_ISREG(file_stat.st_mode))
-            throw HttpException(403, "Requested resource is not a file", true);
-        if (!(file_stat.st_mode & S_IROTH))
-            throw HttpException(403, "You do not have permission to read this file", true);
-
-        readFileIntoBody(fullPath_);
-        setHeader(HEADER_CONTENT_LENGTH, int_to_string(body_.size()));
-        setHeader(HEADER_CONTENT_TYPE, getContentType(fullPath_));
+    if (!util::fileExists(fullPath_, file_stat))
         return;
-    } else
+
+    if (S_ISDIR(file_stat.st_mode))
     {
-        if (errno == ENOENT)
-            return (setPage(404, "File does not exist", true));
-        else if (errno == EACCES)
-            throw HttpException(403, "Access denied.", true);
+        std::vector<std::string> index_files = loc.getIndexFiles();
+        for (std::vector<std::string>::const_iterator it = index_files.begin(); it != index_files.end(); ++it)
+        {
+            std::string candidate = fullPath_ + "/" + *it;
+            struct stat s;
+            if (::stat(candidate.c_str(), &s) == 0 && S_ISREG(s.st_mode))
+            {
+                fullPath_ = candidate;
+                return handleGet(loc);
+            }
+        }
+        if (loc.getAutoindex())
+            return (generateAutoIndex(loc));
         else
-            throw HttpException(500, "Internal server error while accessing file.", true);
+            throw HttpException(403, "Directory listing denied.", true);
     }
+
+    if (!S_ISREG(file_stat.st_mode))
+        throw HttpException(403, "Requested resource is not a file", true);
+    if (!(file_stat.st_mode & S_IROTH))
+        throw HttpException(403, "Permission denied", true);
+
+    readFileIntoBody(fullPath_);
+    setHeader(HEADER_CONTENT_LENGTH, util::intToString(body_.size()));
+    setHeader(HEADER_CONTENT_TYPE, getContentType(fullPath_));
+    return;
+
 }
 
 void Response:: readFileIntoBody(const std::string &fileName) {
     std::ifstream file(fileName.c_str(), std::ios::in | std::ios::binary);
     if (!file) {
         std::ifstream test(fileName.c_str());
-        if (!test) {
+        if (!test)
             throw HttpException(404, "Not Found", true);
-        } else {
+        else
             throw HttpException(500, "Server error: unable to open file.", true);
-        }
         return;
     }
 
@@ -106,60 +105,41 @@ void Response::generateAutoIndex(const LocationConfig& loc) {
     std::string path = fullPath_;
 
     DIR *dir = opendir(path.c_str());
-    if (!dir){
+    if (!dir)
         throw HttpException(403, "Forbidden", true);
-        return;
-    }
 
-    std::ostringstream html;
-
-    html << "<!DOCTYPE html>\n"
-            << "<html>\n<head>\n"
-            << "<title>Index of " << uri << "</title>\n"
-            << "</head>\n<body>\n"
-            << "<h1>Index of " << uri << "</h1>\n"
-            << "<ul>\n";
-
+    std::vector<std::string> entries;
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL)
     {
         std::string name(entry->d_name);
         if (name == "." || name == "..")
             continue;
-        struct stat st;
-        std::string fullpath = path + "/" + name;
-        if (stat(fullpath.c_str(), &st) == 0 && S_ISDIR(st.st_mode))
-            name += "/";
-        html << "<li><a href=\"" << uri;
-        if (uri[uri.size() - 1] != '/')
-            html << "/";
-        html << name << "\">" << name << "</a></li>\n";
-    }
 
-    html << "</ul>\n</body>\n</html>\n";
+        struct ::stat st;
+        std::string fullpath = path + "/" + name;
+        if (::stat(fullpath.c_str(), &st) == 0 && S_ISDIR(st.st_mode))
+            name += "/";
+
+        entries.push_back(name);
+    }
     closedir(dir);
-    body_ = html.str();
-    return;
+    body_ = util::generateAutoIndexHtml(uri, entries);
+}
+
+static std::map<std::string, std::string> initMime()
+{
+    std::map<std::string, std::string> m;
+    size_t len = sizeof(mimeArray) / sizeof(mimeArray[0]);
+    for (size_t i = 0; i < len; ++i)
+        m[mimeArray[i].first] = mimeArray[i].second;
+    return m;
 }
 
 std::string Response::getContentType(const std::string &path)
 {
-    static std::map<std::string, std::string> mime;
-    if (mime.empty())
-    {
-        mime[".html"] = "text/html";
-        mime[".htm"] = "text/html";
-        mime[".css"] = "text/css";
-        mime[".js"] = "application/javascript";
-        mime[".png"] = "image/png";
-        mime[".jpg"] = "image/jpeg";
-        mime[".jpeg"] = "image/jpeg";
-        mime[".gif"] = "image/gif";
-        mime[".txt"] = "text/plain";
-        mime[".pdf"] = "application/pdf";
-        mime[".json"] = "application/json";
-        mime[".svg"] = "image/svg+xml";
-    }
+    static std::map<std::string, std::string> mime = initMime();
+
     size_t dot = path.rfind('.');
     if (dot != std::string::npos) {
         std::string ext = path.substr(dot);
@@ -176,21 +156,17 @@ void Response::handlePost(const Request &reqObj, LocationConfig loc)
         throw std::runtime_error("Config error: No upload_path specified in location " + loc.getUri());
 
     std::string reqPath = reqObj.getReqPath();
-    if (reqPath != "/upload" && reqPath.find("/upload/") != 0){
-        setPage(405, "Method Not Allowed", true); // POST not allowed here
-        return;
-    }
+    if (reqPath != "/upload" && reqPath.find("/upload/") != 0)
+        throw HttpException(405, "Method Not Allowed", true);
 
-    if (reqObj.getBody().empty()) {
-        throw HttpException(400, "No body detected in request", true);
-    }
+    // if (reqObj.getBody().empty()) {
+    //     throw HttpException(400, "No body detected in request", true);
+    // }
 
     parseMultipartBody(reqObj); //insert some check here
 
-    if (!reqObj.findHeader(HEADER_CONTENT_TYPE)) {
-        setPage(400, "Missing Content-Type header", true);
-        return;
-    }
+    if (!reqObj.findHeader(HEADER_CONTENT_TYPE))
+        throw HttpException(400, "Missing Content-Type header", true);
 
     std::string uploadFullPath = "./" + loc.getUploadDir();
     createUploadDir(uploadFullPath);
@@ -204,9 +180,7 @@ void Response::createUploadDir(const std::string &uploadFullPath) {
             std::ostringstream oss;
             oss << "mkdir failed for " << uploadFullPath << ": " << strerror(errno);
             std::string msg = oss.str();
-            //std::string msg = "mkdir failed for " + uploadFullPath + ": " + strerror(errno);
             logs(ERROR, msg);
-            //std::cerr << "mkdir failed for " << uploadFullPath << ": " << strerror(errno) << std::endl;
         }
     }
 }
@@ -220,52 +194,39 @@ void Response::uploadFile(const std::string &uploadFullPath)
         return (setPage(201, "File created", false));
     }
     else
-        return (setPage(500, "Server error: could not open file for writing.", true));
+        throw HttpException(500, "Server error: could not open file for writing.", true);
 }
 
 void Response::handleDelete(const Request &reqObj) {
-    std::string prefix = "/upload/";
+    std::string prefix = "/upload/"; //talvez criar um vetor e encher com as locations que podem POST
 
-    if (reqObj.getReqPath().compare(0, prefix.size(), prefix) != 0) {
-        logs(ERROR, "404 Wrong path. Expected \"/upload/");
-        setPage(404, "Wrong path. Expected \"/upload/", true);
-        return;
-    }
+    if (reqObj.getReqPath().compare(0, prefix.size(), prefix) != 0)
+        throw HttpException(404, "Wrong path. Expected \"/upload/", true);
 
     filename_ = "." + reqObj.getFullPath();
     struct stat fileStat;
 
-    if (stat(filename_.c_str(), &fileStat) != 0) {
-        logs(ERROR, "404 File not found: \"" + filename_ + "\"");
-        setPage(404, "File not found: \"" + filename_ + "\"", true);
-        return;
-    }
 
-    if (!S_ISREG(fileStat.st_mode)) {
-        logs(ERROR, "404 \"" + filename_ + "\" is not a regular file");
-        setPage(404, "\"" + filename_ + "\" is not a regular file", true);
-        return;
-    }
+    if (stat(filename_.c_str(), &fileStat) != 0)
+        throw HttpException(404, "File not found: \"" + filename_ + "\"", true);
 
-    if (remove(filename_.c_str()) != 0) {
-        logs(ERROR, "500 Failed to delete file: \"" + filename_ + "\"");
-        setPage(500, "Failed to delete file: \"" + filename_ + "\"", true);
-        return;
-    }
+
+    if (!S_ISREG(fileStat.st_mode))
+        throw HttpException(404, "\"" + filename_ + "\" is not a regular file", true);
+
+    if (remove(filename_.c_str()) != 0)
+        throw HttpException(500, "Failed to delete file: \"" + filename_ + "\"", true);
+
     logs(INFO, "\"" + filename_ + "\" deleted successfully");
     setPage(204, "No content. File \"" + filename_ + "\" deleted successfully.", false);
 }
 
 void Response::parseMultipartBody(const Request &obj) {
-    // ------ GET BOUNDARY -----
-
     std::string rawValue = *obj.findHeader(HEADER_CONTENT_TYPE);
     size_t pos = rawValue.find("boundary=");
     std::string boundary = "--";
     if (pos != std::string::npos)
         boundary.append(rawValue.substr(pos + 9));
-
-    // ----- EXTRACT BOUNDARY FROM BODY
 
     std::string rawBody = obj.getBody();
     size_t start = rawBody.find(boundary);
@@ -277,7 +238,6 @@ void Response::parseMultipartBody(const Request &obj) {
     if (end != std::string::npos)
         rawBody = rawBody.substr(0, end - 2);
 
-    // ----- EXTRACT HEADERS FROM THE BODY
     std::string headers;
     std::string fileContent;
     size_t headerEnd = rawBody.find("\r\n\r\n");
@@ -287,18 +247,15 @@ void Response::parseMultipartBody(const Request &obj) {
         fileContent = rawBody.substr(headerEnd + 4);
     }
 
-    // ---- EXTRACT FILENAME
-    //string filename = "www/upload/";
     pos = headers.find("filename=\"");
     if (pos != std::string::npos) {
         size_t start = pos + 10;
         size_t end = headers.find("\"", start);
         filename_ = headers.substr(start, end - start);
         logs(INFO, "\"" + filename_ + "\" uploaded successfully");
-        //std::cout << filename_ << std::endl;
+
     }
 
-    // ---- EXTRACT CONTENT-TYPE
     pos = headers.find("content-type: ");
     if (pos != std::string::npos) {
         start = pos + 14;
@@ -316,7 +273,7 @@ std::string Response::writeResponseString() const
     res << "HTTP/1.1 " << statusCode_ << " " << statusMessage_ << "\r\n";
     for (std::map<std::string, std::string>::iterator it = headers.begin(); it != headers.end(); ++it)
         res << it->first << ": " << it->second << "\r\n";
-    res << "\r\n"; // linha em branco antes do body
+    res << "\r\n";
     res << body_;
 
     return (res.str());
@@ -342,6 +299,7 @@ void Response::setCode(const int code)
         codeToMessage[404] = "Not Found";
         codeToMessage[408] = "Request Timeout";
         codeToMessage[405] = "Method Not Allowed";
+        codeToMessage[411] = "Length Required";
         codeToMessage[414] = "URI too long";
         codeToMessage[500] = "Internal Server Error";
     }
@@ -362,62 +320,34 @@ void Response::setPage(const int code, const std::string &message, bool error)
     else
         readFileIntoBody("." + errorPagePath);
 
-    // Content-Length e Content-Type
-    setHeader(HEADER_CONTENT_LENGTH, int_to_string(body_.size()));
+    setHeader(HEADER_CONTENT_LENGTH, util::intToString(body_.size()));
     setHeader(HEADER_CONTENT_TYPE, MIME_HTML);
-
-    // Fechar a conexão para erros ou timeout
-    // if (code >= 400 || code == 408)
-    //     setHeader(HEADER_CONNECTION, "close");
-    // else if (keep_alive_)
-    //     setHeader(HEADER_CONNECTION, "keep-alive");
 }
 
-std::string Response::generateDefaultPage(const int code, const std::string &message, bool error) const
+std::string Response::generateDefaultPage(int code, const std::string &message, bool error) const
 {
-    std::ostringstream html;
-    html << "<!DOCTYPE html>\r\n"
-         << "<html>\r\n"
-         << "<head>\r\n"
-         << "<meta charset=\"UTF-8\">\r\n"
-         << "<title>" << code << " " << message << "</title>\r\n"
-         << "<style>body{font-family:sans-serif;text-align:center;margin-top:100px;}</style>\r\n"
-         << "</head>\r\n"
-         << "<body>\r\n";
-
-    if (error)
-        html << "<h1>Error " << code << "</h1>\r\n";
-    else
-        html << "<h1>Status " << code << "</h1>\r\n";
-
-    html << "<p>" << message << "</p>\r\n";
-
-    // Debug info opcional (fd/port) para timeout ou erros específicos
-    // if (code == 408)
-    //     html << "<p><small>Client fd(" << client_fd_ << ")/port(" << client_port_ << ")</small></p>\r\n";
-
-    html << "</body>\r\n</html>\r\n";
-
-    return html.str();
+    std::ostringstream content;
+    content << "<h1>" << (error ? "Error " : "Status ") << code << "</h1>\n"
+            << "<p>" << message << "</p>";
+    return util::wrapHtml(util::intToString(code) + " " + message, content.str());
 }
-
 
 void Response::setFullPath(const std::string &reqPath) {
     fullPath_.append(reqPath);
 }
 
-std::ostream &operator<<(std::ostream &out, const Response &obj)
-{
-    out << "Version: " << obj.getVersion() << std::endl
-        << "Code: " << obj.getCode() << std::endl
-        << "Status Message: " << obj.getStatusMessage() << std::endl
-        << " ----- " << std::endl
-        << "Headers: " << std::endl
-        << obj.getHeaders() << std::endl
-        << " ----- " << std::endl
-        << "Body: " << obj.getBody() << std::endl;
-    return (out);
-}
+// std::ostream &operator<<(std::ostream &out, const Response &obj)
+// {
+//     out << "Version: " << obj.getVersion() << std::endl
+//         << "Code: " << obj.getCode() << std::endl
+//         << "Status Message: " << obj.getStatusMessage() << std::endl
+//         << " ----- " << std::endl
+//         << "Headers: " << std::endl
+//         << obj.getHeaders() << std::endl
+//         << " ----- " << std::endl
+//         << "Body: " << obj.getBody() << std::endl;
+//     return (out);
+// }
 
 std::string Response::buildResponse(const Request &reqObj, const LocationConfig &locConfig)
 {
@@ -448,16 +378,13 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
     // } else if (reqObj.isCgi()) {
     //     handleCgi(reqObj, locConfig);
     } else if (!reqObj.getMethod().compare("GET")) {
-        handleGet(reqObj, locConfig);
+        handleGet(locConfig);
     } else if (!reqObj.getMethod().compare("POST")) {
         handlePost(reqObj, locConfig);
     } else if (!reqObj.getMethod().compare("DELETE")) {
         handleDelete(reqObj);
     } else
-        setPage(501, "Method not implemented", true);
-
-    //if (reqObj.findHeader(HEADER_CONNECTION))
-    //    this->setHeader(HEADER_CONNECTION, *reqObj.findHeader(HEADER_CONNECTION));
+        throw HttpException(501, "Method not implemented", true);
 
     const std::string version = reqObj.getVersion();
     std::string connection;
@@ -507,7 +434,7 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
 //         msg = oss.str();
 //         logs(INFO, msg);
 //         //std::cout << "CGI execution successful: " << reqObj.getReqPath() << std::endl;
-        
+
 //         setCode(200);
 
 //         oss.str(""); oss.clear();
@@ -573,16 +500,15 @@ void Response::parseCgiResponse(const std::string &cgiOutput) {
     }
     std::string b = body.str();
     if (!b.empty() && b[b.size()-1] == '\n') b.erase(b.size()-1);
-    
+
     setBody(b);
 
     if (!findHeader("Content-Length")) {
-        setHeader("Content-Length", int_to_string(b.size()));
+        setHeader("Content-Length", util::intToString(b.size()));
     }
 }
 
-void Response::handleRedirect(const LocationConfig &locConfig)
-{
+void Response::handleRedirect(const LocationConfig &locConfig) {
     int statusCode = locConfig.getReturnStatus();
     statusCode_ = statusCode;
     std::string newLocation = locConfig.getReturnTarget();

@@ -2,7 +2,18 @@
 #include "ConfigParser.hpp"
 #include "HttpException.hpp"
 #include "CgiHandler.hpp"
+#include "Request.hpp"
+#include "Response.hpp"
+#include "Logger.hpp"
 #include "Utils.hpp"
+
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <unistd.h>
+#include <fcntl.h>
+
+#include <cstring>
+#include <cstdlib>
 
 Config::Config(const std::string &filepath) : client_count(0)
 {
@@ -47,7 +58,7 @@ bool Config::setupServer()
         else {
             std::ostringstream oss;
             oss << "Server listening on " << (socketObj.getHost().empty() ? "0.0.0.0" : socketObj.getHost())
-            << ":" << socketObj.getPort(); 
+            << ":" << socketObj.getPort();
             std::string msg = oss.str();
             logs(INFO, msg);
         }
@@ -146,7 +157,7 @@ bool Config::pollLoop(int server_count)
     {
         // Check for completed CGI processes
         checkCgiProcesses();
-        
+
         int ready = poll(poll_fds.data(), poll_fds.size(), 5000);
         if (ready < 0)
         {
@@ -167,7 +178,7 @@ bool Config::pollLoop(int server_count)
             if (revent & (POLLERR | POLLHUP | POLLNVAL)) {
                 std::ostringstream oss;
                 std::string fd_type = fd_types[fd];
-                
+
                 if (fd_type == "server") {
                     oss << "Critical poll event on server socket fd=" << fd;
                     logs(ERROR, oss.str());
@@ -200,14 +211,14 @@ bool Config::pollLoop(int server_count)
                     poll_fds.erase(poll_fds.begin() + i);
                     fd_types.erase(fd);
                     fd_to_client.erase(fd);
-                    
+
                     // Don't immediately error out - let checkCgiProcesses handle completion
                 }
                 continue;
             }
 
             std::string fd_type = fd_types[fd];
-            
+
             if (fd_type == "server") {
                 if (revent & POLLIN)
                     handleNewConnection(fd, i);
@@ -326,8 +337,8 @@ void Config::handleIdleClient(int client_idx, int pollfd_idx)
     throw HttpException(408, errorMessage, true);
 }
 
-// Parse the header block (up to and incl. the CRLFCRLF) into a lowercased key map.
-// Returns false on malformed headers (e.g., missing colon).
+/* Parse the header block (up to and incl. the CRLFCRLF) into a lowercased key map.
+ Returns false on malformed headers (e.g., missing colon). */
 static bool parse_headers_block(const std::string &headers,
                                 std::map<std::string, std::string> &out_hmap)
 {
@@ -525,32 +536,21 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx)
         long consumed = extract_one_http_request(client.getRequest());
         if (consumed == 0)
             break;
-        if (consumed < 0)
-        {
+        if (consumed < 0) {
             client.setKeepAlive(false);
             poll_fds[pollfd_idx].events = POLLIN | POLLOUT;
             throw HttpException(400, "Bad Request", true);
-            // Response res(servers[client.getServerIndex()].getErrorPagesConfig());
-            // Request bad;
-            // bad.setVersion("HTTP/1.1");
-            // res.setPage(400, "Bad Request", true);
-            // client.setResponseBuffer(res.writeResponseString());
-            // client.setKeepAlive(false);
-            // poll_fds[pollfd_idx].events = POLLIN | POLLOUT;
-            // return;
         }
-
         std::string raw = client.getRequest().substr(0, (size_t)consumed);
         client.consumeRequestBytes((size_t)consumed);
-        Request reqObj(raw);
-        //std::cout << "This is the raw request: " << raw << std::endl;
         ServerConfig srv = servers[client.getServerIndex()];
-        
+<<<<<<< HEAD
+
         // Apply location config to determine if this is a CGI request
         const LocationConfig *loc = matchLocation(reqObj.getReqPath(), srv);
         if (loc) {
             applyLocationConfig(reqObj, *loc);
-            
+
             // Check if this is a CGI request
             if (reqObj.isCgi()) {
                 // Handle CGI request non-blocking
@@ -558,14 +558,15 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx)
                 break; // Don't process more requests until CGI completes
             }
         }
-        
+
         // Non-CGI request - handle normally
+=======
+        Request reqObj(raw, srv.getMaxBodySize());
+>>>>>>> main
         std::string response = buildRequestAndResponse(raw, srv, reqObj);
-        //std::cout << "This is response string: " << response << std::endl;
         client.setKeepAlive(reqObj);
         poll_fds[pollfd_idx].events = POLLIN | POLLOUT;
         client.setResponseBuffer(response);
-
         break;
     }
 }
@@ -598,13 +599,10 @@ void Config::handleResponse(int client_idx, int pollfd_idx)
         client.setBytesSent(alreadySent + bytes);
     }
 
-    // If all bytes sent
     if (client.getBytesSent() >= responseStr.size())
     {
         client.setBytesSent(0);
         alreadySent = 0;
-        // delete client.getResponseObj(); // delete heap Response
-        //client.setResponseObj(NULL);
         if (!client.getKeepAlive() || (client.getState() == Client::IDLE))
         {
             std::ostringstream oss;
@@ -638,7 +636,7 @@ void Config::cleanup()
     client_count = 0;
 }
 
-std::ostream &operator<<(std::ostream &os, const Config &obj)
+/* std::ostream &operator<<(std::ostream &os, const Config &obj)
 {
     std::vector<ServerConfig> serversVector = obj.getServers();
 
@@ -647,7 +645,7 @@ std::ostream &operator<<(std::ostream &os, const Config &obj)
         os << serversVector[i] << std::endl;
     }
     return os;
-}
+} */
 
 const LocationConfig *matchLocation(const std::string &reqPath, const ServerConfig &srv)
 {
@@ -673,13 +671,13 @@ const LocationConfig *matchLocation(const std::string &reqPath, const ServerConf
 
 std::string buildRequestAndResponse(const std::string &raw, const ServerConfig &srv, Request &outReq)
 {
-    Request reqObj(raw);
+    Request reqObj(raw, srv.getMaxBodySize());
     const LocationConfig *loc = matchLocation(reqObj.getReqPath(), srv);
     if (loc)
         applyLocationConfig(reqObj, *loc);
     outReq = reqObj;
 
-    std::string msg = reqObj.getMethod() + " request " + reqObj.getFullPath(); 
+    std::string msg = reqObj.getMethod() + " request " + reqObj.getFullPath();
     logs(INFO, msg);
 
     Response res(srv.getErrorPagesConfig());
@@ -692,28 +690,27 @@ void applyLocationConfig(Request &reqObj, const LocationConfig &loc)
 
     const std::string &ext = loc.getCgiExtension();
     if (!ext.empty() && requestPath.size() >= ext.size() &&
-        requestPath.compare(requestPath.size() - ext.size(), ext.size(), ext) == 0)
-    {
+        requestPath.compare(requestPath.size() - ext.size(), ext.size(), ext) == 0) {
         reqObj.setIsCgi(true);
     }
 
     std::string remainingPath = requestPath.substr(loc.getUri().size());
-    reqObj.setFullPath(loc.getRoot() + remainingPath);
+    reqObj.setFullPath(loc.getRoot() + "/" + remainingPath);
 }
 
 // CGI handling methods
 
 void Config::handleCgiRequest(int client_idx, const Request &reqObj, const LocationConfig &locConfig) {
     Client &client = clients[client_idx];
-    
+
     // Log processing CGI request
     std::ostringstream oss;
     oss << "Processing CGI request: " << reqObj.getMethod() << " " << reqObj.getReqPath();
     logs(INFO, oss.str());
-    
+
     // Create CGI handler and start the process
     CgiHandler cgiHandler(reqObj, locConfig);
-    
+
     if (cgiHandler.startCgi(client)) {
         // Successfully started CGI process
         client.setState(Client::WAITING_CGI);
@@ -725,7 +722,7 @@ void Config::handleCgiRequest(int client_idx, const Request &reqObj, const Locat
         // Failed to start CGI process - generate error response
         ServerConfig srv = servers[client.getServerIndex()];
         Response res(srv.getErrorPagesConfig());
-        
+
         switch (cgiHandler.getError()) {
             case CgiHandler::SCRIPT_NOT_FOUND:
                 oss.str(""); oss.clear();
@@ -754,10 +751,10 @@ void Config::handleCgiRequest(int client_idx, const Request &reqObj, const Locat
                 res.setPage(500, "CGI execution failed: unknown error", true);
                 break;
         }
-        
+
         client.setResponseBuffer(res.writeResponseString());
         client.setState(Client::WAITING_RESPONSE);
-        
+
         // Find client's poll fd and set it for output
         for (size_t i = 0; i < poll_fds.size(); ++i) {
             if (poll_fds[i].fd == client.getFd()) {
@@ -771,14 +768,14 @@ void Config::handleCgiRequest(int client_idx, const Request &reqObj, const Locat
 void Config::addCgiPollFds(int client_idx) {
     Client &client = clients[client_idx];
     Client::CgiContext &cgi = client.getCgiContext();
-    
+
     // For GET requests or empty input, close stdin immediately
     if (cgi.input_buffer.empty() && cgi.stdin_fd >= 0 && !cgi.stdin_closed) {
         close(cgi.stdin_fd);
         cgi.stdin_fd = -1;
         cgi.stdin_closed = true;
     }
-    
+
     // Add CGI stdin (for writing to CGI) only if we have data to send
     if (cgi.stdin_fd >= 0 && !cgi.stdin_closed && !cgi.input_buffer.empty()) {
         pollfd stdin_pollfd = {cgi.stdin_fd, POLLOUT, 0};
@@ -786,7 +783,7 @@ void Config::addCgiPollFds(int client_idx) {
         fd_types[cgi.stdin_fd] = "cgi_stdin";
         fd_to_client[cgi.stdin_fd] = client_idx;
     }
-    
+
     // Add CGI stdout (for reading from CGI)
     if (cgi.stdout_fd >= 0 && !cgi.stdout_closed) {
         pollfd stdout_pollfd = {cgi.stdout_fd, POLLIN, 0};
@@ -794,7 +791,7 @@ void Config::addCgiPollFds(int client_idx) {
         fd_types[cgi.stdout_fd] = "cgi_stdout";
         fd_to_client[cgi.stdout_fd] = client_idx;
     }
-    
+
     // Add CGI stderr (for reading CGI errors)
     if (cgi.stderr_fd >= 0 && !cgi.stderr_closed) {
         pollfd stderr_pollfd = {cgi.stderr_fd, POLLIN, 0};
@@ -807,7 +804,7 @@ void Config::addCgiPollFds(int client_idx) {
 void Config::removeCgiPollFds(int client_idx) {
     Client &client = clients[client_idx];
     const Client::CgiContext &cgi = client.getCgiContext();
-    
+
     // Remove CGI file descriptors from poll set and maps
     for (int i = poll_fds.size() - 1; i >= 0; --i) {
         int fd = poll_fds[i].fd;
@@ -817,7 +814,7 @@ void Config::removeCgiPollFds(int client_idx) {
             fd_to_client.erase(fd);
         }
     }
-    
+
     // Close file descriptors
     if (cgi.stdin_fd >= 0 && !cgi.stdin_closed) {
         close(cgi.stdin_fd);
@@ -833,20 +830,20 @@ void Config::removeCgiPollFds(int client_idx) {
 void Config::checkCgiProcesses() {
     for (size_t i = 0; i < clients.size(); ++i) {
         Client &client = clients[i];
-        
+
         if (client.getState() != Client::WAITING_CGI) {
             continue;
         }
-        
+
         Client::CgiContext &cgi = client.getCgiContext();
         if (cgi.pid <= 0) {
             continue;
         }
-        
+
         // Check if CGI process has finished
         int status;
         pid_t result = waitpid(cgi.pid, &status, WNOHANG);
-        
+
         if (result > 0) {
             // Process has finished - read any remaining output first
             if (cgi.stdout_fd >= 0) {
@@ -856,16 +853,16 @@ void Config::checkCgiProcesses() {
                     cgi.output_buffer.append(buffer, bytes_read);
                 }
             }
-            
+
             // Save the output buffer before finalizing (which resets the context)
             std::string cgi_output = cgi.output_buffer;
-            
+
             finalizeCgiExecution(i);
-            
+
             // Create response with CGI output
             ServerConfig srv = servers[client.getServerIndex()];
             Response res(srv.getErrorPagesConfig());
-            
+
             if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
                 // CGI succeeded
                 std::ostringstream oss;
@@ -880,10 +877,10 @@ void Config::checkCgiProcesses() {
                 logs(ERROR, oss.str());
                 res.setPage(500, "CGI script failed", true);
             }
-            
+
             client.setResponseBuffer(res.writeResponseString());
             client.setState(Client::WAITING_RESPONSE);
-            
+
             // Set client fd to POLLOUT for sending response
             for (size_t j = 0; j < poll_fds.size(); ++j) {
                 if (poll_fds[j].fd == client.getFd()) {
@@ -895,14 +892,14 @@ void Config::checkCgiProcesses() {
             // Error occurred
             logs(ERROR, "waitpid failed for CGI process");
             finalizeCgiExecution(i);
-            
+
             // Generate error response
             ServerConfig srv = servers[client.getServerIndex()];
             Response res(srv.getErrorPagesConfig());
             res.setPage(500, "CGI process error", true);
             client.setResponseBuffer(res.writeResponseString());
             client.setState(Client::WAITING_RESPONSE);
-            
+
             // Set client fd to POLLOUT for sending response
             for (size_t j = 0; j < poll_fds.size(); ++j) {
                 if (poll_fds[j].fd == client.getFd()) {
@@ -917,7 +914,7 @@ void Config::checkCgiProcesses() {
 void Config::handleCgiIO(int client_idx) {
     Client &client = clients[client_idx];
     Client::CgiContext &cgi = client.getCgiContext();
-    
+
     // Check if CGI process has timed out (5 seconds)
     if (time(NULL) - cgi.start_time > 5) {
         std::ostringstream oss;
@@ -925,14 +922,14 @@ void Config::handleCgiIO(int client_idx) {
         logs(ERROR, oss.str());
         kill(cgi.pid, SIGKILL);
         finalizeCgiExecution(client_idx);
-        
+
         // Generate timeout error response
         ServerConfig srv = servers[client.getServerIndex()];
         Response res(srv.getErrorPagesConfig());
         res.setPage(504, "CGI script timed out", true);
         client.setResponseBuffer(res.writeResponseString());
         client.setState(Client::WAITING_RESPONSE);
-        
+
         // Set client fd for output
         for (size_t i = 0; i < poll_fds.size(); ++i) {
             if (poll_fds[i].fd == client.getFd()) {
@@ -942,21 +939,21 @@ void Config::handleCgiIO(int client_idx) {
         }
         return;
     }
-    
+
     // Process completion is handled in checkCgiProcesses()
 }
 
 void Config::handleCgiStdin(int client_idx) {
     Client &client = clients[client_idx];
     Client::CgiContext &cgi = client.getCgiContext();
-    
+
     if (cgi.stdin_closed) return;
-    
+
     // Write remaining input to CGI
     if (cgi.input_sent < cgi.input_buffer.size()) {
         const char *data = cgi.input_buffer.c_str() + cgi.input_sent;
         size_t remaining = cgi.input_buffer.size() - cgi.input_sent;
-        
+
         ssize_t written = write(cgi.stdin_fd, data, remaining);
         if (written > 0) {
             cgi.input_sent += written;
@@ -965,14 +962,14 @@ void Config::handleCgiStdin(int client_idx) {
             std::cerr << "Error writing to CGI stdin: " << strerror(errno) << std::endl;
         }
     }
-    
+
     // Close stdin when all data is sent
     if (cgi.input_sent >= cgi.input_buffer.size()) {
         int stdin_fd = cgi.stdin_fd;  // Store fd before closing
         close(cgi.stdin_fd);
         cgi.stdin_fd = -1;
         cgi.stdin_closed = true;
-        
+
         // Remove stdin from poll set
         for (int i = poll_fds.size() - 1; i >= 0; --i) {
             if (poll_fds[i].fd == stdin_fd) {
@@ -988,10 +985,10 @@ void Config::handleCgiStdin(int client_idx) {
 void Config::handleCgiStdout(int client_idx) {
     Client &client = clients[client_idx];
     Client::CgiContext &cgi = client.getCgiContext();
-    
+
     char buffer[4096];
     ssize_t bytes_read = read(cgi.stdout_fd, buffer, sizeof(buffer));
-    
+
     if (bytes_read > 0) {
         cgi.output_buffer.append(buffer, bytes_read);
     } else if (bytes_read == 0) {
@@ -1000,7 +997,7 @@ void Config::handleCgiStdout(int client_idx) {
         close(cgi.stdout_fd);
         cgi.stdout_fd = -1;
         cgi.stdout_closed = true;
-        
+
         // Remove from poll set
         for (int i = poll_fds.size() - 1; i >= 0; --i) {
             if (poll_fds[i].fd == stdout_fd) {
@@ -1017,7 +1014,7 @@ void Config::handleCgiStdout(int client_idx) {
         close(cgi.stdout_fd);
         cgi.stdout_fd = -1;
         cgi.stdout_closed = true;
-        
+
         // Remove from poll set
         for (int i = poll_fds.size() - 1; i >= 0; --i) {
             if (poll_fds[i].fd == stdout_fd) {
@@ -1033,10 +1030,10 @@ void Config::handleCgiStdout(int client_idx) {
 void Config::handleCgiStderr(int client_idx) {
     Client &client = clients[client_idx];
     Client::CgiContext &cgi = client.getCgiContext();
-    
+
     char buffer[4096];
     ssize_t bytes_read = read(cgi.stderr_fd, buffer, sizeof(buffer));
-    
+
     if (bytes_read > 0) {
         cgi.error_buffer.append(buffer, bytes_read);
     } else if (bytes_read == 0) {
@@ -1045,7 +1042,7 @@ void Config::handleCgiStderr(int client_idx) {
         close(cgi.stderr_fd);
         cgi.stderr_fd = -1;
         cgi.stderr_closed = true;
-        
+
         // Remove from poll set
         for (int i = poll_fds.size() - 1; i >= 0; --i) {
             if (poll_fds[i].fd == stderr_fd) {
@@ -1061,7 +1058,7 @@ void Config::handleCgiStderr(int client_idx) {
         close(cgi.stderr_fd);
         cgi.stderr_fd = -1;
         cgi.stderr_closed = true;
-        
+
         // Remove from poll set
         for (int i = poll_fds.size() - 1; i >= 0; --i) {
             if (poll_fds[i].fd == stderr_fd) {
@@ -1076,7 +1073,7 @@ void Config::handleCgiStderr(int client_idx) {
 
 void Config::finalizeCgiExecution(int client_idx) {
     removeCgiPollFds(client_idx);
-    
+
     // Reset CGI context
     Client &client = clients[client_idx];
     client.getCgiContext() = Client::CgiContext();

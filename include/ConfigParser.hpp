@@ -17,6 +17,7 @@ private:
     std::ostringstream errorMessage;
     std::string fileName;
     size_t lineNum;
+
     std::vector<std::string> collectBlock(std::vector<std::string> lines, size_t i);
     ServerConfig parseServerBlock(std::vector<std::string> lines);
     LocationConfig parseLocationBlock(std::vector<std::string> lines);
@@ -41,7 +42,5 @@ public:
     Config  parseConfigFile(const std::string &filename);
 };
 
-std::string trimComment(std::string line);
-std::string trimWhitespace(std::string line);
-std::string trimLine(std::string line);
+std::string cleanLine(std::string line);
 std::vector<std::string> tokenize(const std::string line);
