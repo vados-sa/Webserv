@@ -18,12 +18,12 @@ Config ConfigParser::parseConfigFile(const std::string &filename) {
     std::vector<std::string> lines;
     std::string line;
     while (std::getline(file, line)) {
-        lines.push_back(trimLine(line));
+        lines.push_back(cleanLine(line));
     }
 
     std::vector<std::string> tokens;
     for (size_t i = 0; i < lines.size(); i++) {
-        line = trimLine(lines[i]);
+        line = cleanLine(lines[i]);
         tokens = tokenize(line);
         if (!tokens.empty()) {
             if (tokens[0] == "server") {
@@ -71,7 +71,7 @@ ServerConfig ConfigParser::parseServerBlock(std::vector<std::string> lines) {
     std::vector<std::string> tokens;
 
     for (size_t i = 1; i < lines.size(); i++) {
-        std::string line = trimLine(lines[i]);
+        std::string line = cleanLine(lines[i]);
         lineNum ++;
         tokens = tokenize(line);
         if (!tokens.empty() && tokens[0] == "host" && servConfig.getHost().empty())
@@ -287,7 +287,7 @@ LocationConfig ConfigParser::parseLocationBlock(std::vector<std::string> lines)
     for (size_t i = 0; i < lines.size(); i++)
     {
         lineNum ++;
-        lines[i] = trimLine(lines[i]);
+        lines[i] = cleanLine(lines[i]);
         tokens = tokenize(lines[i]);
         if (!tokens.empty() && tokens[0] == "location")
             locConfig.setUri(parsePath(tokens));
@@ -521,36 +521,22 @@ std::string ConfigParser::parseCgiExtension(const std::vector<std::string> &toke
 	return extension;
 }
 
-std::string trimComment(std::string line) {
+std::string cleanLine(std::string line)
+{
     if (line.empty())
-        return (line);
+        return line;
     size_t pos = line.find("#");
-    if (pos != std::string::npos) {
+    if (pos != std::string::npos)
         line = line.substr(0, pos);
-    }
-    return (line);
-}
 
-std::string trimWhitespace(std::string line) {
-    if (line.empty())
-        return (line);
-    while (!line.empty() && std::isspace(line[0])) {
+    while (!line.empty() && std::isspace(line[0]))
         line = line.substr(1);
-    }
-    while (!line.empty() && std::isspace(line[line.length() - 1])) {
-        line.resize(line.length() - 1);
-    }
-    return (line);
-}
+    while (!line.empty() && std::isspace(line[line.size() - 1]))
+        line.resize(line.size() - 1);
 
-std::string trimLine(std::string line) {
-    if (line.empty())
-        return (line);
-    line = trimComment(line);
-    line = trimWhitespace(line);
-   if (!line.empty() && line[line.length() - 1] == ';')
-        line.resize(line.length() - 1);
-    return (line);
+    if (!line.empty() && line[line.size() - 1] == ';')
+        line.resize(line.size() - 1);
+    return line;
 }
 
 std::vector<std::string> tokenize(const std::string line) {
