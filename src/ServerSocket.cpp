@@ -1,4 +1,14 @@
 #include "ServerSocket.hpp"
+#include "ServerConfig.hpp"
+
+#include <sys/socket.h>
+#include <netdb.h>
+#include <unistd.h>
+#include <fcntl.h>
+
+#include <cstring>
+#include <cstdio> 
+
 
 ServerSocket::ServerSocket() : fd(-1), port(0), isSetup(false) {
 	std::memset(&address, 0, sizeof(address));
@@ -30,13 +40,11 @@ bool ServerSocket::createSocket() {
 };
 
 bool ServerSocket::configureSocket() {
-	// non-blocking
 	if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0) {
 		perror("fcntl failed");
 		return false;
 	}
 
-	// reuse of address
 	int option = 1;
 	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option)) < 0) {
 		perror("setsockopt failed");

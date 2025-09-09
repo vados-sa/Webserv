@@ -16,7 +16,6 @@ void logs(LogLevel level, const std::string &msg) {
     const char* reset = "\033[0m";
     switch (level) {
         case INFO:   tag = "INFO"; color = "\033[32m"; break; // green
-        case ACCESS: tag = "ACCESS"; color = "\033[36m"; break; // cyan
         case ERROR:  tag = "ERROR"; color = "\033[31m"; break; // red
     }
 

@@ -3,23 +3,13 @@
 #include "ServerConfig.hpp"
 #include "ServerSocket.hpp"
 #include "Client.hpp"
-#include "Request.hpp"
-#include "Response.hpp"
-#include "Logger.hpp"
+#include "LocationConfig.hpp"
 
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <unistd.h>
-#include <fcntl.h>
 #include <poll.h>
 
 #include <vector>
-#include <iostream>
 #include <string>
-#include <cstring>
-#include <cstdlib>
-
-// check necessity of includes
+#include <iostream>
 
 const int MAX_CLIENT = 1024;
 
@@ -74,14 +64,13 @@ class Config
         Config &operator=(const Config &other);
         ~Config() {};
         
-        void addServer(ServerConfig &server);
         const std::vector<ServerConfig> &getServers() const { return servers; };
-		LocationConfig findLocationConfig(const std::string &path) const;
+        void addServer(ServerConfig &server);
         bool setupServer();
         bool run();
 };
 
-std::ostream &operator<<(std::ostream &os, const Config &obj);
+//std::ostream &operator<<(std::ostream &os, const Config &obj); // to print config in main
 const LocationConfig *matchLocation(const std::string &path, const ServerConfig &obj);
 std::string buildRequestAndResponse(const std::string& raw, const ServerConfig& srv, Request& outReq);
 void applyLocationConfig(Request& reqObj, const LocationConfig& loc);
