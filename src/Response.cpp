@@ -38,23 +38,24 @@ void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
     (void) reqObj;
     struct stat file_stat;
 
-    std::vector<std::string> index_files = loc.getIndexFiles();
-
-    if (stat(fullPath_.c_str(), &file_stat) == 0) {
-        if (S_ISDIR(file_stat.st_mode)) {
-            for (size_t i = 0; i < index_files.size(); ++i) {
-                std::string candidate = fullPath_ + "/" + index_files[i];
-                if (stat(candidate.c_str(), &file_stat) == 0 && S_ISREG(file_stat.st_mode)) {
-                    fullPath_ = candidate;
-                    return (handleGet(reqObj, loc));
-                }
+    if (S_ISDIR(file_stat.st_mode))
+    {
+        std::vector<std::string> index_files = loc.getIndexFiles();
+        for (std::vector<std::string>::const_iterator it = index_files.begin(); it != index_files.end(); ++it)
+        {
+            std::string candidate = fullPath_ + "/" + *it;
+            struct stat s;
+            if (::stat(candidate.c_str(), &s) == 0 && S_ISREG(s.st_mode))
+            {
+                fullPath_ = candidate;
+                return handleGet(reqObj, loc);
             }
-            if (loc.getAutoindex()) {
-                generateAutoIndex(loc);
-                return;
-            } else
-                throw HttpException(403, "Directory listing denied.", true);
         }
+        if (loc.getAutoindex())
+            return (generateAutoIndex(loc));
+        else
+            throw HttpException(403, "Directory listing denied.", true);
+    }
 
         if (!S_ISREG(file_stat.st_mode))
             throw HttpException(403, "Requested resource is not a file", true);
