@@ -51,6 +51,8 @@ void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
 
     (void) reqObj;
     struct stat file_stat;
+    if (!util::fileExists(fullPath_, file_stat))
+        return;
 
     if (S_ISDIR(file_stat.st_mode))
     {
@@ -71,24 +73,16 @@ void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
             throw HttpException(403, "Directory listing denied.", true);
     }
 
-        if (!S_ISREG(file_stat.st_mode))
-            throw HttpException(403, "Requested resource is not a file", true);
-        if (!(file_stat.st_mode & S_IROTH))
-            throw HttpException(403, "You do not have permission to read this file", true);
+    if (!S_ISREG(file_stat.st_mode))
+        throw HttpException(403, "Requested resource is not a file", true);
+    if (!(file_stat.st_mode & S_IROTH))
+        throw HttpException(403, "Permission denied", true);
 
-        readFileIntoBody(fullPath_);
-        setHeader(HEADER_CONTENT_LENGTH, util::intToString(body_.size()));
-        setHeader(HEADER_CONTENT_TYPE, getContentType(fullPath_));
-        return;
-    } else
-    {
-        if (errno == ENOENT)
-            throw HttpException(404, "File does not exist", true);
-        else if (errno == EACCES)
-            throw HttpException(403, "Access denied.", true);
-        else
-            throw HttpException(500, "Internal server error while accessing file.", true);
-    }
+    readFileIntoBody(fullPath_);
+    setHeader(HEADER_CONTENT_LENGTH, util::intToString(body_.size()));
+    setHeader(HEADER_CONTENT_TYPE, getContentType(fullPath_));
+    return;
+
 }
 
 void Response:: readFileIntoBody(const std::string &fileName) {
