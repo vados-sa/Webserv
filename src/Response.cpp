@@ -20,6 +20,20 @@ static const char *HEADER_CONTENT_LENGTH = "content-length";
 static const char *HEADER_CONNECTION = "connection";
 static const char *MIME_HTML = "text/html";
 
+static const std::pair<const char *, const char *> mimeArray[] = {
+    std::pair<const char *, const char *>(".html", "text/html"),
+    std::pair<const char *, const char *>(".htm", "text/html"),
+    std::pair<const char *, const char *>(".css", "text/css"),
+    std::pair<const char *, const char *>(".js", "application/javascript"),
+    std::pair<const char *, const char *>(".png", "image/png"),
+    std::pair<const char *, const char *>(".jpg", "image/jpeg"),
+    std::pair<const char *, const char *>(".jpeg", "image/jpeg"),
+    std::pair<const char *, const char *>(".gif", "image/gif"),
+    std::pair<const char *, const char *>(".txt", "text/plain"),
+    std::pair<const char *, const char *>(".pdf", "application/pdf"),
+    std::pair<const char *, const char *>(".json", "application/json"),
+    std::pair<const char *, const char *>(".svg", "image/svg+xml")};
+
 Response::Response() : fullPath_(".") {}
 
 Response::Response(std::map<int, std::string> error_pages)
@@ -33,47 +47,41 @@ Response::Response(std::map<int, std::string> error_pages, int code, const std::
     setHeader("Connection", "close");
 }
 
-void Response::handleGet(const Request &reqObj, const LocationConfig &loc) {
+void Response::handleGet(const LocationConfig &loc) {
 
-    (void) reqObj;
     struct stat file_stat;
-
-    std::vector<std::string> index_files = loc.getIndexFiles();
-
-    if (stat(fullPath_.c_str(), &file_stat) == 0) {
-        if (S_ISDIR(file_stat.st_mode)) {
-            for (size_t i = 0; i < index_files.size(); ++i) {
-                std::string candidate = fullPath_ + "/" + index_files[i];
-                if (stat(candidate.c_str(), &file_stat) == 0 && S_ISREG(file_stat.st_mode)) {
-                    fullPath_ = candidate;
-                    return (handleGet(reqObj, loc));
-                }
-            }
-            if (loc.getAutoindex()) {
-                generateAutoIndex(loc);
-                return;
-            } else
-                throw HttpException(403, "Directory listing denied.", true);
-        }
-
-        if (!S_ISREG(file_stat.st_mode))
-            throw HttpException(403, "Requested resource is not a file", true);
-        if (!(file_stat.st_mode & S_IROTH))
-            throw HttpException(403, "You do not have permission to read this file", true);
-
-        readFileIntoBody(fullPath_);
-        setHeader(HEADER_CONTENT_LENGTH, util::intToString(body_.size()));
-        setHeader(HEADER_CONTENT_TYPE, getContentType(fullPath_));
+    if (!util::fileExists(fullPath_, file_stat))
         return;
-    } else
+
+    if (S_ISDIR(file_stat.st_mode))
     {
-        if (errno == ENOENT)
-            throw HttpException(404, "File does not exist", true);
-        else if (errno == EACCES)
-            throw HttpException(403, "Access denied.", true);
+        std::vector<std::string> index_files = loc.getIndexFiles();
+        for (std::vector<std::string>::const_iterator it = index_files.begin(); it != index_files.end(); ++it)
+        {
+            std::string candidate = fullPath_ + "/" + *it;
+            struct stat s;
+            if (::stat(candidate.c_str(), &s) == 0 && S_ISREG(s.st_mode))
+            {
+                fullPath_ = candidate;
+                return handleGet(loc);
+            }
+        }
+        if (loc.getAutoindex())
+            return (generateAutoIndex(loc));
         else
-            throw HttpException(500, "Internal server error while accessing file.", true);
+            throw HttpException(403, "Directory listing denied.", true);
     }
+
+    if (!S_ISREG(file_stat.st_mode))
+        throw HttpException(403, "Requested resource is not a file", true);
+    if (!(file_stat.st_mode & S_IROTH))
+        throw HttpException(403, "Permission denied", true);
+
+    readFileIntoBody(fullPath_);
+    setHeader(HEADER_CONTENT_LENGTH, util::intToString(body_.size()));
+    setHeader(HEADER_CONTENT_TYPE, getContentType(fullPath_));
+    return;
+
 }
 
 void Response:: readFileIntoBody(const std::string &fileName) {
@@ -100,55 +108,38 @@ void Response::generateAutoIndex(const LocationConfig& loc) {
     if (!dir)
         throw HttpException(403, "Forbidden", true);
 
-    std::ostringstream html;
-
-    html << "<!DOCTYPE html>\n"
-            << "<html>\n<head>\n"
-            << "<title>Index of " << uri << "</title>\n"
-            << "</head>\n<body>\n"
-            << "<h1>Index of " << uri << "</h1>\n"
-            << "<ul>\n";
-
+    std::vector<std::string> entries;
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL)
     {
         std::string name(entry->d_name);
         if (name == "." || name == "..")
             continue;
-        struct stat st;
-        std::string fullpath = path + "/" + name;
-        if (stat(fullpath.c_str(), &st) == 0 && S_ISDIR(st.st_mode))
-            name += "/";
-        html << "<li><a href=\"" << uri;
-        if (uri[uri.size() - 1] != '/')
-            html << "/";
-        html << name << "\">" << name << "</a></li>\n";
-    }
 
-    html << "</ul>\n</body>\n</html>\n";
+        struct ::stat st;
+        std::string fullpath = path + "/" + name;
+        if (::stat(fullpath.c_str(), &st) == 0 && S_ISDIR(st.st_mode))
+            name += "/";
+
+        entries.push_back(name);
+    }
     closedir(dir);
-    body_ = html.str();
-    return;
+    body_ = util::generateAutoIndexHtml(uri, entries);
+}
+
+static std::map<std::string, std::string> initMime()
+{
+    std::map<std::string, std::string> m;
+    size_t len = sizeof(mimeArray) / sizeof(mimeArray[0]);
+    for (size_t i = 0; i < len; ++i)
+        m[mimeArray[i].first] = mimeArray[i].second;
+    return m;
 }
 
 std::string Response::getContentType(const std::string &path)
 {
-    static std::map<std::string, std::string> mime;
-    if (mime.empty())
-    {
-        mime[".html"] = "text/html";
-        mime[".htm"] = "text/html";
-        mime[".css"] = "text/css";
-        mime[".js"] = "application/javascript";
-        mime[".png"] = "image/png";
-        mime[".jpg"] = "image/jpeg";
-        mime[".jpeg"] = "image/jpeg";
-        mime[".gif"] = "image/gif";
-        mime[".txt"] = "text/plain";
-        mime[".pdf"] = "application/pdf";
-        mime[".json"] = "application/json";
-        mime[".svg"] = "image/svg+xml";
-    }
+    static std::map<std::string, std::string> mime = initMime();
+
     size_t dot = path.rfind('.');
     if (dot != std::string::npos) {
         std::string ext = path.substr(dot);
@@ -333,46 +324,30 @@ void Response::setPage(const int code, const std::string &message, bool error)
     setHeader(HEADER_CONTENT_TYPE, MIME_HTML);
 }
 
-std::string Response::generateDefaultPage(const int code, const std::string &message, bool error) const
+std::string Response::generateDefaultPage(int code, const std::string &message, bool error) const
 {
-    std::ostringstream html;
-    html << "<!DOCTYPE html>\r\n"
-         << "<html>\r\n"
-         << "<head>\r\n"
-         << "<meta charset=\"UTF-8\">\r\n"
-         << "<title>" << code << " " << message << "</title>\r\n"
-         << "<style>body{font-family:sans-serif;text-align:center;margin-top:100px;}</style>\r\n"
-         << "</head>\r\n"
-         << "<body>\r\n";
-
-    if (error)
-        html << "<h1>Error " << code << "</h1>\r\n";
-    else
-        html << "<h1>Status " << code << "</h1>\r\n";
-
-    html << "<p>" << message << "</p>\r\n";
-    html << "</body>\r\n</html>\r\n";
-
-    return (html.str());
+    std::ostringstream content;
+    content << "<h1>" << (error ? "Error " : "Status ") << code << "</h1>\n"
+            << "<p>" << message << "</p>";
+    return util::wrapHtml(util::intToString(code) + " " + message, content.str());
 }
-
 
 void Response::setFullPath(const std::string &reqPath) {
     fullPath_.append(reqPath);
 }
 
-std::ostream &operator<<(std::ostream &out, const Response &obj)
-{
-    out << "Version: " << obj.getVersion() << std::endl
-        << "Code: " << obj.getCode() << std::endl
-        << "Status Message: " << obj.getStatusMessage() << std::endl
-        << " ----- " << std::endl
-        << "Headers: " << std::endl
-        << obj.getHeaders() << std::endl
-        << " ----- " << std::endl
-        << "Body: " << obj.getBody() << std::endl;
-    return (out);
-}
+// std::ostream &operator<<(std::ostream &out, const Response &obj)
+// {
+//     out << "Version: " << obj.getVersion() << std::endl
+//         << "Code: " << obj.getCode() << std::endl
+//         << "Status Message: " << obj.getStatusMessage() << std::endl
+//         << " ----- " << std::endl
+//         << "Headers: " << std::endl
+//         << obj.getHeaders() << std::endl
+//         << " ----- " << std::endl
+//         << "Body: " << obj.getBody() << std::endl;
+//     return (out);
+// }
 
 std::string Response::buildResponse(const Request &reqObj, const LocationConfig &locConfig)
 {
@@ -403,7 +378,7 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
     } else if (reqObj.isCgi()) {
         handleCgi(reqObj, locConfig);
     } else if (!reqObj.getMethod().compare("GET")) {
-        handleGet(reqObj, locConfig);
+        handleGet(locConfig);
     } else if (!reqObj.getMethod().compare("POST")) {
         handlePost(reqObj, locConfig);
     } else if (!reqObj.getMethod().compare("DELETE")) {
@@ -438,10 +413,7 @@ void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
     msg = "Processing CGI Request: " + reqObj.getMethod() + " " + cgiScriptPath;
     logs(INFO, msg);
     CgiHandler cgiHandler(reqObj, locConfig);
-	// setenv("SERVER_NAME", "localhost", 1); // Replace with actual server name if available
-	// setenv("SERVER_PORT", "8080", 1);     // Replace with actual server port if available
 
-	// Check if the CGI script was found
     if (!cgiHandler.getStatus() && cgiHandler.getError() == CgiHandler::SCRIPT_NOT_FOUND) {
         throw HttpException(404, "The requested CGI script was not found: " + reqObj.getReqPath(), true);
     }
