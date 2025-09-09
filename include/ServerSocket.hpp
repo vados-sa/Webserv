@@ -1,20 +1,7 @@
 #pragma once
 
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <poll.h>
-
-#include <iostream>
-#include <vector>
 #include <string>
-#include <cstring>
-#include <csignal>
-#include <cstdio> 
-
-#include "ServerConfig.hpp"
+#include <netinet/in.h>
 
 class ServerSocket {
 	private:
