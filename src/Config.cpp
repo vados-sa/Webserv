@@ -211,7 +211,7 @@ bool Config::pollLoop(int server_count)
                 Response res(error_pages, e.getStatusCode(), e.what(), e.getError());
                 std::string msg = util::intToString(e.getStatusCode()) + " " + e.what();
                 logs(ERROR, msg);
-                std::string res_string = res.writeResponseString(); //some checks maybe?
+                std::string res_string = res.writeResponseString();
                 clients[client_idx].setResponseBuffer(res_string);
                 handleResponse(client_idx, i);
             }
@@ -282,15 +282,12 @@ void Config::handleIdleClient(int client_idx, int pollfd_idx)
     throw HttpException(408, errorMessage, true);
 }
 
-/* Parse the header block (up to and incl. the CRLFCRLF) into a lowercased key map.
- Returns false on malformed headers (e.g., missing colon). */
 static bool parse_headers_block(const std::string &headers,
                                 std::map<std::string, std::string> &out_hmap)
 {
     std::istringstream iss(headers);
     std::string line;
 
-    // First line is the request line; we skip storing it here.
     if (!std::getline(iss, line))
         return false;
 
@@ -299,7 +296,7 @@ static bool parse_headers_block(const std::string &headers,
         if (!line.empty() && line[line.size() - 1] == '\r')
             line.erase(line.size() - 1);
         if (line.empty())
-            break; // blank line before body
+            break;
 
         std::string::size_type pos = line.find(':');
         if (pos == std::string::npos)
@@ -308,7 +305,6 @@ static bool parse_headers_block(const std::string &headers,
         std::string k = line.substr(0, pos);
         std::string v = line.substr(pos + 1);
 
-        // trim spaces/tabs
         while (!k.empty() && (k[0] == ' ' || k[0] == '\t'))
             k.erase(0, 1);
         while (!k.empty() && (k[k.size() - 1] == ' ' || k[k.size() - 1] == '\t'))
@@ -327,25 +323,20 @@ static bool parse_headers_block(const std::string &headers,
     return true;
 }
 
-// If TE: chunked is present, parse chunk framing starting at body_start.
-// Returns: 0 (need more), >0 (total bytes consumed for this request), -1 (malformed).
 static long parse_chunked_body_consumed(const std::string &buf, size_t body_start)
 {
     size_t p = body_start;
 
     while (true)
     {
-        // find "<hex-size>\r\n"
         std::string::size_type crlf = buf.find("\r\n", p);
         if (crlf == std::string::npos)
-            return 0; // need more size line
+            return 0;
 
         std::string size_line = buf.substr(p, crlf - p);
-        // strip any chunk extensions after ';'
         std::string::size_type sc = size_line.find(';');
         if (sc != std::string::npos)
             size_line.erase(sc);
-        // trim
         while (!size_line.empty() && std::isspace((unsigned char)size_line[0]))
             size_line.erase(0, 1);
         while (!size_line.empty() && std::isspace((unsigned char)size_line[size_line.size() - 1]))
@@ -356,31 +347,23 @@ static long parse_chunked_body_consumed(const std::string &buf, size_t body_star
             std::istringstream hexin(size_line);
             hexin >> std::hex >> chunk_size;
             if (!hexin || chunk_size < 0)
-                return -1; // invalid size
+                return -1;
         }
 
-        p = crlf + 2; // after the size line CRLF
+        p = crlf + 2;
 
-        // need chunk_size bytes + CRLF
         if (buf.size() < p + (size_t)chunk_size + 2)
-            return 0; // incomplete
+            return 0;
         p += (size_t)chunk_size;
         if (buf.compare(p, 2, "\r\n") != 0)
-            return -1; // missing CRLF after data
+            return -1;
         p += 2;
 
         if (chunk_size == 0)
-        {
-            // // último chunk, fim do corpo
-            // if (buf.size() < p + 2)
-            //     return 0;         // ainda não recebeu o CRLF final
-            return (long)(p + 2); // posição logo após o CRLF do último chunk
-        }
+            return (long)(p + 2);
     }
 }
 
-// Parse Content-Length value safely into 'out_len'.
-// Returns false if missing/invalid/negative.
 static bool parse_content_length(const std::map<std::string, std::string> &hmap, size_t &out_len)
 {
     std::map<std::string, std::string>::const_iterator it = hmap.find("content-length");
@@ -388,9 +371,8 @@ static bool parse_content_length(const std::map<std::string, std::string> &hmap,
     {
         out_len = 0;
         return true;
-    } // no body by default
+    }
 
-    // Accept only plain decimal; reject negatives or junk.
     long n = -1;
     std::istringstream iss(it->second);
     iss >> n;
@@ -402,24 +384,20 @@ static bool parse_content_length(const std::map<std::string, std::string> &hmap,
 
 static long extract_one_http_request(const std::string &buf)
 {
-    // 1) Need end of headers
     std::string::size_type hdr_end = buf.find("\r\n\r\n");
     if (hdr_end == std::string::npos)
         return 0;
     const size_t body_start = hdr_end + 4;
     const std::string headers = buf.substr(0, body_start);
 
-    // 2) Parse headers
     std::map<std::string, std::string> hmap;
     if (!parse_headers_block(headers, hmap))
         return -1;
 
-    // 3) Transfer-Encoding: chunked ? (case-insensitive check on value)
     {
         std::map<std::string, std::string>::const_iterator it = hmap.find("transfer-encoding");
         if (it != hmap.end())
         {
-            // Lowercase a copy of the value for robust "chunked" detection.
             std::string te = it->second;
             for (size_t i = 0; i < te.size(); ++i)
                 te[i] = (char)std::tolower(te[i]);
@@ -428,16 +406,15 @@ static long extract_one_http_request(const std::string &buf)
         }
     }
 
-    // 4) Else: Content-Length?
     size_t need = 0;
     if (!parse_content_length(hmap, need))
-        return -1; // malformed CL
+        return -1;
 
     const size_t have = (buf.size() >= body_start) ? (buf.size() - body_start) : 0;
     if (have < need)
         return 0;
 
-    return (long)(body_start + need); // headers + body bytes
+    return (long)(body_start + need);
 }
 
 void Config::handleClientRequest(int pollfd_idx, int client_idx)
