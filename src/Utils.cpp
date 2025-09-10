@@ -1,8 +1,12 @@
 
 #include "Utils.hpp"
+#include "HttpException.hpp"
 
+#include <string>
+#include <sys/stat.h>
 #include <sstream>
 #include <vector>
+#include <cerrno>
 
 namespace util {
     std::string normalizePath(const std::string &rawPath)
@@ -56,5 +60,44 @@ namespace util {
         std::ostringstream oss;
         oss << value;
         return oss.str();
+    }
+
+    bool fileExists(const std::string &path, struct ::stat &st)
+    {
+        if (::stat(path.c_str(), &st) == 0)
+            return true;
+        if (errno == ENOENT)
+            throw HttpException(404, "File does not exist", true);
+        if (errno == EACCES)
+            throw HttpException(403, "Access denied", true);
+        throw HttpException(500, "Internal server error while accessing file", true);
+    }
+
+    std::string wrapHtml(const std::string &title, const std::string &body)
+    {
+        std::ostringstream html;
+        html << "<!DOCTYPE html>\n<html>\n<head>\n"
+             << "<meta charset=\"UTF-8\">\n<title>" << title << "</title>\n"
+             << "</head>\n<body>\n"
+             << body
+             << "\n</body>\n</html>";
+        return html.str();
+    }
+
+    std::string generateAutoIndexHtml(const std::string &uri, const std::vector<std::string> &entries)
+    {
+        std::ostringstream body;
+        body << "<h1>Index of " << uri << "</h1>\n<ul>\n";
+
+        for (std::vector<std::string>::const_iterator it = entries.begin(); it != entries.end(); ++it)
+        {
+            body << "<li><a href=\"" << uri;
+            if (uri[uri.size() - 1] != '/')
+                body << "/";
+            body << *it << "\">" << *it << "</a></li>\n";
+        }
+        body << "</ul>\n";
+
+        return wrapHtml("Index of " + uri, body.str());
     }
 }
