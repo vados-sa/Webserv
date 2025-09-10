@@ -73,15 +73,36 @@ namespace util {
         throw HttpException(500, "Internal server error while accessing file", true);
     }
 
-    std::string wrapHtml(const std::string &title, const std::string &body)
+    std::string wrapHtml(const std::string &title, const std::string &innerHtml)
     {
-        std::ostringstream html;
-        html << "<!DOCTYPE html>\n<html>\n<head>\n"
-             << "<meta charset=\"UTF-8\">\n<title>" << title << "</title>\n"
-             << "</head>\n<body>\n"
-             << body
-             << "\n</body>\n</html>";
-        return html.str();
+        // Inline minimal CSS matching your test.html look (no external deps; C++98-safe)
+        const std::string css =
+            "body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;"
+            "padding:30px 0;box-sizing:border-box;"
+            "background:url('/img/images/background.png') center/cover no-repeat fixed;"
+            "background-color:#41479b;"
+            "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,"
+            "'Noto Sans','Liberation Sans',sans-serif;color:#0f4910}"
+            ".content{margin:0 auto;width:85%;max-width:960px;background:#F2F1EF;border-radius:10px;"
+            "box-shadow:2px 2px 9px rgba(0,0,0,0.3);padding:24px 28px}"
+            "h1,h2,h3{font-weight:600;margin:0 0 12px;text-align:center}"
+            "hr{border:0;border-top:1px solid #AAB03C;margin:20px auto}"
+            "p{line-height:1.5;font-size:15px;text-align:justify}"
+            ".center{text-align:center;margin:12px 0;}";
+
+        std::string html;
+        html.reserve(1024 + innerHtml.size());
+        html += "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\">";
+        html += "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">";
+        html += "<title>";
+        html += title;
+        html += "</title><style>";
+        html += css;
+        html += "</style></head><body><div class=\"content\">";
+        html += innerHtml;
+        html += "</div></body></html>";
+        return html;
+        //return html.str();
     }
 
     std::string generateAutoIndexHtml(const std::string &uri, const std::vector<std::string> &entries)
