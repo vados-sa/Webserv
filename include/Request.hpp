@@ -14,18 +14,18 @@ private:
     std::string reqPath_;
     std::string fullPath_;
     std::string queryString_;
-    int maxBodySize_;
+    //int maxBodySize_;
     bool isCgi_;
 
     bool parseRequestLine(std::string &raw);
     bool parseHeaders(std::string &raw);
     bool parseBody(std::string &raw);
     void parseRequest(const std::string &raw);
-    bool parseChunkedBody(std::string &raw);
 
 public :
     Request();
-    explicit Request(const std::string &raw, int maxBodySize);
+    //explicit Request(const std::string &raw, int maxBodySize);
+    explicit Request(const std::string &raw);
 
     //---getters
     const std::string getMethod() const { return method_; }

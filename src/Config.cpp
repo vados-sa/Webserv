@@ -544,7 +544,7 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx)
         std::string raw = client.getRequest().substr(0, (size_t)consumed);
         client.consumeRequestBytes((size_t)consumed);
         ServerConfig srv = servers[client.getServerIndex()];
-        Request reqObj(raw, srv.getMaxBodySize());
+        Request reqObj(raw);
         // Apply location config to determine if this is a CGI request
         const LocationConfig *loc = matchLocation(reqObj.getReqPath(), srv);
         if (loc) {
@@ -667,7 +667,7 @@ const LocationConfig *matchLocation(const std::string &reqPath, const ServerConf
 
 std::string buildRequestAndResponse(const std::string &raw, const ServerConfig &srv, Request &outReq)
 {
-    Request reqObj(raw, srv.getMaxBodySize());
+    Request reqObj(raw);
     const LocationConfig *loc = matchLocation(reqObj.getReqPath(), srv);
     if (loc)
         applyLocationConfig(reqObj, *loc);

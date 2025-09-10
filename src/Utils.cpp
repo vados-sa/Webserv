@@ -1,14 +1,17 @@
 
 #include "Utils.hpp"
 #include "HttpException.hpp"
+#include "Logger.hpp"
 
 #include <string>
 #include <sys/stat.h>
 #include <sstream>
+#include <fstream>
 #include <vector>
 #include <cerrno>
 
 namespace util {
+
     std::string normalizePath(const std::string &rawPath)
     {
         std::istringstream iss(rawPath);
@@ -36,6 +39,14 @@ namespace util {
                 normalized += "/";
         }
         return (normalized);
+    }
+
+    std::string sanitizeFileName(const std::string &fileName)
+    {
+        std::string sanitized = fileName;
+        std::replace(sanitized.begin(), sanitized.end(), '/', '_');
+        std::replace(sanitized.begin(), sanitized.end(), '\\', '_');
+        return sanitized;
     }
 
     bool isValidPathChar(char c)
@@ -73,6 +84,39 @@ namespace util {
         throw HttpException(500, "Internal server error while accessing file", true);
     }
 
+    bool saveFile(const std::string &filePath, const std::string &fileContent)
+    {
+        std::ofstream outFile(filePath.c_str(), std::ios::binary);
+        std::string msg;
+        if (!outFile)
+        {
+            logs(ERROR, "Failed to open file: " + filePath);
+            return false;
+        }
+        outFile.write(fileContent.c_str(), fileContent.size());
+        outFile.close();
+        msg = "File uploaded successfully: " + filePath;
+        logs(INFO, msg);
+        return true;
+    }
+
+    bool createUploadDir(const std::string &uploadFullPath)
+    {
+        if (mkdir(uploadFullPath.c_str(), 0755) == -1)
+        {
+            if (errno != EEXIST)
+            {
+                std::ostringstream oss;
+                oss << "mkdir failed for " << uploadFullPath << ": " << strerror(errno);
+                std::string msg = oss.str();
+                logs(ERROR, msg);
+                return (false);
+            }
+            return (true);
+        }
+        return (true);
+    }
+
     std::string wrapHtml(const std::string &title, const std::string &body)
     {
         std::ostringstream html;
@@ -100,4 +144,115 @@ namespace util {
 
         return wrapHtml("Index of " + uri, body.str());
     }
+
+    std::string extractBoundary(std::string rawValue) {
+        size_t pos = rawValue.find("boundary=");
+        std::string boundary = "--";
+        if (pos != std::string::npos)
+            boundary.append(rawValue.substr(pos + 9));
+        return (boundary);
+    }
+
+    std::string extractFilename(std::string headers) {
+        size_t pos = headers.find("filename=\"");
+        if (pos != std::string::npos)
+        {
+            size_t start = pos + 10;
+            size_t end = headers.find("\"", start);
+            return (headers.substr(start, end - start));
+        }
+        return ("");
+    }
+
+    std::string extractContentType(std::string headers) {
+        size_t pos = headers.find("Content-Type: ");
+        if (pos != std::string::npos)
+        {
+            size_t start = pos + 14;
+            size_t end = headers.find("\r\n", start);
+            return (headers.substr(start, end - start));
+        }
+        return ("");
+    }
+
+    std::string parseChunkedBody(std::string &raw)
+    {
+        //body_.clear();
+        std::string body;
+        std::string::size_type pos = 0;
+        //std::size_t totalSize = 0;
+
+        while (true)
+        {
+            std::string::size_type endline = raw.find("\r\n", pos);
+            if (endline == std::string::npos)
+                throw HttpException(400, "Malformed chunk size line", true);
+
+            std::string sizeStr = raw.substr(pos, endline - pos);
+            std::istringstream iss(sizeStr);
+            std::size_t chunkSize = 0;
+            iss >> std::hex >> chunkSize;
+            if (iss.fail())
+                throw HttpException(400, "Invalid chunk size", true);
+
+            pos = endline + 2; // move past "\r\n"
+
+            if (chunkSize == 0)
+            {
+                std::string::size_type trailerEnd = raw.find("\r\n", pos);
+                if (trailerEnd == std::string::npos)
+                    throw HttpException(400, "Missing CRLF after last chunk", true);
+                raw.erase(0, trailerEnd + 2);
+                return (body);
+            }
+
+            //totalSize += chunkSize;
+            // if ((int)totalSize > maxBodySize)
+            //     throw HttpException(413, "Payload Too Large", true);
+
+            if (raw.size() < pos + chunkSize + 2)
+                throw HttpException(400, "Incomplete chunk data", true);
+
+            body.append(raw, pos, chunkSize);
+
+            pos += chunkSize;
+
+            if (raw.substr(pos, 2) != "\r\n")
+                throw HttpException(400, "Missing CRLF after chunk data", true);
+            pos += 2;
+        }
+    }
+
+    MultipartPart parseMultipartBody(const std::string &rawBody, const std::string &boundary)
+    {
+        MultipartPart part;
+
+        std::string body = rawBody;
+        size_t start = body.find(boundary);
+        if (start != std::string::npos)
+            body = body.substr(start + boundary.length() + 2);
+
+        std::string closingBoundary = boundary + "--";
+        size_t end = body.rfind(closingBoundary);
+        if (end != std::string::npos)
+            body = body.substr(0, end - 2);
+
+        size_t headerEnd = body.find("\r\n\r\n");
+        if (headerEnd == std::string::npos)
+            throw HttpException(400, "Malformed multipart part", true);
+
+        std::string headers = body.substr(0, headerEnd);
+        part.content = body.substr(headerEnd + 4);
+
+        part.filename = extractFilename(headers);
+        if (part.filename.empty())
+            throw HttpException(400, "Filename missing in multipart part", true);
+
+        part.contentType = extractContentType(headers);
+        if (part.contentType.empty())
+            throw HttpException(400, "Content-Type missing in multipart part", true);
+
+        return part;
+    }
+
 }

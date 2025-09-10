@@ -6,7 +6,11 @@
 
 Request::Request() : isCgi_(false) {};
 
-Request::Request(const std::string &raw, int maxBodySize) : maxBodySize_(maxBodySize), isCgi_(false) {
+// Request::Request(const std::string &raw, int maxBodySize) : maxBodySize_(maxBodySize), isCgi_(false) {
+//     this->parseRequest(raw);
+// };
+
+Request::Request(const std::string &raw) : isCgi_(false) {
     this->parseRequest(raw);
 };
 
@@ -106,12 +110,13 @@ bool Request::parseHeaders(std::string &raw)
 
 bool Request::parseBody(std::string &raw)
 {
-    if (raw.empty()) //if (raw.empty() && method_ != "POST")
+    if (raw.empty())
         return (true);
 
     std::map<std::string, std::string>::iterator it = headers_.find("transfer-encoding");
     if (!raw.empty() && it != headers_.end() && it->second == "chunked") {
-        return (parseChunkedBody(raw));
+        util::parseChunkedBody(raw);
+        return (true);
     }
 
     it = headers_.find("content-length");
@@ -125,61 +130,12 @@ bool Request::parseBody(std::string &raw)
     if (length < 0)
         throw HttpException(400, "Bad Request", true);
 
-    // if (raw.empty() && method_ == "POST" && length != 0)
-    //     return (false);
-
     if (raw.size() < static_cast<size_t>(length))
         throw HttpException(400, "Bad Request", true);
 
     body_= raw.substr(0, length);
     raw.erase(0, length);
     return (true);
-}
-
-bool Request::parseChunkedBody(std::string &raw)
-{
-    body_.clear();
-    std::string::size_type pos = 0;
-    std::size_t totalSize = 0;
-
-    while (true)
-    {
-        std::string::size_type endline = raw.find("\r\n", pos);
-        if (endline == std::string::npos)
-            throw HttpException(400, "Malformed chunk size line", true);
-
-        std::string sizeStr = raw.substr(pos, endline - pos);
-        std::istringstream iss(sizeStr);
-        std::size_t chunkSize = 0;
-        iss >> std::hex >> chunkSize;
-        if (iss.fail())
-            throw HttpException(400, "Invalid chunk size", true);
-
-        pos = endline + 2; // move past "\r\n"
-
-        if (chunkSize == 0) {
-            std::string::size_type trailerEnd = raw.find("\r\n", pos);
-            if (trailerEnd == std::string::npos)
-                throw HttpException(400, "Missing CRLF after last chunk", true);
-            raw.erase(0, trailerEnd + 2); // consume used data
-            return (true);
-        }
-
-        totalSize += chunkSize;
-        if ((int)totalSize > maxBodySize_)
-            throw HttpException(413, "Payload Too Large", true);
-
-        if (raw.size() < pos + chunkSize + 2)
-            throw HttpException(400, "Incomplete chunk data", true);
-
-        body_.append(raw, pos, chunkSize);
-
-        pos += chunkSize;
-
-        if (raw.substr(pos, 2) != "\r\n")
-            throw HttpException(400, "Missing CRLF after chunk data", true);
-        pos += 2;
-    }
 }
 
 std::ostream &operator<<(std::ostream &out, const Request &obj) {

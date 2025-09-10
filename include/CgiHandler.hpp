@@ -25,28 +25,23 @@ class CgiHandler {
 		std::string body;
 		CgiErrorType  error;
 		bool status_cgi;
-		
+
 		public:
 		CgiHandler(const Request &req, const LocationConfig &locConfig);
 		void handleFileUpload(const std::string &body, const std::string &uploadDir);
 		bool getStatus() const { return status_cgi; };
 		CgiErrorType getError() const { return error; };
-		
+
 		// Non-blocking CGI execution
 		bool startCgi(Client &client);
 		std::string finishCgi(const Client &client, int exit_status);
-		
+
 		// Old blocking method (keep for reference)
 		//std::string run();
-		
-		std::string extractBoundary(const std::string &contentType);
+
 		bool processPart(const std::string &part, const std::string &uploadDir);
-		std::string extractFileName(const std::string &headers);
-		std::string sanitizeFileName(const std::string &fileName);
-		bool saveFile(const std::string &filePath, const std::string &fileContent);
+		//bool saveFile(const std::string &filePath, const std::string &fileContent);
 
 };
 
 std::string getInterpreterPath(const std::string &cgiExtension);
-std::string decodeChunkedBody(std::istringstream &rawStream);
-//std::string decodeChunkedBody(std::istream &rawStream);

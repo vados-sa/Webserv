@@ -21,7 +21,6 @@ private:
     std::string contentType_;
     std::map<int, std::string> error_pages_config;
 
-    void parseMultipartBody(const Request &obj);
     void generateAutoIndex(const LocationConfig &loc);
     void handleGet(const LocationConfig &loc);
     void handleDelete(const Request &reqObj);
@@ -29,13 +28,10 @@ private:
     void handleRedirect(const LocationConfig &locConfig);
 
     void handlePost(const Request &reqObj, LocationConfig loc);
-    void createUploadDir(const std::string &uploadFullPath);
     void uploadFile(const std::string &uploadFullPath);
-
     void readFileIntoBody(const std::string &fileName);
     std::string generateDefaultPage(const int code, const std::string &message, bool error) const;
 
-    void handleCgi(const Request &reqObj, const LocationConfig &locConfig);
 
 public:
     Response();

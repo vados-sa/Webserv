@@ -15,11 +15,6 @@
 #include <cstring>
 #include <fstream>
 
-static const char *HEADER_CONTENT_TYPE = "content-type";
-static const char *HEADER_CONTENT_LENGTH = "content-length";
-static const char *HEADER_CONNECTION = "connection";
-static const char *MIME_HTML = "text/html";
-
 static const std::pair<const char *, const char *> mimeArray[] = {
     std::pair<const char *, const char *>(".html", "text/html"),
     std::pair<const char *, const char *>(".htm", "text/html"),
@@ -159,29 +154,23 @@ void Response::handlePost(const Request &reqObj, LocationConfig loc)
     if (reqPath != "/upload" && reqPath.find("/upload/") != 0)
         throw HttpException(405, "Method Not Allowed", true);
 
-    // if (reqObj.getBody().empty()) {
-    //     throw HttpException(400, "No body detected in request", true);
-    // }
-
-    parseMultipartBody(reqObj); //insert some check here
-
     if (!reqObj.findHeader(HEADER_CONTENT_TYPE))
         throw HttpException(400, "Missing Content-Type header", true);
+    else {
+        std::string boundary = util::extractBoundary(*reqObj.findHeader(HEADER_CONTENT_TYPE));
+        if (boundary.empty())
+            throw HttpException (400, "Bad Request", true);
+        struct util::MultipartPart mp_struct = util::parseMultipartBody(reqObj.getBody(), boundary);
 
-    std::string uploadFullPath = "./" + loc.getUploadDir();
-    createUploadDir(uploadFullPath);
-    uploadFile(uploadFullPath);
-    setPage(201, "File uploaded successfully", false);
-}
+        std::string uploadFullPath = "." + loc.getUploadDir();
+        if (!util::createUploadDir(uploadFullPath))
+            throw HttpException(500, "Failed to create upload directory", true);
+        std::string safeFilename = util::sanitizeFileName(mp_struct.filename);
+        std::string filePath = uploadFullPath + "/" + safeFilename;
 
-void Response::createUploadDir(const std::string &uploadFullPath) {
-    if (mkdir(uploadFullPath.c_str(), 0755) == -1) {
-        if (errno != EEXIST) {
-            std::ostringstream oss;
-            oss << "mkdir failed for " << uploadFullPath << ": " << strerror(errno);
-            std::string msg = oss.str();
-            logs(ERROR, msg);
-        }
+        if (!util::saveFile(filePath, mp_struct.content))
+            throw HttpException(500, "Failed to save uploaded file", true);
+        setPage(201, "File uploaded successfully", false);
     }
 }
 
@@ -219,51 +208,6 @@ void Response::handleDelete(const Request &reqObj) {
 
     logs(INFO, "\"" + filename_ + "\" deleted successfully");
     setPage(204, "No content. File \"" + filename_ + "\" deleted successfully.", false);
-}
-
-void Response::parseMultipartBody(const Request &obj) {
-    std::string rawValue = *obj.findHeader(HEADER_CONTENT_TYPE);
-    size_t pos = rawValue.find("boundary=");
-    std::string boundary = "--";
-    if (pos != std::string::npos)
-        boundary.append(rawValue.substr(pos + 9));
-
-    std::string rawBody = obj.getBody();
-    size_t start = rawBody.find(boundary);
-    if (start != std::string::npos)
-        rawBody = rawBody.substr(start + boundary.length() + 2);
-
-    boundary.append("--");
-    size_t end = rawBody.rfind(boundary);
-    if (end != std::string::npos)
-        rawBody = rawBody.substr(0, end - 2);
-
-    std::string headers;
-    std::string fileContent;
-    size_t headerEnd = rawBody.find("\r\n\r\n");
-    if (headerEnd != std::string::npos)
-    {
-        headers = rawBody.substr(0, headerEnd);
-        fileContent = rawBody.substr(headerEnd + 4);
-    }
-
-    pos = headers.find("filename=\"");
-    if (pos != std::string::npos) {
-        size_t start = pos + 10;
-        size_t end = headers.find("\"", start);
-        filename_ = headers.substr(start, end - start);
-        logs(INFO, "\"" + filename_ + "\" uploaded successfully");
-
-    }
-
-    pos = headers.find("content-type: ");
-    if (pos != std::string::npos) {
-        start = pos + 14;
-        end = headers.find("\r\n", start);
-        contentType_ = headers.substr(start, end - start);
-        setHeader(HEADER_CONTENT_TYPE, contentType_);
-    }
-    body_ = fileContent;
 }
 
 std::string Response::writeResponseString() const
@@ -404,73 +348,6 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
     setHeader("Content-Length", util::intToString(body_.size()));
     return (writeResponseString());
 }
-
-// void Response::handleCgi(const Request &reqObj, const LocationConfig &locConfig)
-// {
-//     std::string cgiScriptPath = "." + locConfig.getRoot() + reqObj.getReqPath();
-//     std::ostringstream oss;
-//     std::string msg;
-
-//     oss << "Processing CGI Request: " << reqObj.getMethod() << " " << cgiScriptPath;
-//     msg = oss.str();
-//     logs(INFO, msg);
-// 	//std::cout << "Processing CGI Request: " << reqObj.getMethod() << " " << cgiScriptPath << std::endl;
-//     CgiHandler cgiHandler(reqObj, locConfig);
-// 	// setenv("SERVER_NAME", "localhost", 1); // Replace with actual server name if available
-// 	// setenv("SERVER_PORT", "8080", 1);     // Replace with actual server port if available
-
-// 	// Check if the CGI script was found
-//     if (!cgiHandler.getStatus() && cgiHandler.getError() == CgiHandler::SCRIPT_NOT_FOUND) {
-//         setPage(404, "The requested CGI script was not found: " + reqObj.getReqPath(), true);
-//         setHeader("Content-Type", "text/html");
-//         return;
-//     }
-//     // Run the CGI script and capture its output
-//     std::string cgiOutput = cgiHandler.run();
-//     if (cgiHandler.getStatus()) {
-//         // CGI execution was successful
-//         oss.str(""); oss.clear();
-//         oss << "CGI execution successful: " << reqObj.getReqPath();
-//         msg = oss.str();
-//         logs(INFO, msg);
-//         //std::cout << "CGI execution successful: " << reqObj.getReqPath() << std::endl;
-
-//         setCode(200);
-
-//         oss.str(""); oss.clear();
-//         oss << "Raw CGI output:\n" << cgiOutput << "\nEND OF CGI OUTPUT\n"; // is this needed?
-//         msg = oss.str();
-//         logs(INFO, msg);
-// 		//std::cout << "Raw CGI output:\n" << cgiOutput << "\nEND OF CGI OUTPUT\n";
-//         parseCgiResponse(cgiOutput);
-//     } else {
-// 		switch (cgiHandler.getError()) {
-// 			case CgiHandler::PIPE_FAILED:
-// 				setPage(500, "CGI execution failed: pipe creation failed", true);
-// 				setHeader("Content-Type", "text/plain");
-// 				break;
-// 			case CgiHandler::FORK_FAILED:
-// 				setPage(500, "CGI execution failed: fork failed", true);
-// 				setHeader("Content-Type", "text/plain");
-// 				break;
-// 			case CgiHandler::EXECVE_FAILED:
-// 				setPage(500, "CGI execution failed: execve failed", true);
-// 				setHeader("Content-Type", "text/plain");
-// 				break;
-// 			case CgiHandler::TIMEOUT:
-// 				setPage(504, "CGI execution failed: script timed out", true);
-// 				setHeader("Content-Type", "text/plain");
-// 				break;
-// 			case CgiHandler::CGI_SCRIPT_FAILED:
-// 				setPage(500, "CGI execution failed: script error", true);
-// 				setHeader("Content-Type", "text/plain");
-// 				break;
-// 			default:
-// 				setPage(500, "CGI execution failed: unknown error", true);
-// 				setHeader("Content-Type", "text/plain");
-// 		}
-//     }
-// }
 
 void Response::parseCgiResponse(const std::string &cgiOutput) {
     std::istringstream stream(cgiOutput);
