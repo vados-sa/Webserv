@@ -545,21 +545,15 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx)
         client.consumeRequestBytes((size_t)consumed);
         ServerConfig srv = servers[client.getServerIndex()];
         Request reqObj(raw);
-        // Apply location config to determine if this is a CGI request
         const LocationConfig *loc = matchLocation(reqObj.getReqPath(), srv);
         if (loc) {
             applyLocationConfig(reqObj, *loc);
-
-            // Check if this is a CGI request
             if (reqObj.isCgi()) {
-                // Handle CGI request non-blocking
                 handleCgiRequest(client_idx, reqObj, *loc);
-                break; // Don't process more requests until CGI completes
+                break;
             }
         }
-
-        // Non-CGI request - handle normally
-        std::string response = buildRequestAndResponse(raw, srv, reqObj);
+        std::string response = buildRequestAndResponse(srv, reqObj, *loc);
         client.setKeepAlive(reqObj);
         poll_fds[pollfd_idx].events = POLLIN | POLLOUT;
         client.setResponseBuffer(response);
@@ -665,19 +659,13 @@ const LocationConfig *matchLocation(const std::string &reqPath, const ServerConf
     return (bestMatch);
 }
 
-std::string buildRequestAndResponse(const std::string &raw, const ServerConfig &srv, Request &outReq)
+std::string buildRequestAndResponse(const ServerConfig &srv, Request &outReq, const LocationConfig &loc)
 {
-    Request reqObj(raw);
-    const LocationConfig *loc = matchLocation(reqObj.getReqPath(), srv);
-    if (loc)
-        applyLocationConfig(reqObj, *loc);
-    outReq = reqObj;
-
-    std::string msg = reqObj.getMethod() + " request " + reqObj.getFullPath();
+    std::string msg = outReq.getMethod() + " request " + outReq.getFullPath();
     logs(INFO, msg);
 
     Response res(srv.getErrorPagesConfig());
-    return (res.buildResponse(reqObj, *loc));
+    return (res.buildResponse(outReq, loc));
 }
 
 void applyLocationConfig(Request &reqObj, const LocationConfig &loc)
