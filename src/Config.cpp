@@ -14,6 +14,7 @@
 #include <signal.h>
 #include <cstring>
 #include <cstdlib>
+#include <sys/wait.h>
 
 Config::Config(const std::string &filepath) : client_count(0)
 {

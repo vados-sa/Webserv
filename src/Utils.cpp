@@ -9,6 +9,16 @@
 #include <fstream>
 #include <vector>
 #include <cerrno>
+#include <algorithm>
+#include <cstring>
+
+const char *HEADER_CONTENT_TYPE = "content-type";
+
+const char *HEADER_CONTENT_LENGTH = "content-length";
+
+const char *HEADER_CONNECTION = "connection";
+
+const char *MIME_HTML = "text/html";
 
 namespace util {
 

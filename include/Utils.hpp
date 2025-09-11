@@ -4,10 +4,10 @@
 #include <sys/stat.h>
 #include <vector>
 
-static const char *HEADER_CONTENT_TYPE = "content-type";
-static const char *HEADER_CONTENT_LENGTH = "content-length";
-static const char *HEADER_CONNECTION = "connection";
-static const char *MIME_HTML = "text/html";
+extern const char *HEADER_CONTENT_TYPE;
+extern const char *HEADER_CONTENT_LENGTH;
+extern const char *HEADER_CONNECTION;
+extern const char *MIME_HTML;
 
 namespace util {
 
