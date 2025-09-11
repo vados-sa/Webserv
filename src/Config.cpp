@@ -550,10 +550,12 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx)
         if (loc) {
             applyLocationConfig(reqObj, *loc);
             if (reqObj.isCgi()) {
+                reqObj.setMaxBodySize(loc->getMaxBodySize());
                 handleCgiRequest(client_idx, reqObj, *loc);
                 break;
             }
         }
+        reqObj.setMaxBodySize(loc->getMaxBodySize());
         std::string response = buildRequestAndResponse(srv, reqObj, *loc);
         client.setKeepAlive(reqObj);
         poll_fds[pollfd_idx].events = POLLIN | POLLOUT;

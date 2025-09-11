@@ -115,7 +115,7 @@ bool Request::parseBody(std::string &raw)
 
     std::map<std::string, std::string>::iterator it = headers_.find("transfer-encoding");
     if (!raw.empty() && it != headers_.end() && it->second == "chunked") {
-        util::parseChunkedBody(raw);
+        util::parseChunkedBody(raw, maxBodySize_);
         return (true);
     }
 

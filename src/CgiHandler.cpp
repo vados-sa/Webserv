@@ -38,7 +38,7 @@ CgiHandler::CgiHandler(const Request &reqObj, const LocationConfig &locConfig)
     std::string transferEncoding = reqObj.findHeader("Transfer-Encoding") ? *reqObj.findHeader("Transfer-Encoding") : "";
 	if (transferEncoding == "chunked") {
 		std::string rawStream = reqObj.getBody();
-        body = util::parseChunkedBody(rawStream);
+        body = util::parseChunkedBody(rawStream, reqObj.getMaxBodySize());
     } else {
 		body = reqObj.getBody();
 	}

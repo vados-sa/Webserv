@@ -150,6 +150,9 @@ void Response::handlePost(const Request &reqObj, LocationConfig loc)
     if (loc.getUploadDir().empty())
         throw std::runtime_error("Config error: No upload_path specified in location " + loc.getUri());
 
+    if ((int)reqObj.getBody().size() > reqObj.getMaxBodySize())
+        throw HttpException(413, "Payload Too Large", true);
+
     std::string reqPath = reqObj.getReqPath();
     if (reqPath != "/upload" && reqPath.find("/upload/") != 0)
         throw HttpException(405, "Method Not Allowed", true);

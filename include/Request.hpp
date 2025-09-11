@@ -14,7 +14,7 @@ private:
     std::string reqPath_;
     std::string fullPath_;
     std::string queryString_;
-    //int maxBodySize_;
+    int maxBodySize_;
     bool isCgi_;
 
     bool parseRequestLine(std::string &raw);
@@ -24,10 +24,10 @@ private:
 
 public :
     Request();
-    //explicit Request(const std::string &raw, int maxBodySize);
     explicit Request(const std::string &raw);
 
     //---getters
+    int getMaxBodySize() const { return maxBodySize_; } 
     const std::string getMethod() const { return method_; }
     const std::string getReqPath() const { return reqPath_; }
     const std::string getFullPath() const { return fullPath_; }
@@ -41,6 +41,7 @@ public :
     void setFullPath(const std::string &p) { fullPath_ = p; }
     void setQueryString(const std::string &q) { queryString_ = q; }
     void setIsCgi(bool cgi) { isCgi_ = cgi; }
+    void setMaxBodySize(int maxsize)  { maxBodySize_ = maxsize; }
 };
 
 std::ostream &operator<<(std::ostream &out, const Request &obj);

@@ -31,6 +31,6 @@ namespace util {
     std::string extractBoundary(std::string rawValue);
     std::string extractFilename(std::string headers);
     std::string extractContentType(std::string headers);
-    std::string parseChunkedBody(std::string &raw);
+    std::string parseChunkedBody(std::string &raw, int maxBodySize);
     MultipartPart parseMultipartBody(const std::string &rawBody, const std::string &boundary);
 }

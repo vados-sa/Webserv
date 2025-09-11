@@ -98,6 +98,8 @@ ServerConfig ConfigParser::parseServerBlock(std::vector<std::string> lines) {
             servConfig.addLocation(loc);
             i += locationLines.size();
             lineNum ++;
+            if (loc.getMaxBodySize() == -1)
+                loc.setMaxBodySize(servConfig.getMaxBodySize());
         }
         else if (!tokens.empty() && tokens[0] != "}")
             throwConfigError(fileName, lineNum, "   \"" + tokens[0] + "\" directive is not allowed here\n");
@@ -266,6 +268,8 @@ LocationConfig ConfigParser::parseLocationBlock(std::vector<std::string> lines)
             locConfig.setAutoindex(parseAutoindex(tokens));
         else if (isDirective(tokens, "cgi_extension"))
         	locConfig.setCgiExtension(parseCgiExtension(tokens));
+        else if (isDirective(tokens, "client_max_body_size") && locConfig.getMaxBodySize() == -1)
+            locConfig.setMaxBodySize(parseMaxBodySize(tokens));
         else if (!tokens.empty() && tokens[0] != "}") {
             throwConfigError(fileName, lineNum, "   \"" + tokens[0] + "\" directive is not allowed here\n");
         }
@@ -280,11 +284,11 @@ std::string ConfigParser::parsePath(const std::vector<std::string> &tokens)
     }
 
     if (tokens[0] == "location") {
-        if (tokens[1][0] != '/')
-            throwConfigError(fileName, lineNum, "  Path missing starting slash");
+        // if (tokens[1][0] != '/') ---- NAO APAGAR AINDA
+        //     throwConfigError(fileName, lineNum, "  Path missing starting slash");
 
-        if (tokens.size() > 3 && !tokens[2].empty())
-            throwConfigError(fileName, lineNum, "  Path contains unexpected spaces or extra tokens");
+        // if (tokens.size() > 3 && !tokens[2].empty())
+        //     throwConfigError(fileName, lineNum, "  Path contains unexpected spaces or extra tokens");
 
         if (!util::isValidPath(tokens[1]))
             throwConfigError(fileName, lineNum, "  Path contains illegal characters");

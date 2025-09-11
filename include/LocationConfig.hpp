@@ -17,6 +17,7 @@ private:
     std::string upload_dir;
     bool autoindex;
     std::string cgi_extension;
+    int client_max_body_size;
 
 public:
     LocationConfig();
@@ -35,6 +36,7 @@ public:
     const std::string &getUploadDir() const { return upload_dir; };
     const bool &getAutoindex() const { return autoindex; };
     const std::string &getCgiExtension() const { return cgi_extension; };
+    int getMaxBodySize() const { return client_max_body_size; }
 
     //setters
     void setUri(std::string set) { uri = set; };
@@ -45,6 +47,7 @@ public:
     void setUploadDir(std::string set) { upload_dir = set; };
     void setAutoindex(bool set) { autoindex = set; };
 	void setCgiExtension(std::string set) { cgi_extension = set; };
+    void setMaxBodySize(int set) { client_max_body_size = set; };
 };
 
 std::ostream &operator<<(std::ostream &os, const std::vector<LocationConfig> &obj);

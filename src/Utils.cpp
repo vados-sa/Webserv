@@ -185,12 +185,12 @@ namespace util {
         return ("");
     }
 
-    std::string parseChunkedBody(std::string &raw)
+    std::string parseChunkedBody(std::string &raw, int maxBodySize)
     {
         //body_.clear();
         std::string body;
         std::string::size_type pos = 0;
-        //std::size_t totalSize = 0;
+        std::size_t totalSize = 0;
 
         while (true)
         {
@@ -216,9 +216,9 @@ namespace util {
                 return (body);
             }
 
-            //totalSize += chunkSize;
-            // if ((int)totalSize > maxBodySize)
-            //     throw HttpException(413, "Payload Too Large", true);
+            totalSize += chunkSize;
+            if ((int)totalSize > maxBodySize)
+                 throw HttpException(413, "Payload Too Large", true);
 
             if (raw.size() < pos + chunkSize + 2)
                 throw HttpException(400, "Incomplete chunk data", true);
