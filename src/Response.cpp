@@ -308,8 +308,7 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
         this->setPage(405, "Method not allowed", true);
         std::vector<std::string> allowed = locConfig.getAllowedMethods();
         std::string allowHeader;
-        for (size_t i = 0; i < allowed.size(); i++)
-        {
+        for (size_t i = 0; i < allowed.size(); i++) {
             allowHeader += allowed[i];
             if (i != allowed.size() - 1)
                 allowHeader += ", ";
@@ -384,10 +383,11 @@ void Response::parseCgiResponse(const std::string &cgiOutput) {
     }
 }
 
-void Response::handleRedirect(const LocationConfig &locConfig) {
-    int statusCode = locConfig.getReturnStatus();
-    statusCode_ = statusCode;
+void Response::handleRedirect(const LocationConfig &locConfig)
+{
     std::string newLocation = locConfig.getReturnTarget();
+    int statusCode = locConfig.getReturnStatus();
+
     setCode(statusCode);
     setHeader("Location", newLocation);
 
