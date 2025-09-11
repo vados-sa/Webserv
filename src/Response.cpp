@@ -62,7 +62,7 @@ void Response::handleGet(const LocationConfig &loc) {
             }
         }
         if (loc.getAutoindex())
-            return (generateAutoIndex(loc));
+            return (generateAutoIndex());
         else
             throw HttpException(403, "Directory listing denied.", true);
     }
@@ -73,7 +73,7 @@ void Response::handleGet(const LocationConfig &loc) {
         throw HttpException(403, "Permission denied", true);
 
     readFileIntoBody(fullPath_);
-    setHeader(HEADER_CONTENT_LENGTH, util::intToString(body_.size()));
+    //setHeader(HEADER_CONTENT_LENGTH, util::intToString(body_.size()));
     setHeader(HEADER_CONTENT_TYPE, getContentType(fullPath_));
     return;
 
@@ -95,8 +95,8 @@ void Response:: readFileIntoBody(const std::string &fileName) {
     body_ = ss.str();
 }
 
-void Response::generateAutoIndex(const LocationConfig& loc) {
-    std::string uri = loc.getUri();
+void Response::generateAutoIndex(void) {
+    std::string uri = reqPath_;
     std::string path = fullPath_;
 
     DIR *dir = opendir(path.c_str());
@@ -297,6 +297,7 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
 {
     this->setVersion(reqObj.getVersion());
     this->setFullPath(reqObj.getFullPath());
+    this->setReqPath(reqObj.getReqPath());
 
     if (reqObj.getReqPath().size() > MAX_URI_LENGTH) {
         this->setPage(414, "URI Too Long", true);
@@ -319,8 +320,6 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
 
     if (!locConfig.getReturnTarget().empty()) {
         handleRedirect(locConfig);
-    // } else if (reqObj.isCgi()) {
-    //     handleCgi(reqObj, locConfig);
     } else if (!reqObj.getMethod().compare("GET")) {
         handleGet(locConfig);
     } else if (!reqObj.getMethod().compare("POST")) {
@@ -345,7 +344,7 @@ std::string Response::buildResponse(const Request &reqObj, const LocationConfig 
         want_close = (connection != "keep-alive"); // default is close
 
     setHeader("Connection", want_close ? "close" : "keep-alive");
-    setHeader("Content-Length", util::intToString(body_.size()));
+    setHeader(HEADER_CONTENT_LENGTH, util::intToString(body_.size()));
     return (writeResponseString());
 }
 
