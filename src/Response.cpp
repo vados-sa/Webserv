@@ -64,7 +64,7 @@ void Response::handleGet(const LocationConfig &loc) {
         if (loc.getAutoindex())
             return (generateAutoIndex());
         else
-            throw HttpException(403, "Directory listing denied.", true);
+            throw HttpException(404, "File not found", true);
     }
 
     if (!S_ISREG(file_stat.st_mode))
