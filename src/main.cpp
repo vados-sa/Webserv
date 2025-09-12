@@ -13,7 +13,7 @@ int main(int ac, char *av[])
     {
         std::string configfile;
         if (ac != 2) {
-            configfile = "config/42tester.conf";
+            configfile = "config/simple.conf";
         } else {
             configfile = av[1];
         }
