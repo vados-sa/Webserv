@@ -275,7 +275,7 @@ std::string Response::generateDefaultPage(int code, const std::string &message, 
 {
     std::ostringstream content;
     content << "<h1>" << (error ? "Error " : "Status ") << code << "</h1>\n"
-            << "<p>" << message << "</p>";
+            << "<p class='center'>" << message << "</p>";
     return util::wrapHtml(util::intToString(code) + " " + message, content.str());
 }
 
@@ -394,10 +394,10 @@ void Response::handleRedirect(const LocationConfig &locConfig)
     setCode(statusCode);
     setHeader("Location", newLocation);
 
-    body_ =
-        "<html><head><title>" + util::intToString(statusCode) + " " + statusMessage_ + "</title></head>"
-        "<body style='font-family:sans-serif;text-align:center;margin-top:100px;'>"
-        "<h1>" + util::intToString(statusCode) + " " + statusMessage_ + "</h1>"
-        "<p>Resource has moved to <a href=\"" +
-        newLocation + "\">" + newLocation + "</a>.</p></body></html>";
+    std::ostringstream content;
+    content << "<h1>" << util::intToString(statusCode) << " " << statusMessage_ << "</h1>"
+            << "<p class='center''>Resource has moved to "
+            << "<a href=\"" << newLocation << "\">" << newLocation << "</a>.</p>";
+
+    body_ = util::wrapHtml(util::intToString(statusCode) + " " + statusMessage_, content.str());
 }

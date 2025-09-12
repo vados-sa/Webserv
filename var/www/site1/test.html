@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<!-- saved from url=(0134)https://s3.amazonaws.com/shecodesio-production/challenge_submissions/files/001/570/001/original/SheCodes-Final-Project.html?1680972485 -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webserv</title>
+    <link rel="icon" href="./img/images/favicon.png" type="image/png">
+    <style>
+      :root {
+        --brand: #4471C8;
+        --brand-hover: #4471C8;
+        --ink: #0f4910;
+        --panel: #F2F1EF;
+        --shadow: rgba(0,0,0,0.3);
+        --border: rgba(0,0,0,0.05);
+      }
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        padding: 30px 0;
+        background: url("./img/images/background.png") center / cover no-repeat fixed;
+        background-color: #41479b; /* fallback */
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                     "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+        color: var(--ink);
+      }
+
+      .content {
+        margin: 0 auto;
+        width: min(960px, 85%);
+        background: var(--panel);
+        border-radius: 10px;
+        box-shadow: 2px 2px 9px var(--shadow);
+        padding: 24px 28px;
+      }
+
+      h1, h2, h3 { font-weight: 600; margin: 0 0 12px; text-align: center; }
+      hr { border: 0; border-top: 1px solid #AAB03C; margin: 20px auto; }
+      p { line-height: 1.5; font-size: 15px; text-align: justify; }
+
+      /* Two cards side-by-side; stack on small screens */
+      .actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 20px;
+        margin: 20px 0;
+      }
+      @media (max-width: 800px) { .actions { grid-template-columns: 1fr; } }
+
+      .action {
+        background: rgba(255, 212, 73, 0.15);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 16px;
+      }
+
+      /* Form row centered under each h2 */
+      .action form {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        justify-content: center;
+        max-width: 640px;
+        margin: 0 auto;
+        flex-wrap: nowrap;
+      }
+
+      .action form input[type="text"],
+      .action form input[type="file"] {
+        background-color: #fff;
+        color: var(--ink);
+        border: 1px solid rgba(0,0,0,0.15);
+        border-radius: 6px;
+        padding: 10px 12px;
+        flex: 0 1 320px;
+        width: 320px;
+        min-width: 0;
+      }
+      .action form input[type="text"]::placeholder { color: #6b7280; opacity: 1; }
+
+      /* File input button */
+      .action form input[type="file"]::file-selector-button,
+      .action form input[type="file"]::-webkit-file-upload-button {
+        background: var(--brand);
+        color: #fff;
+        border: 1px solid rgba(0,0,0,0.08);
+        border-radius: 6px;
+        padding: 10px 16px;
+        margin-right: 12px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        cursor: pointer;
+        transition: background-color .2s, box-shadow .15s, transform .05s;
+      }
+      .action form input[type="file"]::file-selector-button:hover,
+      .action form input[type="file"]::-webkit-file-upload-button:hover {
+        background: var(--brand-hover);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.18);
+      }
+      .action form input[type="file"]::file-selector-button:active,
+      .action form input[type="file"]::-webkit-file-upload-button:active {
+        transform: translateY(1px);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      }
+
+      /* Clean button style */
+      button {
+        background: var(--brand);
+        color: #fff;
+        border: 1px solid rgba(0,0,0,0.08);
+        border-radius: 6px;
+        padding: 10px 16px;
+        font-size: 15px;
+        margin: 0;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        transition: background-color .2s, box-shadow .15s, transform .05s;
+      }
+      button:hover { background: var(--brand-hover); box-shadow: 0 4px 10px rgba(0,0,0,0.18); cursor: pointer; }
+      button:active { transform: translateY(1px); box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+      button:focus-visible { outline: 2px solid #004b57; outline-offset: 2px; }
+
+      /* Credits */
+      .credits { text-align: center; }
+      .credits .coder { color: #4471C8; display: block; margin: 4px 0; text-decoration: none; }
+    </style>
+  </head>
+  <body data-new-gr-c-s-check-loaded="14.1252.0" data-gr-ext-installed="" cz-shortcut-listen="true">
+    <div class="content">
+      <h1>Welcome to our Webserv!</h1>
+      <hr>
+      <div class="actions">
+        <div class="action">
+          <h2>Upload a File</h2>
+          <form action="/upload/" method="POST" enctype="multipart/form-data">
+            <input type="file" name="file" required>
+            <button type="submit">Upload</button>
+          </form>
+        </div>
+      
+        <div class="action">
+          <h2>Delete a File</h2>
+          <form onsubmit="event.preventDefault(); sendDelete();">
+            <input type="text" id="deleteFilename" placeholder="example.txt" required>
+            <button type="submit">Delete</button>
+          </form>
+        </div>
+      </div>
+  
+      <hr>
+      <div class="credits">
+        <h3>This server was built by:</h3>
+        <a href="https://github.com/schardot" target="_blank" class="coder">Natália Schardosim</a>
+        <a href="https://github.com/vados-sa" target="_blank" class="coder">Vanessa Santos</a>
+        <a href="https://github.com/mariaserpa" target="_blank" class="coder">Maria Luiza Rabelo</a>
+      </div>
+      </p>
+    </div>
+
+    <script>
+        function sendDelete() {
+            const filename = document.getElementById("deleteFilename").value.trim();
+            if (!filename) {
+                alert("Please enter a filename.");
+                return;
+            }
+
+            fetch("/upload/" + encodeURIComponent(filename), {
+                method: "DELETE"
+            }).then(response => {
+                if (response.ok) {
+                    alert("✅ File deleted successfully.");
+                } else if (response.status === 404) {
+                    alert("❌ File not found.");
+                } else {
+                    alert("⚠️ Failed to delete file.");
+                }
+            }).catch(error => {
+                console.error("Error:", error);
+                alert("❌ Network error.");
+            });
+        }
+    </script>
+  
+
+</body><grammarly-desktop-integration data-grammarly-shadow-root="true"><template shadowrootmode="open"><style>
+      div.grammarly-desktop-integration {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+        -moz-user-select: none;
+        -webkit-user-select: none;
+        -ms-user-select:none;
+        user-select:none;
+      }
+
+      div.grammarly-desktop-integration:before {
+        content: attr(data-content);
+      }
+    </style><div aria-label="grammarly-integration" role="group" tabindex="-1" class="grammarly-desktop-integration" data-content="{&quot;mode&quot;:&quot;full&quot;,&quot;isActive&quot;:true,&quot;isUserDisabled&quot;:false}"></div></template></grammarly-desktop-integration></html>

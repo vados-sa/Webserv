@@ -1,5 +1,4 @@
 #include "ServerSocket.hpp"
-#include "ServerConfig.hpp"
 
 #include <sys/socket.h>
 #include <netdb.h>
@@ -61,23 +60,23 @@ bool ServerSocket::bindSocket() {
 		address.sin_port = htons(port);
 		address.sin_addr.s_addr = htonl(INADDR_ANY);
 	} else {
-		struct addrinfo hints;
-		std::memset(&hints, 0, sizeof(hints));
-		hints.ai_family = AF_INET;
-		hints.ai_socktype = SOCK_STREAM;
+		struct addrinfo addrHints;
+		std::memset(&addrHints, 0, sizeof(addrHints));
+		addrHints.ai_family = AF_INET;
+		addrHints.ai_socktype = SOCK_STREAM;
 
-		struct addrinfo* res = 0;
-		int rc = getaddrinfo(host.c_str(), 0, &hints, &res);
-		if (rc != 0) {
+		struct addrinfo* addrResult = 0;
+		int getAddrStatus = getaddrinfo(host.c_str(), 0, &addrHints, &addrResult);
+		if (getAddrStatus != 0) {
 			perror("getaddrinfo failed");
 			return false;
 		}
 
-		const struct sockaddr_in* got = reinterpret_cast<const struct sockaddr_in*>(res->ai_addr);
-		address = *got;
+		const struct sockaddr_in* resolveAddr = reinterpret_cast<const struct sockaddr_in*>(addrResult->ai_addr);
+		address = *resolveAddr;
 		address.sin_port = htons(port);
 
-		freeaddrinfo(res);
+		freeaddrinfo(addrResult);
 	}
 
 	if (bind(fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
