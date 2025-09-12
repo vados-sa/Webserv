@@ -1,7 +1,7 @@
 #include "ServerConfig.hpp"
 
 ServerConfig::ServerConfig() : listen_port(-1), host(""), error_pages_config(),
-                                client_max_body_size(-1), locations()
+                                client_max_body_size(1048576), locations()
 {};
 
 const std::string &ServerConfig::getErrorPage(int code) const {

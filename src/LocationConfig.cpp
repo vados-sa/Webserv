@@ -1,7 +1,7 @@
 #include "LocationConfig.hpp"
 #include <algorithm>
 
-LocationConfig::LocationConfig() : has_return(false), autoindex(false), client_max_body_size(-1)
+LocationConfig::LocationConfig() : has_return(false), autoindex(false), client_max_body_size(1048576)
 {
     allowed_methods.push_back("GET");
     allowed_methods.push_back("POST");

@@ -88,7 +88,7 @@ ServerConfig ConfigParser::parseServerBlock(std::vector<std::string> lines) {
             servConfig.setPort(parsePort(tokens));
         else if (isDirective(tokens, "error_page"))
             servConfig.setErrorPagesConfig(parseErrorPageLine(tokens));
-        else if (isDirective(tokens, "client_max_body_size") && servConfig.getMaxBodySize() == -1)
+        else if (isDirective(tokens, "client_max_body_size"))
             servConfig.setMaxBodySize(parseMaxBodySize(tokens));
         else if (isDirective(tokens, "location"))
         {
@@ -98,7 +98,7 @@ ServerConfig ConfigParser::parseServerBlock(std::vector<std::string> lines) {
             servConfig.addLocation(loc);
             i += locationLines.size();
             lineNum ++;
-            if (loc.getMaxBodySize() == -1)
+            if (loc.getMaxBodySize() == 1048576 && servConfig.getMaxBodySize() != 1048576)
                 loc.setMaxBodySize(servConfig.getMaxBodySize());
         }
         else if (!tokens.empty() && tokens[0] != "}")
@@ -268,7 +268,7 @@ LocationConfig ConfigParser::parseLocationBlock(std::vector<std::string> lines)
             locConfig.setAutoindex(parseAutoindex(tokens));
         else if (isDirective(tokens, "cgi_extension"))
         	locConfig.setCgiExtension(parseCgiExtension(tokens));
-        else if (isDirective(tokens, "client_max_body_size") && locConfig.getMaxBodySize() == -1)
+        else if (isDirective(tokens, "client_max_body_size"))
             locConfig.setMaxBodySize(parseMaxBodySize(tokens));
         else if (!tokens.empty() && tokens[0] != "}") {
             throwConfigError(fileName, lineNum, "   \"" + tokens[0] + "\" directive is not allowed here\n");
