@@ -154,8 +154,8 @@ void Response::handlePost(const Request &reqObj, LocationConfig loc)
         throw HttpException(413, "Payload Too Large", true);
 
     std::string reqPath = reqObj.getReqPath();
-    if (reqPath != "/upload" && reqPath.find("/upload/") != 0)
-        throw HttpException(405, "Method Not Allowed", true);
+    // if (reqPath != "/upload" && reqPath.find("/upload/") != 0)
+    //     throw HttpException(405, "Method Not Allowed", true);
 
     if (!reqObj.findHeader(HEADER_CONTENT_TYPE))
         throw HttpException(400, "Missing Content-Type header", true);
@@ -247,6 +247,7 @@ void Response::setCode(const int code)
         codeToMessage[408] = "Request Timeout";
         codeToMessage[405] = "Method Not Allowed";
         codeToMessage[411] = "Length Required";
+        codeToMessage[413] = "Payload too large";
         codeToMessage[414] = "URI too long";
         codeToMessage[500] = "Internal Server Error";
     }

@@ -195,10 +195,10 @@ bool Config::pollLoop(int server_count)
                         }
                     }
                     if (client_idx >= 0) {
-                        if (revent & POLLERR) oss << "POLLERR";
-                        if (revent & POLLHUP) oss << "POLLHUP";
-                        if (revent & POLLNVAL) oss << "POLLNVAL";
-                        oss << " event on client fd=" << fd << " port=" << servers[clients[client_idx].getServerIndex()].getPort();
+                        if (revent & POLLERR) oss << "POLLERR ";
+                        if (revent & POLLHUP) oss << "POLLHUP ";
+                        if (revent & POLLNVAL) oss << "POLLNVAL ";
+                        oss << "event on client fd=" << fd << " port=" << servers[clients[client_idx].getServerIndex()].getPort();
                         logs(INFO, oss.str());
                         close(fd);
                         poll_fds.erase(poll_fds.begin() + i);
@@ -252,6 +252,7 @@ bool Config::pollLoop(int server_count)
                         clients[client_idx].setResponseBuffer(res_string);
                         clients[client_idx].setState(Client::WAITING_RESPONSE);
                         poll_fds[i].events = POLLOUT;
+                        logs(ERROR, e.what());
                     }
                 }
             } else if (fd_type == "cgi_stdin") {
@@ -507,8 +508,10 @@ void Config::handleClientRequest(int pollfd_idx, int client_idx)
         client_count--;
         return;
     }
-
-    client.appendRequestData(buffer, bytes);
+    if ((int)client.getRequest().size() < servers[client.getServerIndex()].getMaxBodySize())
+        client.appendRequestData(buffer, bytes);
+    else
+        throw HttpException(413, "Payload too large", true);
     while (true)
     {
         long consumed = extract_one_http_request(client.getRequest());
