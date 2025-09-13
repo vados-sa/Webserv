@@ -238,7 +238,7 @@ namespace util {
             }
 
             totalSize += chunkSize;
-            if ((int)totalSize > maxBodySize)
+            if (maxBodySize != -1 && (int)totalSize > maxBodySize)
                  throw HttpException(413, "Payload Too Large", true);
 
             if (raw.size() < pos + chunkSize + 2)

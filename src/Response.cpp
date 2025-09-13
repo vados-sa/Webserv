@@ -153,25 +153,29 @@ void Response::handlePost(const Request &reqObj, LocationConfig loc)
     if ((int)reqObj.getBody().size() > reqObj.getMaxBodySize())
         throw HttpException(413, "Payload Too Large", true);
 
-    std::string reqPath = reqObj.getReqPath();
-    // if (reqPath != "/upload" && reqPath.find("/upload/") != 0)
-    //     throw HttpException(405, "Method Not Allowed", true);
+    std::string uploadFullPath = "." + loc.getUploadDir();
+    if (!util::createUploadDir(uploadFullPath))
+        throw HttpException(500, "Failed to create upload directory", true);
 
-    if (!reqObj.findHeader(HEADER_CONTENT_TYPE))
-        throw HttpException(400, "Missing Content-Type header", true);
-    else {
-        std::string boundary = util::extractBoundary(*reqObj.findHeader(HEADER_CONTENT_TYPE));
+    const std::string *ctype = reqObj.findHeader(HEADER_CONTENT_TYPE);
+    if (ctype && ctype->find("multipart/form-data") != std::string::npos)
+    {
+        std::string boundary = util::extractBoundary(*ctype);
         if (boundary.empty())
-            throw HttpException (400, "Bad Request", true);
-        struct util::MultipartPart mp_struct = util::parseMultipartBody(reqObj.getBody(), boundary);
+            throw HttpException(400, "Bad Request (missing boundary)", true);
 
-        std::string uploadFullPath = "." + loc.getUploadDir();
-        if (!util::createUploadDir(uploadFullPath))
-            throw HttpException(500, "Failed to create upload directory", true);
+        struct util::MultipartPart mp_struct = util::parseMultipartBody(reqObj.getBody(), boundary);
         std::string safeFilename = util::sanitizeFileName(mp_struct.filename);
         std::string filePath = uploadFullPath + "/" + safeFilename;
 
         if (!util::saveFile(filePath, mp_struct.content))
+            throw HttpException(500, "Failed to save uploaded file", true);
+        setPage(201, "File uploaded successfully", false);
+    }
+    else
+    {
+        std::string filePath = uploadFullPath + "/upload.data";
+        if (!util::saveFile(filePath, reqObj.getBody()))
             throw HttpException(500, "Failed to save uploaded file", true);
         setPage(201, "File uploaded successfully", false);
     }

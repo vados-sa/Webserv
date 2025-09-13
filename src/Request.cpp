@@ -10,7 +10,7 @@ Request::Request() : isCgi_(false) {};
 //     this->parseRequest(raw);
 // };
 
-Request::Request(const std::string &raw) : isCgi_(false) {
+Request::Request(const std::string &raw) : maxBodySize_(-1), isCgi_(false) {
     this->parseRequest(raw);
 };
 
