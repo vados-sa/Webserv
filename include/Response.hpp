@@ -4,7 +4,6 @@
 #include "HttpMessage.hpp"
 #include "Logger.hpp"
 
-
 class Config;
 class Request;
 class LocationConfig;
@@ -32,7 +31,6 @@ private:
     void uploadFile(const std::string &uploadFullPath);
     void readFileIntoBody(const std::string &fileName);
     std::string generateDefaultPage(const int code, const std::string &message, bool error) const;
-
 
 public:
     Response();

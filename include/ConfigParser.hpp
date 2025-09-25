@@ -12,7 +12,8 @@
 
 class Config;
 
-class ConfigParser {
+class ConfigParser
+{
 private:
     std::ostringstream errorMessage;
     std::string fileName;
@@ -22,13 +23,11 @@ private:
     ServerConfig parseServerBlock(std::vector<std::string> lines);
     LocationConfig parseLocationBlock(std::vector<std::string> lines);
 
-    // Parsers for the SERVER block
     std::string parseHost(const std::vector<std::string> &tokens);
     int parsePort(const std::vector<std::string> &tokens);
     std::pair<int, std::string> parseErrorPageLine(const std::vector<std::string> &tokens);
     size_t parseMaxBodySize(const std::vector<std::string> &tokens);
 
-    // Parsers for the LOCATION block
     std::string parsePath(const std::vector<std::string> &tokens);
     std::string parseRoot(const std::vector<std::string> &tokens);
     std::vector<std::string> parseIndex(const std::vector<std::string> &tokens);
@@ -36,10 +35,10 @@ private:
     std::pair<int, std::string> parseRedirection(const std::vector<std::string> &tokens);
     std::string parseUploadDir(const std::vector<std::string> &tokens);
     bool parseAutoindex(const std::vector<std::string> &tokens);
-	std::string parseCgiExtension(const std::vector<std::string> &tokens);
+    std::string parseCgiExtension(const std::vector<std::string> &tokens);
 
 public:
-    Config  parseConfigFile(const std::string &filename);
+    Config parseConfigFile(const std::string &filename);
 };
 
 std::string cleanLine(std::string line);

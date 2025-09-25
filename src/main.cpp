@@ -1,8 +1,9 @@
 #include "Config.hpp"
 #include <signal.h>
 
-void signal_handler(int sig) {
-	(void)sig;
+void signal_handler(int sig)
+{
+    (void)sig;
 }
 
 int main(int ac, char *av[])
@@ -12,23 +13,29 @@ int main(int ac, char *av[])
     try
     {
         std::string configfile;
-        if (ac != 2) {
-            configfile = "config/simple.conf";
-        } else {
+        if (ac != 2)
+        {
+            configfile = "config/default.conf";
+        }
+        else
+        {
             configfile = av[1];
         }
 
         Config config(configfile);
 
-        //std::cout << config << std::endl;
-        if (!config.setupServer()) {
+        if (!config.setupServer())
+        {
             throw std::runtime_error("Failed to set server up.");
         };
 
-        if (!config.run()) {
+        if (!config.run())
+        {
             throw std::runtime_error("Server failed to run.");
         };
-    } catch (const std::exception &e) {
+    }
+    catch (const std::exception &e)
+    {
         std::string msg = e.what();
         logs(ERROR, msg);
         return 1;

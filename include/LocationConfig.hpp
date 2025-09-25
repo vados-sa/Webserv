@@ -22,11 +22,9 @@ private:
 public:
     LocationConfig();
 
-    //methods
     bool isCgiRequest(std::string &uri);
     bool isMethodAllowed(const std::string &method) const;
 
-    //getters
     std::string getUri() const { return uri; }
     std::string getRoot() const { return root; }
     const std::vector<std::string> &getIndexFiles() const { return index_files; }
@@ -38,18 +36,18 @@ public:
     const std::string &getCgiExtension() const { return cgi_extension; };
     int getMaxBodySize() const { return client_max_body_size; }
 
-    //setters
     void setUri(std::string set) { uri = set; };
     void setRoot(std::string set) { root = set; };
     void setIndex(std::vector<std::string> set) { index_files = set; };
     void setAllowedMethods(std::vector<std::string> set) { allowed_methods = set; };
-    void setRedirection(std::pair<int, std::string> set) { has_return = true; return_status = set.first; return_target = set.second;};
+    void setRedirection(std::pair<int, std::string> set)
+    {
+        has_return = true;
+        return_status = set.first;
+        return_target = set.second;
+    };
     void setUploadDir(std::string set) { upload_dir = set; };
     void setAutoindex(bool set) { autoindex = set; };
-	void setCgiExtension(std::string set) { cgi_extension = set; };
+    void setCgiExtension(std::string set) { cgi_extension = set; };
     void setMaxBodySize(int set) { client_max_body_size = set; };
 };
-
-std::ostream &operator<<(std::ostream &os, const std::vector<LocationConfig> &obj);
-std::ostream &operator<<(std::ostream &os, const std::vector<std::string>& obj);
-

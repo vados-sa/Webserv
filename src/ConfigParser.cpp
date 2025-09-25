@@ -12,31 +12,38 @@ inline bool isDirective(const std::vector<std::string> &tokens, const std::strin
     return !tokens.empty() && tokens[0] == name;
 }
 
-Config ConfigParser::parseConfigFile(const std::string &filename) {
+Config ConfigParser::parseConfigFile(const std::string &filename)
+{
     Config config;
     fileName = filename;
     lineNum = 0;
 
-	if (filename.size() < 5 || filename.substr(filename.size() - 5) != ".conf") {
-		throw std::runtime_error("Invalid file extension, expected .conf");
-	}
-	std::ifstream file(filename.c_str());
-	if (!file.is_open()) {
-		throw std::runtime_error("Couldn't open config file");
-	}
+    if (filename.size() < 5 || filename.substr(filename.size() - 5) != ".conf")
+    {
+        throw std::runtime_error("Invalid file extension, expected .conf");
+    }
+    std::ifstream file(filename.c_str());
+    if (!file.is_open())
+    {
+        throw std::runtime_error("Couldn't open config file");
+    }
 
     std::vector<std::string> lines;
     std::string line;
-    while (std::getline(file, line)) {
+    while (std::getline(file, line))
+    {
         lines.push_back(cleanLine(line));
     }
 
     std::vector<std::string> tokens;
-    for (size_t i = 0; i < lines.size(); i++) {
+    for (size_t i = 0; i < lines.size(); i++)
+    {
         line = cleanLine(lines[i]);
         tokens = tokenize(line);
-        if (!tokens.empty()) {
-            if (tokens[0] == "server") {
+        if (!tokens.empty())
+        {
+            if (tokens[0] == "server")
+            {
                 if (tokens[1] != "{")
                     throwConfigError(fileName, i + 1, "Expected '{' after 'server'");
                 lineNum = i + 1;
@@ -51,13 +58,16 @@ Config ConfigParser::parseConfigFile(const std::string &filename) {
     return (config);
 }
 
-std::vector<std::string> ConfigParser::collectBlock(std::vector<std::string> lines, size_t i) {
+std::vector<std::string> ConfigParser::collectBlock(std::vector<std::string> lines, size_t i)
+{
     std::vector<std::string> blockLines;
     int braceCount = 0;
 
-    for (; i < lines.size(); i++) {
-        if (lines[i].find('{') != std::string::npos) {
-            braceCount ++;
+    for (; i < lines.size(); i++)
+    {
+        if (lines[i].find('{') != std::string::npos)
+        {
+            braceCount++;
         }
         if (lines[i].find('}') != std::string::npos)
         {
@@ -73,14 +83,16 @@ std::vector<std::string> ConfigParser::collectBlock(std::vector<std::string> lin
     return (blockLines);
 }
 
-ServerConfig ConfigParser::parseServerBlock(std::vector<std::string> lines) {
+ServerConfig ConfigParser::parseServerBlock(std::vector<std::string> lines)
+{
     ServerConfig servConfig;
 
     std::vector<std::string> tokens;
 
-    for (size_t i = 1; i < lines.size(); i++) {
+    for (size_t i = 1; i < lines.size(); i++)
+    {
         std::string line = cleanLine(lines[i]);
-        lineNum ++;
+        lineNum++;
         tokens = tokenize(line);
         if (isDirective(tokens, "host") && servConfig.getHost().empty())
             servConfig.setHost(parseHost(tokens));
@@ -92,14 +104,14 @@ ServerConfig ConfigParser::parseServerBlock(std::vector<std::string> lines) {
             servConfig.setMaxBodySize(parseMaxBodySize(tokens));
         else if (isDirective(tokens, "location"))
         {
-            lineNum --;
+            lineNum--;
             std::vector<std::string> locationLines = collectBlock(lines, i);
             LocationConfig loc = parseLocationBlock(locationLines);
-            servConfig.addLocation(loc);
             i += locationLines.size();
-            lineNum ++;
+            lineNum++;
             if (loc.getMaxBodySize() == 1048576 && servConfig.getMaxBodySize() != 1048576)
                 loc.setMaxBodySize(servConfig.getMaxBodySize());
+            servConfig.addLocation(loc);
         }
         else if (!tokens.empty() && tokens[0] != "}")
             throwConfigError(fileName, lineNum, "   \"" + tokens[0] + "\" directive is not allowed here\n");
@@ -121,7 +133,8 @@ std::string ConfigParser::parseHost(const std::vector<std::string> &tokens)
 
     std::string host = tokens[1];
 
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 4; i++)
+    {
         size_t pos = host.find('.');
         if (pos == std::string::npos)
             break;
@@ -132,14 +145,16 @@ std::string ConfigParser::parseHost(const std::vector<std::string> &tokens)
     if (octets.size() != 4)
         throwConfigError(fileName, lineNum, "  Invalid host IP address in configuration file\n");
 
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 4; i++)
+    {
         if (octets[i].empty())
             throwConfigError(fileName, lineNum, "  Host address incomplete in configuration file\n");
 
         if (octets[i][0] == '0' && octets[i].length() > 1)
             throwConfigError(fileName, lineNum, "  Host address contains leading zeros in configuration file\n");
 
-        for (std::string::const_iterator it = octets[i].begin(); it != octets[i].end(); ++it) {
+        for (std::string::const_iterator it = octets[i].begin(); it != octets[i].end(); ++it)
+        {
             if (!isdigit(*it))
                 throwConfigError(fileName, lineNum, "  Host address must include digits only\n");
         }
@@ -161,7 +176,8 @@ int ConfigParser::parsePort(const std::vector<std::string> &tokens)
 
     for (std::string::const_iterator it = tokens[1].begin(); it != tokens[1].end(); ++it)
     {
-        if (!isdigit(*it)) {
+        if (!isdigit(*it))
+        {
             throwConfigError(fileName, lineNum, "  Port must include digits only");
         }
     }
@@ -196,7 +212,7 @@ std::pair<int, std::string> ConfigParser::parseErrorPageLine(const std::vector<s
         throwConfigError(fileName, lineNum, "Invalid error code '" + tokens[1] + "'");
 
     if (key < 300 || key > 599)
-        throwConfigError(fileName, lineNum,"Invalid error code '" + tokens[1] + "': not a valid HTTP error code");
+        throwConfigError(fileName, lineNum, "Invalid error code '" + tokens[1] + "': not a valid HTTP error code");
 
     entry = std::make_pair(key, tokens[2]);
     return (entry);
@@ -216,20 +232,20 @@ size_t ConfigParser::parseMaxBodySize(const std::vector<std::string> &tokens)
     {
         switch (unit)
         {
-            case 'k':
-            case 'K':
-                multiplier = 1024;
-                break;
-            case 'm':
-            case 'M':
-                multiplier = 1024 * 1024;
-                break;
-            case 'g':
-            case 'G':
-                multiplier = 1024 * 1024 * 1024;
-                break;
-            default:
-				throwConfigError(fileName, lineNum, "  Unknown size unit in client_max_body_size");
+        case 'k':
+        case 'K':
+            multiplier = 1024;
+            break;
+        case 'm':
+        case 'M':
+            multiplier = 1024 * 1024;
+            break;
+        case 'g':
+        case 'G':
+            multiplier = 1024 * 1024 * 1024;
+            break;
+        default:
+            throwConfigError(fileName, lineNum, "  Unknown size unit in client_max_body_size");
         }
 
         value.resize(value.size() - 1);
@@ -249,7 +265,7 @@ LocationConfig ConfigParser::parseLocationBlock(std::vector<std::string> lines)
 
     for (size_t i = 0; i < lines.size(); i++)
     {
-        lineNum ++;
+        lineNum++;
         lines[i] = cleanLine(lines[i]);
         tokens = tokenize(lines[i]);
         if (isDirective(tokens, "location"))
@@ -267,10 +283,11 @@ LocationConfig ConfigParser::parseLocationBlock(std::vector<std::string> lines)
         else if (isDirective(tokens, "autoindex"))
             locConfig.setAutoindex(parseAutoindex(tokens));
         else if (isDirective(tokens, "cgi_extension"))
-        	locConfig.setCgiExtension(parseCgiExtension(tokens));
+            locConfig.setCgiExtension(parseCgiExtension(tokens));
         else if (isDirective(tokens, "client_max_body_size"))
             locConfig.setMaxBodySize(parseMaxBodySize(tokens));
-        else if (!tokens.empty() && tokens[0] != "}") {
+        else if (!tokens.empty() && tokens[0] != "}")
+        {
             throwConfigError(fileName, lineNum, "   \"" + tokens[0] + "\" directive is not allowed here\n");
         }
     }
@@ -279,17 +296,13 @@ LocationConfig ConfigParser::parseLocationBlock(std::vector<std::string> lines)
 
 std::string ConfigParser::parsePath(const std::vector<std::string> &tokens)
 {
-    if (tokens.size() < 2) {
+    if (tokens.size() < 2)
+    {
         throwConfigError(fileName, lineNum, "  Missing path value in configuration file.");
     }
 
-    if (tokens[0] == "location") {
-        // if (tokens[1][0] != '/') ---- NAO APAGAR AINDA
-        //     throwConfigError(fileName, lineNum, "  Path missing starting slash");
-
-        // if (tokens.size() > 3 && !tokens[2].empty())
-        //     throwConfigError(fileName, lineNum, "  Path contains unexpected spaces or extra tokens");
-
+    if (tokens[0] == "location")
+    {
         if (!util::isValidPath(tokens[1]))
             throwConfigError(fileName, lineNum, "  Path contains illegal characters");
         return (util::normalizePath(tokens[1]));
@@ -301,19 +314,23 @@ std::string ConfigParser::parsePath(const std::vector<std::string> &tokens)
 
 std::string ConfigParser::parseRoot(const std::vector<std::string> &tokens)
 {
-    if (tokens.size() < 2) {
-		throwConfigError(fileName, lineNum, "  Missing root value in configuration file.");
+    if (tokens.size() < 2)
+    {
+        throwConfigError(fileName, lineNum, "  Missing root value in configuration file.");
     }
 
-    if (tokens.size() > 2) {
+    if (tokens.size() > 2)
+    {
         throwConfigError(fileName, lineNum, "  Root path contains unexpected spaces or extra tokens");
     }
 
-    if (tokens[1][0] != '/'){
+    if (tokens[1][0] != '/')
+    {
         throwConfigError(fileName, lineNum, "  Root path must start with '/'");
     }
 
-    if (!util::isValidPath(tokens[1])){
+    if (!util::isValidPath(tokens[1]))
+    {
         throwConfigError(fileName, lineNum, "  Root path contains illegal characters");
     }
 
@@ -322,18 +339,22 @@ std::string ConfigParser::parseRoot(const std::vector<std::string> &tokens)
 
 std::vector<std::string> ConfigParser::parseIndex(const std::vector<std::string> &tokens)
 {
-    if (tokens.size() < 2) {
+    if (tokens.size() < 2)
+    {
         throwConfigError(fileName, lineNum, "  Missing index value in configuration file.");
     }
 
     std::vector<std::string> ret;
 
-    for (size_t i = 1; i < tokens.size(); i++) {
-        if (tokens[i].empty()) {
+    for (size_t i = 1; i < tokens.size(); i++)
+    {
+        if (tokens[i].empty())
+        {
             throwConfigError(fileName, lineNum, "  Index value cannot be empty");
         }
 
-        if (!util::isValidPath(tokens[i])){
+        if (!util::isValidPath(tokens[i]))
+        {
             throwConfigError(fileName, lineNum, "  Index value contains illegal characters: " + tokens[i]);
         }
 
@@ -346,7 +367,8 @@ std::vector<std::string> ConfigParser::parseAllowedMethods(const std::vector<std
 {
     std::vector<std::string> ret;
 
-    if (tokens.size() < 2){
+    if (tokens.size() < 2)
+    {
         throwConfigError(fileName, lineNum, "  Missing allowed_methods value in configuration file.");
     }
 
@@ -355,14 +377,17 @@ std::vector<std::string> ConfigParser::parseAllowedMethods(const std::vector<std
     for (size_t i = 1; i < tokens.size(); i++)
     {
         const std::string &method = tokens[i];
-        if (method.empty()){
+        if (method.empty())
+        {
             throwConfigError(fileName, lineNum, "  allowed_methods: empty method value is not allowed");
         }
 
-        if (method != "GET" && method != "POST" && method != "DELETE"){
+        if (method != "GET" && method != "POST" && method != "DELETE")
+        {
             throwConfigError(fileName, lineNum, "  allowed_methods: unsupported HTTP method '" + method + "'");
         }
-        if (seen.find(method) == seen.end()) {
+        if (seen.find(method) == seen.end())
+        {
             ret.push_back(method);
             seen.insert(method);
         }
@@ -374,7 +399,8 @@ std::pair<int, std::string> ConfigParser::parseRedirection(const std::vector<std
 {
 
     std::pair<int, std::string> entry;
-    if (tokens.size() < 3) {
+    if (tokens.size() < 3)
+    {
         throwConfigError(fileName, lineNum, "  Unable to parse return, missing value");
     }
 
@@ -388,14 +414,15 @@ std::pair<int, std::string> ConfigParser::parseRedirection(const std::vector<std
 
     for (std::string::const_iterator it = tokens[1].begin(); it != tokens[1].end(); ++it)
     {
-        if (!isdigit(*it)) {
+        if (!isdigit(*it))
+        {
             throwConfigError(fileName, lineNum, "  Redirection code must include digits only");
         }
     }
 
     int key = std::atoi(tokens[1].c_str());
     if (key == 0 && tokens[1] != "0")
-		throwConfigError(fileName, lineNum, "Invalid redirection code '" + tokens[1] + "'");
+        throwConfigError(fileName, lineNum, "Invalid redirection code '" + tokens[1] + "'");
 
     if ((key < 301 || key > 302) && (key < 307 || key > 308))
         throwConfigError(fileName, lineNum, "Invalid redirection code '" + tokens[1] + "': not a valid HTTP redirection code");
@@ -406,11 +433,13 @@ std::pair<int, std::string> ConfigParser::parseRedirection(const std::vector<std
 
 std::string ConfigParser::parseUploadDir(const std::vector<std::string> &tokens)
 {
-    if (tokens.size() < 2) {
+    if (tokens.size() < 2)
+    {
         throwConfigError(fileName, lineNum, "  Missing upload_path value in configuration file.");
     }
 
-    if (tokens[1] == "/") {
+    if (tokens[1] == "/")
+    {
         throwConfigError(fileName, lineNum, "  Upload path cannot be root '/'");
     }
 
@@ -419,11 +448,13 @@ std::string ConfigParser::parseUploadDir(const std::vector<std::string> &tokens)
 
 bool ConfigParser::parseAutoindex(const std::vector<std::string> &tokens)
 {
-    if (tokens.size() < 2) {
+    if (tokens.size() < 2)
+    {
         throwConfigError(fileName, lineNum, "  Missing autoindex value in configuration file.");
     }
 
-    if (tokens.size() > 2) {
+    if (tokens.size() > 2)
+    {
         throwConfigError(fileName, lineNum, "  Autoindex contains unexpected extra tokens.");
     }
 
@@ -438,22 +469,26 @@ bool ConfigParser::parseAutoindex(const std::vector<std::string> &tokens)
 
 std::string ConfigParser::parseCgiExtension(const std::vector<std::string> &tokens)
 {
-	if (tokens.size() != 2) {
-		throwConfigError(fileName, lineNum, "Error: Exactly one CGI extension must be specified in the configuration file.");
-	}
+    if (tokens.size() != 2)
+    {
+        throwConfigError(fileName, lineNum, "Error: Exactly one CGI extension must be specified in the configuration file.");
+    }
 
-	const std::string &extension = tokens[1];
+    const std::string &extension = tokens[1];
 
-	if (extension.empty()) {
-		throwConfigError(fileName, lineNum, "Error: Empty CGI extension is not allowed.");
-	}
-	if (extension[0] != '.') {
+    if (extension.empty())
+    {
+        throwConfigError(fileName, lineNum, "Error: Empty CGI extension is not allowed.");
+    }
+    if (extension[0] != '.')
+    {
         throwConfigError(fileName, lineNum, "Error: CGI extension must start with a '.' character.");
     }
-	if (!util::isValidPath(extension)) {
-		throwConfigError(fileName, lineNum, "Error: Invalid CGI extension '" + extension + "'.");
-	}
-	return extension;
+    if (!util::isValidPath(extension))
+    {
+        throwConfigError(fileName, lineNum, "Error: Invalid CGI extension '" + extension + "'.");
+    }
+    return extension;
 }
 
 std::string cleanLine(std::string line)
@@ -474,12 +509,14 @@ std::string cleanLine(std::string line)
     return line;
 }
 
-std::vector<std::string> tokenize(const std::string line) {
+std::vector<std::string> tokenize(const std::string line)
+{
     std::istringstream iss(line);
     std::string word;
     std::vector<std::string> tokens;
 
-    while (iss >> word) {
+    while (iss >> word)
+    {
         tokens.push_back(word);
     }
     return (tokens);

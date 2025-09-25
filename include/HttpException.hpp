@@ -3,13 +3,14 @@
 #include <exception>
 #include <string>
 
-class HttpException : public std::exception {
-    private:
+class HttpException : public std::exception
+{
+private:
     int statusCode;
     std::string message;
     bool error;
 
-    public:
+public:
     HttpException(int code, const std::string &msg, const bool error) : statusCode(code), message(msg), error(error) {};
 
     virtual ~HttpException() throw() {}

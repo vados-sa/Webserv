@@ -3,26 +3,27 @@
 #include <string>
 #include <netinet/in.h>
 
-class ServerSocket {
-	private:
-		int fd;
-		struct sockaddr_in address;
-		int port;
-		std::string host;
-		bool isSetup;
-		
-		bool createSocket();
-		bool configureSocket();
-		bool bindSocket();
-		bool listenMode();
+class ServerSocket
+{
+private:
+    int fd;
+    struct sockaddr_in address;
+    int port;
+    std::string host;
+    bool isSetup;
 
-	public:
-		ServerSocket();
-		~ServerSocket();
+    bool createSocket();
+    bool configureSocket();
+    bool bindSocket();
+    bool listenMode();
 
-		bool setupServerSocket(int port, std::string host);
+public:
+    ServerSocket();
+    ~ServerSocket();
 
-		int getFd() const {return fd;}
-		std::string getHost() const {return host;}
-		int getPort() const {return port;}
+    bool setupServerSocket(int port, std::string host);
+
+    int getFd() const { return fd; }
+    std::string getHost() const { return host; }
+    int getPort() const { return port; }
 };

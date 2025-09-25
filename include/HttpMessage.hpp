@@ -23,4 +23,3 @@ public:
     void setBody(const std::string &bodyToSet) { body_ = bodyToSet; };
     void setVersion(const std::string &versionToSet) { version_ = versionToSet; };
 };
-

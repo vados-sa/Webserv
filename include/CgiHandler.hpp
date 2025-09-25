@@ -6,42 +6,36 @@
 #include "LocationConfig.hpp"
 #include "Logger.hpp"
 
-class CgiHandler {
-	public:
-		enum CgiErrorType {
-			SCRIPT_NOT_FOUND,
-			EXECUTION_FAILED,
-			EXECVE_FAILED,
-			PIPE_FAILED,
-			FORK_FAILED,
-			TIMEOUT,
-			CGI_SCRIPT_FAILED,
-			NO_ERROR
-		};
-	private:
-		std::string cgiScriptPath;
-		std::string interpreterPath;
-		std::map<std::string, std::string> env;
-		std::string body;
-		CgiErrorType  error;
-		bool status_cgi;
+class CgiHandler
+{
+public:
+    enum CgiErrorType
+    {
+        SCRIPT_NOT_FOUND,
+        EXECUTION_FAILED,
+        EXECVE_FAILED,
+        PIPE_FAILED,
+        FORK_FAILED,
+        TIMEOUT,
+        CGI_SCRIPT_FAILED,
+        NO_ERROR
+    };
 
-		public:
-		CgiHandler(const Request &req, const LocationConfig &locConfig);
-		void handleFileUpload(const std::string &body, const std::string &uploadDir);
-		bool getStatus() const { return status_cgi; };
-		CgiErrorType getError() const { return error; };
+private:
+    std::string cgiScriptPath;
+    std::string interpreterPath;
+    std::map<std::string, std::string> env;
+    std::string body;
+    CgiErrorType error;
+    bool status_cgi;
 
-		// Non-blocking CGI execution
-		bool startCgi(Client &client);
-		std::string finishCgi(const Client &client, int exit_status);
+public:
+    CgiHandler(const Request &req, const LocationConfig &locConfig);
+    bool getStatus() const { return status_cgi; };
+    CgiErrorType getError() const { return error; };
 
-		// Old blocking method (keep for reference)
-		//std::string run();
-
-		bool processPart(const std::string &part, const std::string &uploadDir);
-		//bool saveFile(const std::string &filePath, const std::string &fileContent);
-
+    bool startCgi(Client &client);
+    std::string finishCgi(const Client &client, int exit_status);
 };
 
 std::string getInterpreterPath(const std::string &cgiExtension);
