@@ -20,7 +20,8 @@ const char *HEADER_CONNECTION = "connection";
 
 const char *MIME_HTML = "text/html";
 
-namespace util {
+namespace util
+{
 
     std::string normalizePath(const std::string &rawPath)
     {
@@ -129,7 +130,6 @@ namespace util {
 
     std::string wrapHtml(const std::string &title, const std::string &innerHtml)
     {
-        // Inline minimal CSS matching your test.html look (no external deps; C++98-safe)
         const std::string css =
             "body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;"
             "padding:30px 0;box-sizing:border-box;"
@@ -150,13 +150,15 @@ namespace util {
         html += "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">";
         html += "<title>";
         html += title;
-        html += "</title><style>";
+        html += "</title>";
+        html += "<link rel=\"icon\" href=\"/img/images/favicon.png\" type=\"image/png\">";
+        html += "<style>";
         html += css;
         html += "</style></head><body><div class=\"content\">";
         html += innerHtml;
         html += "</div></body></html>";
         return html;
-        //return html.str();
+        // return html.str();
     }
 
     std::string generateAutoIndexHtml(const std::string &uri, const std::vector<std::string> &entries)
@@ -176,7 +178,8 @@ namespace util {
         return wrapHtml("Index of " + uri, body.str());
     }
 
-    std::string extractBoundary(std::string rawValue) {
+    std::string extractBoundary(std::string rawValue)
+    {
         size_t pos = rawValue.find("boundary=");
         std::string boundary = "--";
         if (pos != std::string::npos)
@@ -184,7 +187,8 @@ namespace util {
         return (boundary);
     }
 
-    std::string extractFilename(std::string headers) {
+    std::string extractFilename(std::string headers)
+    {
         size_t pos = headers.find("filename=\"");
         if (pos != std::string::npos)
         {
@@ -195,7 +199,8 @@ namespace util {
         return ("");
     }
 
-    std::string extractContentType(std::string headers) {
+    std::string extractContentType(std::string headers)
+    {
         size_t pos = headers.find("Content-Type: ");
         if (pos != std::string::npos)
         {
@@ -208,7 +213,6 @@ namespace util {
 
     std::string parseChunkedBody(std::string &raw, int maxBodySize)
     {
-        //body_.clear();
         std::string body;
         std::string::size_type pos = 0;
         std::size_t totalSize = 0;
@@ -226,7 +230,7 @@ namespace util {
             if (iss.fail())
                 throw HttpException(400, "Invalid chunk size", true);
 
-            pos = endline + 2; // move past "\r\n"
+            pos = endline + 2;
 
             if (chunkSize == 0)
             {
@@ -238,8 +242,8 @@ namespace util {
             }
 
             totalSize += chunkSize;
-            if ((int)totalSize > maxBodySize)
-                 throw HttpException(413, "Payload Too Large", true);
+            if (maxBodySize != -1 && (int)totalSize > maxBodySize)
+                throw HttpException(413, "Payload Too Large", true);
 
             if (raw.size() < pos + chunkSize + 2)
                 throw HttpException(400, "Incomplete chunk data", true);

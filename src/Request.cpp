@@ -6,15 +6,13 @@
 
 Request::Request() : isCgi_(false) {};
 
-// Request::Request(const std::string &raw, int maxBodySize) : maxBodySize_(maxBodySize), isCgi_(false) {
-//     this->parseRequest(raw);
-// };
-
-Request::Request(const std::string &raw) : isCgi_(false) {
+Request::Request(const std::string &raw, int maxBodySize) : maxBodySize_(maxBodySize), isCgi_(false)
+{
     this->parseRequest(raw);
 };
 
-void Request::parseRequest(const std::string &raw) {
+void Request::parseRequest(const std::string &raw)
+{
     std::string temp = raw;
 
     parseRequestLine(temp);
@@ -36,12 +34,13 @@ bool Request::parseRequestLine(std::string &raw)
 
     std::string query;
     size_t qpos = path.find('?');
-    if (qpos != std::string::npos) {
+    if (qpos != std::string::npos)
+    {
         query = path.substr(qpos + 1);
         path = path.substr(0, qpos);
     }
 
-    std::string cleanPath = util::normalizePath(path); /// turns "a/b/../c/./d" and turn it into a clean, normalized path "/a/c/d"
+    std::string cleanPath = util::normalizePath(path);
     if (cleanPath.empty())
         cleanPath = "/";
     if (!util::isValidPath(cleanPath))
@@ -100,7 +99,8 @@ bool Request::parseHeaders(std::string &raw)
         headers_[key] = value;
     }
 
-    if (headers_.count("transfer-encoding")) {
+    if (headers_.count("transfer-encoding"))
+    {
         if (headers_["transfer-encoding"] != "chunked")
             throw HttpException(400, "Unsupported Transfer-Encoding", true);
     }
@@ -114,7 +114,8 @@ bool Request::parseBody(std::string &raw)
         return (true);
 
     std::map<std::string, std::string>::iterator it = headers_.find("transfer-encoding");
-    if (!raw.empty() && it != headers_.end() && it->second == "chunked") {
+    if (!raw.empty() && it != headers_.end() && it->second == "chunked")
+    {
         util::parseChunkedBody(raw, maxBodySize_);
         return (true);
     }
@@ -133,12 +134,13 @@ bool Request::parseBody(std::string &raw)
     if (raw.size() < static_cast<size_t>(length))
         throw HttpException(400, "Bad Request", true);
 
-    body_= raw.substr(0, length);
+    body_ = raw.substr(0, length);
     raw.erase(0, length);
     return (true);
 }
 
-std::ostream &operator<<(std::ostream &out, const Request &obj) {
+std::ostream &operator<<(std::ostream &out, const Request &obj)
+{
     out << "Method: " << obj.getMethod() << std::endl
         << "Request path: " << obj.getReqPath() << std::endl
         << "Full path: " << obj.getFullPath() << std::endl
@@ -157,5 +159,3 @@ std::ostream &operator<<(std::ostream &os, const std::map<std::string, std::stri
         os << it->first << ": " << it->second << '\n';
     return os;
 }
-
-

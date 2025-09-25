@@ -22,7 +22,7 @@ public:
     int getPort() const { return listen_port; }
     const std::string &getHost() const { return host; }
     const std::map<int, std::string> &getErrorPagesConfig() const { return error_pages_config; }
-    const std::string &getErrorPage (int code) const;
+    const std::string &getErrorPage(int code) const;
     int getMaxBodySize() const { return client_max_body_size; }
     const std::vector<LocationConfig> &getLocations() const { return locations; }
 
@@ -33,6 +33,4 @@ public:
     void addLocation(LocationConfig &locConfig) { locations.push_back(locConfig); };
 };
 
-std::ostream &operator<<(std::ostream &os, const ServerConfig &obj);
-
-std::ostream &operator<<(std::ostream &os, const std::map<int, std::string>&obj);
+std::ostream &operator<<(std::ostream &os, const std::map<int, std::string> &obj);

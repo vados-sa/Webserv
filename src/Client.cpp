@@ -15,24 +15,28 @@ Client::Client(int fd, int server_index) : client_fd(fd), server_idx(server_inde
                                            bytes_sent(0), port(-1), keep_alive(true), res(NULL) {};
 Client::~Client() {};
 
-void Client::appendRequestData(char* buffer, int bytes) {
-	request_buffer.append(buffer, bytes);
+void Client::appendRequestData(char *buffer, int bytes)
+{
+    request_buffer.append(buffer, bytes);
 }
 
-bool Client::isTimedOut(int timeout_seconds) const {
-	return (time(NULL) - state_start_time) >= timeout_seconds;
+bool Client::isTimedOut(int timeout_seconds) const
+{
+    return (time(NULL) - state_start_time) >= timeout_seconds;
 }
 
-void Client::setState(State new_state) {
-	current_state = new_state;
-	state_start_time = time(NULL);
+void Client::setState(State new_state)
+{
+    current_state = new_state;
+    state_start_time = time(NULL);
 }
 
 void Client::setKeepAlive(const Request &req)
 {
-	const std::string version = req.getVersion();
+    const std::string version = req.getVersion();
     std::string connection = "";
-    if (req.findHeader("Connection")) {
+    if (req.findHeader("Connection"))
+    {
         connection = *req.findHeader("Connection");
         for (size_t i = 0; i < connection.size(); ++i)
             connection[i] = (char)std::tolower(connection[i]);
@@ -40,8 +44,8 @@ void Client::setKeepAlive(const Request &req)
 
     bool want_close;
     if (version == "HTTP/1.1")
-		want_close = (connection == "close");
+        want_close = (connection == "close");
     else
-		want_close = (connection != "keep-alive");
-	keep_alive = !want_close;
+        want_close = (connection != "keep-alive");
+    keep_alive = !want_close;
 }

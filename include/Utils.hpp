@@ -9,7 +9,8 @@ extern const char *HEADER_CONTENT_LENGTH;
 extern const char *HEADER_CONNECTION;
 extern const char *MIME_HTML;
 
-namespace util {
+namespace util
+{
 
     struct MultipartPart
     {
@@ -26,7 +27,7 @@ namespace util {
     bool fileExists(const std::string &path, struct ::stat &st);
     bool saveFile(const std::string &filePath, const std::string &fileContent);
     bool createUploadDir(const std::string &uploadFullPath);
-        std::string wrapHtml(const std::string &title, const std::string &body);
+    std::string wrapHtml(const std::string &title, const std::string &body);
     std::string generateAutoIndexHtml(const std::string &uri, const std::vector<std::string> &entries);
     std::string extractBoundary(std::string rawValue);
     std::string extractFilename(std::string headers);

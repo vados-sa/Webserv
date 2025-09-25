@@ -3,30 +3,109 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Welcome to /new</title>
+    <title>Webserv /new</title>
+    <link rel="icon" href="./img/images/favicon.png" type="image/png">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            margin-top: 100px;
-            background-color: #f5f5f5;
+        :root {
+            --brand: #4471C8;
+            --brand-hover: #4471C8;
+            --ink: #0f4910;
+            --panel: #F2F1EF;
+            --shadow: rgba(0, 0, 0, 0.3);
+            --border: rgba(0, 0, 0, 0.05);
         }
 
-        h1 {
-            color: #2c3e50;
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding: 30px 0;
+            background: url("./img/images/background_redirect.jpg") center / cover no-repeat fixed;
+            background-color: #41479b;
+            /* fallback */
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+            color: var(--ink);
+        }
+
+        .content {
+            margin: 0 auto;
+            width: min(960px, 85%);
+            background: var(--panel);
+            border-radius: 10px;
+            box-shadow: 2px 2px 9px var(--shadow);
+            padding: 24px 28px;
+        }
+
+        h1,
+        h2,
+        h3 {
+            font-weight: 600;
+            margin: 0 0 12px;
+            text-align: center;
+        }
+
+        hr {
+            border: 0;
+            border-top: 1px solid #AAB03C;
+            margin: 20px auto;
         }
 
         p {
-            color: #34495e;
+            line-height: 1.5;
+            font-size: 15px;
+            text-align: justify;
+        }
+
+        .redirect-message {
+            text-align: center;
+            margin: 40px 0;
+        }
+
+        .redirect-message h1 {
+            font-size: 2.2em;
+            margin-bottom: 18px;
+        }
+
+        .redirect-message p {
             font-size: 18px;
+            color: #34495e;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .credits {
+            text-align: center;
+        }
+
+        .credits .coder {
+            color: #4471C8;
+            display: block;
+            margin: 4px 0;
+            text-decoration: none;
         }
     </style>
 </head>
 
 <body>
-    <h1>🎉 Welcome to the new location!</h1>
-    <p>Hi! You’ve been successfully redirected to <strong>/new</strong>.</p>
-    <p>Everything is working fine here.</p>
+    <div class="content">
+        <div class="redirect-message">
+            <h1>New location!</h1>
+            <p>You’ve been successfully redirected to <strong>/new</strong>.</p>
+        </div>
+        <hr>
+        <div class="credits">
+            <h3>This server was built by:</h3>
+            <a href="https://github.com/schardot" target="_blank" class="coder">Natália Schardosim</a>
+            <a href="https://github.com/vados-sa" target="_blank" class="coder">Vanessa Santos</a>
+            <a href="https://github.com/mariaserpa" target="_blank" class="coder">Maria Luiza Rabelo</a>
+        </div>
+    </div>
 </body>
 
 </html>

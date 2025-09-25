@@ -22,12 +22,11 @@ private:
     bool parseBody(std::string &raw);
     void parseRequest(const std::string &raw);
 
-public :
+public:
     Request();
-    explicit Request(const std::string &raw);
+    Request(const std::string &raw, int maxBodySize);
 
-    //---getters
-    int getMaxBodySize() const { return maxBodySize_; } 
+    int getMaxBodySize() const { return maxBodySize_; }
     const std::string getMethod() const { return method_; }
     const std::string getReqPath() const { return reqPath_; }
     const std::string getFullPath() const { return fullPath_; }
@@ -35,13 +34,12 @@ public :
     const std::string getQueryString() const { return queryString_; }
     bool isCgi() const { return isCgi_; }
 
-    //---setters
     void setMethod(const std::string &m) { method_ = m; }
     void setReqPath(const std::string &p) { reqPath_ = p; }
     void setFullPath(const std::string &p) { fullPath_ = p; }
     void setQueryString(const std::string &q) { queryString_ = q; }
     void setIsCgi(bool cgi) { isCgi_ = cgi; }
-    void setMaxBodySize(int maxsize)  { maxBodySize_ = maxsize; }
+    void setMaxBodySize(int maxsize) { maxBodySize_ = maxsize; }
 };
 
 std::ostream &operator<<(std::ostream &out, const Request &obj);
